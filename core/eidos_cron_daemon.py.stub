@@ -1,0 +1,185 @@
+"""
+core/eidos_cron_daemon.py — Cron Daemon autónomo [S88 CARNE]
+
+Hilo de fondo que ejecuta trabajos programados cada 60s.
+Integrado con CronJobManager de HermesBridgeV2.
+
+El Cron Daemon revisa trabajos pendientes cada minuto y los ejecuta.
+Los resultados se entregan en el log y opcionalmente en plataformas.
+
+Uso:
+    cd = get_cron_daemon()
+    cd.start()
+    cd.schedule("health_report", "Verifica salud", "every 6h", platforms=["telegram"])
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import threading
+import time
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+log = logging.getLogger("eidos.cron_daemon")
+
+CRON_STATE = Path.home() / ".eidos" / "cron_daemon_state.json"
+
+
+class CronDaemon:
+    """Hilo de fondo que ejecuta trabajos cron cada 60s."""
+
+    def __init__(self):
+        self._running = False
+        self._thread: Optional[threading.Thread] = None
+        self._jobs_executed = 0
+        self._last_tick: float = 0
+        self._errors: List[str] = []
+
+    def start(self):
+        """Inicia el hilo del cron daemon."""
+        if self._running:
+            return
+        self._running = True
+        self._thread = threading.Thread(
+            target=self._run_loop,
+            daemon=True,
+            name="eidos-cron-daemon",
+        )
+        self._thread.start()
+        log.info("CronDaemon: iniciado (tick cada 60s)")
+
+    def stop(self):
+        """Detiene el hilo del cron daemon."""
+        self._running = False
+        if self._thread:
+            self._thread.join(timeout=5)
+        log.info("CronDaemon: detenido (jobs=%d)", self._jobs_executed)
+
+    def tick(self):
+        """Un tick del scheduler: revisa jobs pendientes y los ejecuta."""
+        try:
+            from core.eidos_hermes_bridge_v2 import get_hermes_v2
+            hb = get_hermes_v2()
+
+            due = hb.get_due_tasks()
+            for job in due:
+                job_id = job.get("id", "unknown")
+                try:
+                    # Ejecutar el job
+                    prompt = job.get("prompt", "")
+                    ts = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+                    # Registrar resultado
+                    result_text = f"[CRON {ts}] {job_id}: {prompt[:200]}"
+
+                    # Si tiene plataformas configuradas, loguear entrega
+                    platforms = job.get("platforms", ["local"])
+                    if platforms and platforms != ["local"]:
+                        result_text += f" → entregado en {','.join(platforms)}"
+
+                    log.info(result_text)
+
+                    # Marcar como ejecutado (calcula next_run)
+                    hb.complete_task(job_id)
+                    self._jobs_executed += 1
+
+                except Exception as e:
+                    log.debug("CronDaemon: error job %s: %s", job_id, e)
+                    self._errors.append(f"{job_id}:{e}"[:200])
+
+            self._last_tick = time.time()
+
+        except Exception as e:
+            log.debug("CronDaemon tick: %s", e)
+
+    def schedule(self, job_id: str, prompt: str, schedule: str,
+                platforms: Optional[List[str]] = None) -> Dict[str, Any]:
+        """Programa un trabajo cron.
+
+        Ejemplos:
+          cd.schedule("health_check", "Verifica salud", "every 6h", platforms=["telegram"])
+          cd.schedule("daily_report", "Informe diario", "0 9 * * *")
+        """
+        try:
+            from core.eidos_hermes_bridge_v2 import get_hermes_v2
+            hb = get_hermes_v2()
+            return hb.schedule_task(job_id, prompt, schedule, platforms)
+        except Exception as e:
+            return {"error": str(e)}
+
+    def _run_loop(self):
+        """Loop de fondo: tick cada 60s."""
+        while self._running:
+            try:
+                self.tick()
+            except Exception as e:
+                log.debug("CronDaemon loop: %s", e)
+                self._errors.append(str(e)[:200])
+
+            # Dormir 60s con chequeo de _running cada 5s
+            for _ in range(12):
+                if not self._running:
+                    break
+                time.sleep(5)
+
+    @property
+    def is_running(self) -> bool:
+        return self._running
+
+    def stats(self) -> Dict[str, Any]:
+        return {
+            "running": self._running,
+            "jobs_executed": self._jobs_executed,
+            "last_tick": self._last_tick,
+            "errors": self._errors[-10:],
+        }
+
+
+# ── Singleton ─────────────────────────────────────────────────────────────────
+_daemon: Optional[CronDaemon] = None
+
+
+def get_cron_daemon() -> CronDaemon:
+    global _daemon
+    if _daemon is None:
+        _daemon = CronDaemon()
+    return _daemon
+
+
+# ── CLI ───────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import argparse
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+
+    p = argparse.ArgumentParser(description="EIDOS Cron Daemon [S88 CARNE]")
+    p.add_argument("--start", action="store_true", help="Iniciar cron daemon")
+    p.add_argument("--tick", action="store_true", help="Un tick manual")
+    p.add_argument("--schedule", nargs=3, metavar=("ID", "PROMPT", "SCHEDULE"),
+                   help="Programar job")
+    p.add_argument("--stats", action="store_true", help="Estadísticas")
+    args = p.parse_args()
+
+    cd = get_cron_daemon()
+
+    if args.start:
+        print("Iniciando CronDaemon... (Ctrl+C para detener)")
+        cd.start()
+        try:
+            while True:
+                time.sleep(10)
+                print(f"  [{cd._jobs_executed} jobs ejecutados]")
+        except KeyboardInterrupt:
+            cd.stop()
+    elif args.tick:
+        cd.tick()
+        print(f"Tick completado. Jobs ejecutados: {cd._jobs_executed}")
+    elif args.schedule:
+        result = cd.schedule(args.schedule[0], args.schedule[1], args.schedule[2])
+        print(json.dumps(result, indent=2))
+    elif args.stats:
+        print(json.dumps(cd.stats(), indent=2, ensure_ascii=False))
+    else:
+        p.print_help()

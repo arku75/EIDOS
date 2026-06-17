@@ -1,0 +1,17 @@
+[Unit]
+Description=EIDOS Supervisor — Monitoreo 24/7 y auto-reparación
+After=network.target
+Wants=eidos-bridge.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -c "from core.eidos_supervisor import get_supervisor; import time; sup = get_supervisor(); sup.start(); print('Supervisor activo'); while True: time.sleep(60)"
+WorkingDirectory=/home/ser/EIDOS
+Environment=PYTHONPATH=/home/ser/EIDOS
+Restart=always
+RestartSec=10
+StandardOutput=append:/home/ser/.eidos/supervisor.log
+StandardError=append:/home/ser/.eidos/supervisor.log
+
+[Install]
+WantedBy=default.target

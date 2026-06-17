@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/editor/editor.main.min.css">
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #1e1e1e; }
+        #container { width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+    <script>
+        require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' } });
+        require(['vs/editor/editor.main'], function() {
+            window.editor = monaco.editor.create(document.getElementById('container'), {
+                value: '# EIDOS Tactical Interface\nprint("Terminal Activa...")',
+                language: 'python',
+                theme: 'vs-dark',
+                automaticLayout: true
+            });
+
+            // Bridge API
+            window.editorAPI = {
+                getCode: () => editor.getValue(),
+                setCode: (code) => editor.setValue(code),
+                insertAtCursor: (text) => {
+                    const selection = editor.getSelection();
+                    editor.executeEdits('insert', [{ range: selection, text: text }]);
+                }
+            };
+
+            editor.onDidChangeModelContent(() => {
+                if (window.webkit && window.webkit.messageHandlers.editor) {
+                    window.webkit.messageHandlers.editor.postMessage({
+                        type: 'change',
+                        content: editor.getValue()
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

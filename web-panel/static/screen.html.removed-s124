@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>EIDOS — Vista en Vivo</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0d1117; color: #c9d1d9; font-family: monospace; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+header {
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+header h1 { font-size: 14px; color: #58a6ff; }
+.pulse { width: 8px; height: 8px; border-radius: 50%; background: #3fb950; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+.status-pill {
+  font-size: 11px; padding: 2px 10px; border-radius: 12px;
+  background: rgba(63,185,80,.15); border: 1px solid rgba(63,185,80,.3); color: #3fb950;
+}
+.status-pill.warn { background: rgba(210,153,34,.15); border-color: rgba(210,153,34,.3); color: #d2993a; }
+.status-pill.err  { background: rgba(248,81,73,.15);  border-color: rgba(248,81,73,.3);  color: #f85149; }
+a.back { color: #8b949e; text-decoration: none; font-size: 12px; margin-left: auto; }
+a.back:hover { color: #58a6ff; }
+.fps-label { font-size: 11px; color: #484f58; }
+
+.main { display: flex; flex: 1; overflow: hidden; gap: 0; }
+
+/* PANTALLA */
+.screen-wrap {
+  flex: 1;
+  position: relative;
+  background: #000;
+  overflow: hidden;
+  cursor: crosshair;
+}
+.screen-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  transition: opacity .1s;
+}
+.screen-wrap img.loading { opacity: .6; }
+.coords-bar {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,.65);
+  padding: 4px 12px;
+  font-size: 11px;
+  color: #484f58;
+  display: flex;
+  gap: 16px;
+}
+.coords-bar span { color: #8b949e; }
+.click-ripple {
+  position: absolute;
+  width: 20px; height: 20px;
+  border: 2px solid #58a6ff;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: ripple .5s ease-out forwards;
+  transform: translate(-50%, -50%);
+}
+@keyframes ripple { 0%{opacity:1;transform:translate(-50%,-50%) scale(.2)} 100%{opacity:0;transform:translate(-50%,-50%) scale(2)} }
+
+/* PANEL DERECHO */
+.side {
+  width: 300px;
+  min-width: 300px;
+  background: #161b22;
+  border-left: 1px solid #30363d;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tab-bar {
+  display: flex;
+  border-bottom: 1px solid #30363d;
+  flex-shrink: 0;
+}
+.tab {
+  flex: 1;
+  padding: 8px 4px;
+  font-size: 11px;
+  text-align: center;
+  cursor: pointer;
+  color: #8b949e;
+  border-bottom: 2px solid transparent;
+  transition: all .15s;
+}
+.tab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+.tab:hover { color: #c9d1d9; }
+
+.tab-content { flex: 1; overflow-y: auto; }
+.tab-pane { display: none; padding: 10px; }
+.tab-pane.active { display: block; }
+
+/* EIDOS MENTE */
+.thought-entry {
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.thought-entry .who { color: #58a6ff; font-weight: bold; margin-bottom: 3px; }
+.thought-entry .text { color: #c9d1d9; }
+.thought-entry .ts { color: #484f58; font-size: 10px; margin-top: 4px; }
+.thought-entry.action { border-color: rgba(63,185,80,.3); }
+.thought-entry.action .who { color: #3fb950; }
+
+/* CONTROLES */
+.ctrl-section { margin-bottom: 12px; }
+.ctrl-section h4 { font-size: 10px; color: #484f58; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.btn-row { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px; }
+.btn {
+  background: #21262d; border: 1px solid #30363d;
+  color: #c9d1d9; padding: 5px 10px;
+  border-radius: 5px; cursor: pointer;
+  font-family: monospace; font-size: 11px;
+  transition: all .12s;
+}
+.btn:hover { background: #30363d; border-color: #58a6ff; }
+.btn.blue { background: rgba(31,111,235,.2); border-color: rgba(31,111,235,.5); color: #58a6ff; }
+.btn.blue:hover { background: rgba(31,111,235,.35); }
+.btn.green { background: rgba(35,134,54,.2); border-color: rgba(35,134,54,.5); color: #3fb950; }
+.btn.red { background: rgba(218,54,51,.15); border-color: rgba(218,54,51,.4); color: #f85149; }
+.input-row { display: flex; gap: 4px; margin-bottom: 6px; }
+input[type=text] {
+  flex: 1; background: #0d1117; border: 1px solid #30363d;
+  color: #c9d1d9; padding: 5px 8px;
+  border-radius: 5px; font-family: monospace; font-size: 11px;
+}
+input[type=text]:focus { outline: none; border-color: #58a6ff; }
+.key-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+.key-grid .btn { padding: 4px; font-size: 10px; text-align: center; }
+
+/* TOPIC */
+.topic-box {
+  background: rgba(31,111,235,.08);
+  border: 1px solid rgba(31,111,235,.25);
+  border-radius: 6px; padding: 8px;
+  margin-bottom: 8px;
+}
+.topic-box textarea {
+  width: 100%;
+  background: #0d1117; border: 1px solid #30363d;
+  color: #c9d1d9; padding: 6px;
+  border-radius: 4px; font-family: monospace; font-size: 11px;
+  resize: vertical; min-height: 50px;
+}
+.topic-box textarea:focus { outline: none; border-color: #58a6ff; }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: #0d1117; }
+::-webkit-scrollbar-thumb { background: #30363d; border-radius: 2px; }
+
+/* TOGGLE de refresh rate */
+.rate-btns { display: flex; gap: 3px; margin-bottom: 6px; }
+.rate-btn {
+  flex: 1; padding: 4px; font-size: 10px;
+  background: #21262d; border: 1px solid #30363d;
+  color: #8b949e; border-radius: 4px; cursor: pointer; text-align: center;
+}
+.rate-btn.active { background: rgba(31,111,235,.25); border-color: #1f6feb; color: #58a6ff; }
+
+.no-thoughts { color: #484f58; font-size: 11px; text-align: center; padding: 20px 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="pulse" id="pulse"></div>
+  <h1>🖥️ EIDOS — Vista en Vivo</h1>
+  <span class="status-pill" id="statusPill">Conectando...</span>
+  <span class="fps-label" id="fpsLabel"></span>
+  <button id="stopAllBtn" onclick="stopAll()" style="background:#da3633;border:1px solid #f85149;color:#fff;font-weight:bold;padding:5px 14px;border-radius:5px;cursor:pointer;font-size:12px;letter-spacing:.5px">🛑 STOP</button>
+  <button id="observeBtn" onclick="toggleObserve()" style="background:#21262d;border:1px solid #58a6ff;color:#58a6ff;padding:5px 14px;border-radius:5px;cursor:pointer;font-size:12px;letter-spacing:.5px">👁️ OBSERVA</button>
+  <a class="back" href="/">← Panel</a>
+</header>
+
+<div id="recursionBanner" style="background:rgba(210,153,34,.12);border-bottom:1px solid rgba(210,153,34,.35);padding:6px 16px;font-size:11px;color:#d2993a;display:none;align-items:center;gap:10px">
+  <span>⚠ Si abres esta vista en el MISMO PC cuya pantalla muestra, verás una recursión infinita (ventana dentro de ventana). Es físicamente inevitable.</span>
+  <button onclick="hideBrowserOnce()" style="background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:3px 8px;border-radius:4px;cursor:pointer;font-size:10px">Ocultar este browser 2s</button>
+  <button onclick="document.getElementById('recursionBanner').style.display='none'" style="background:none;border:none;color:#8b949e;cursor:pointer;font-size:14px;margin-left:auto">×</button>
+</div>
+
+<div class="main">
+
+  <!-- PANTALLA EN VIVO -->
+  <div class="screen-wrap" id="screenWrap" onclick="onScreenClick(event)" onmousemove="onMouseMove(event)">
+    <img id="liveImg" src="" alt="Pantalla de EIDOS" />
+    <div class="coords-bar">
+      <span>x:<b id="cx">0</b> y:<b id="cy">0</b></span>
+      <span id="clickInfo">Click izquierdo para interactuar</span>
+      <span id="lastAction" style="margin-left:auto;color:#3fb950"></span>
+    </div>
+  </div>
+
+  <!-- PANEL LATERAL -->
+  <div class="side">
+    <div class="tab-bar">
+      <div class="tab active" onclick="switchTab('mind')">🧠 Mente</div>
+      <div class="tab" onclick="switchTab('ctrl')">🎮 Control</div>
+      <div class="tab" onclick="switchTab('topic')">🔬 Investigar</div>
+    </div>
+
+    <div class="tab-content">
+
+      <!-- TAB: MENTE DE EIDOS -->
+      <div class="tab-pane active" id="tab-mind">
+        <div id="thoughtFeed">
+          <div class="no-thoughts">Esperando pensamientos de EIDOS...</div>
+        </div>
+      </div>
+
+      <!-- TAB: CONTROL MANUAL -->
+      <div class="tab-pane" id="tab-ctrl">
+
+        <div class="ctrl-section">
+          <h4>Velocidad de refresco</h4>
+          <div class="rate-btns">
+            <div class="rate-btn" onclick="setRate(500)">2/s</div>
+            <div class="rate-btn active" onclick="setRate(1500)">1/1.5s</div>
+            <div class="rate-btn" onclick="setRate(3000)">1/3s</div>
+            <div class="rate-btn" onclick="setRate(0)">Pausa</div>
+          </div>
+          <div class="btn-row">
+            <button class="btn blue" onclick="captureNow()" style="flex:1">📸 Capturar ahora</button>
+          </div>
+        </div>
+
+        <div class="ctrl-section">
+          <h4>Teclado</h4>
+          <div class="input-row">
+            <input type="text" id="typeText" placeholder="Texto a escribir..." onkeydown="if(event.key==='Enter'){sendType();event.preventDefault()}">
+            <button class="btn green" onclick="sendType()">→</button>
+          </div>
+          <div class="key-grid">
+            <button class="btn" onclick="sendKey('Return')">Enter</button>
+            <button class="btn" onclick="sendKey('Escape')">Esc</button>
+            <button class="btn" onclick="sendKey('Tab')">Tab</button>
+            <button class="btn" onclick="sendKey('BackSpace')">⌫</button>
+            <button class="btn" onclick="sendKey('ctrl+c')">^C</button>
+            <button class="btn" onclick="sendKey('ctrl+v')">^V</button>
+            <button class="btn" onclick="sendKey('ctrl+z')">^Z</button>
+            <button class="btn" onclick="sendKey('ctrl+a')">^A</button>
+            <button class="btn" onclick="sendKey('ctrl+l')">^L</button>
+            <button class="btn" onclick="sendKey('super')">⊞</button>
+            <button class="btn" onclick="sendKey('alt+F4')">✕Win</button>
+            <button class="btn" onclick="sendKey('alt+Tab')">⇄</button>
+          </div>
+          <div class="input-row" style="margin-top:4px">
+            <input type="text" id="customKey" placeholder="tecla custom (ctrl+shift+t)">
+            <button class="btn" onclick="sendKey(document.getElementById('customKey').value)">→</button>
+          </div>
+        </div>
+
+        <div class="ctrl-section">
+          <h4>Abrir aplicación / URL</h4>
+          <div class="input-row">
+            <input type="text" id="openTarget" placeholder="firefox, /ruta, https://...">
+            <button class="btn green" onclick="doOpen()">▶</button>
+          </div>
+          <div class="btn-row">
+            <button class="btn" onclick="quickOpen('firefox')">Firefox</button>
+            <button class="btn" onclick="quickOpen('xterm')">Terminal</button>
+            <button class="btn" onclick="quickOpen('thunar')">Archivos</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- TAB: EIDOS INVESTIGA -->
+      <div class="tab-pane" id="tab-topic">
+        <div class="topic-box">
+          <h4 style="font-size:11px;color:#8b949e;margin-bottom:6px">Pídele a EIDOS que investigue algo en profundidad:</h4>
+          <textarea id="topicInput" placeholder="Ej: SQL injection bypass WAF&#10;Ej: Linux privilege escalation via SUID&#10;Ej: buffer overflow ARM64"></textarea>
+          <div class="btn-row" style="margin-top:6px">
+            <button class="btn blue" style="flex:1" onclick="sendTopic()">🔬 Investigar ahora</button>
+          </div>
+        </div>
+        <div id="topicFeed">
+          <div class="no-thoughts">Los resultados de investigación aparecerán aquí...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Estado global ─────────────────────────────────────────────────────────────
+let refreshRate = 1500;
+let refreshTimer = null;
+let lastFrameTime = 0;
+let frameCount = 0;
+let imgNatW = 1920, imgNatH = 1080;
+let thoughts = [];
+let topicResults = [];
+
+// ── Estado OBSERVA / STOP ────────────────────────────────────────────────────
+let observeActive = false;
+let observeSessionId = null;
+let stopped = false;
+
+// ── Inicialización ────────────────────────────────────────────────────────────
+window.onload = () => {
+  captureNow();           // carga inmediata
+  startRefresh();         // auto-refresh
+  pollThoughts();         // pensamientos de EIDOS
+  // Mostrar banner si la URL es localhost / 127.0.0.1 (probable bucle)
+  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    document.getElementById('recursionBanner').style.display = 'flex';
+  }
+};
+
+// ── STOP global ───────────────────────────────────────────────────────────────
+async function stopAll() {
+  stopped = !stopped;
+  const btn = document.getElementById('stopAllBtn');
+  if (stopped) {
+    refreshRate = 0;
+    if (refreshTimer) clearInterval(refreshTimer);
+    btn.textContent = '▶️ REANUDAR';
+    btn.style.background = '#1f6feb';
+    btn.style.borderColor = '#58a6ff';
+    setPill('warn', 'PARADO');
+    try { await fetch('/api/screen/stop', {method:'POST'}); } catch(_) {}
+    setAction('🛑 Sistema parado — refresh OFF, acciones de EIDOS canceladas');
+  } else {
+    refreshRate = 1500;
+    startRefresh();
+    btn.textContent = '🛑 STOP';
+    btn.style.background = '#da3633';
+    btn.style.borderColor = '#f85149';
+    setPill('ok', 'En vivo');
+    setAction('▶️ Sistema reanudado');
+  }
+}
+
+// ── OBSERVA toggle ────────────────────────────────────────────────────────────
+async function toggleObserve() {
+  const btn = document.getElementById('observeBtn');
+  if (!observeActive) {
+    try {
+      const r = await fetch('/api/observation/start', {method:'POST'});
+      const d = await r.json();
+      if (d.success) {
+        observeActive = true;
+        observeSessionId = d.session_id;
+        btn.textContent = '⏹ DETENER OBSERVA';
+        btn.style.background = 'rgba(63,185,80,.2)';
+        btn.style.borderColor = '#3fb950';
+        btn.style.color = '#3fb950';
+        setAction('👁️ OBSERVA activo — cada click/tecla que hagas en esta vista se manda al brain como ejemplo');
+      } else { setAction('❌ ' + (d.error || 'no se pudo iniciar')); }
+    } catch(e) { setAction('❌ ' + e.message); }
+  } else {
+    try {
+      const r = await fetch('/api/observation/stop', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_id:observeSessionId})});
+      const d = await r.json();
+      observeActive = false;
+      btn.textContent = '👁️ OBSERVA';
+      btn.style.background = '#21262d';
+      btn.style.borderColor = '#58a6ff';
+      btn.style.color = '#58a6ff';
+      if (d.success) setAction(`✓ Lesson enviada al brain (${d.n_events||0} eventos, ${d.node_id||'sin id'})`);
+      else setAction('❌ ' + (d.error || 'stop falló'));
+    } catch(e) { setAction('❌ ' + e.message); }
+  }
+}
+
+async function pushObservation(kind, payload) {
+  if (!observeActive) return;
+  try {
+    await fetch('/api/observation/event', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({session_id: observeSessionId, kind, payload, ts: Date.now()/1000})
+    });
+  } catch(_) {}
+}
+
+async function hideBrowserOnce() {
+  try {
+    await fetch('/api/screen/hide-window-briefly', {method:'POST'});
+    setAction('✓ Ventana ocultada, captura limpia en próximo refresh');
+    setTimeout(captureNow, 2200);
+  } catch(e) { setAction('❌ ' + e.message); }
+}
+
+// ── Captura de pantalla ───────────────────────────────────────────────────────
+function captureNow() {
+  const img = document.getElementById('liveImg');
+  img.classList.add('loading');
+  // Cargar imagen directa PNG con cache-bust por timestamp
+  img.onload = () => {
+    img.classList.remove('loading');
+    imgNatW = img.naturalWidth || 1920;
+    imgNatH = img.naturalHeight || 1080;
+    const now = Date.now();
+    if (lastFrameTime) {
+      const fps = Math.round(1000 / (now - lastFrameTime));
+      document.getElementById('fpsLabel').textContent = fps + ' fps';
+    }
+    lastFrameTime = now;
+    setPill('ok', 'En vivo');
+  };
+  img.onerror = () => {
+    img.classList.remove('loading');
+    setPill('err', 'Sin señal');
+  };
+  img.src = '/api/screen/live.png?t=' + Date.now();
+}
+
+function startRefresh() {
+  if (refreshTimer) clearInterval(refreshTimer);
+  if (refreshRate > 0) {
+    refreshTimer = setInterval(captureNow, refreshRate);
+  }
+}
+
+function setRate(ms) {
+  refreshRate = ms;
+  document.querySelectorAll('.rate-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  startRefresh();
+  if (ms === 0) setPill('warn', 'Pausado');
+}
+
+// ── Mouse sobre la imagen ─────────────────────────────────────────────────────
+function getScaledCoords(e) {
+  const img = document.getElementById('liveImg');
+  const rect = img.getBoundingClientRect();
+  // La imagen puede tener object-fit: contain — calcular área real
+  const scale = Math.min(rect.width / imgNatW, rect.height / imgNatH);
+  const dispW = imgNatW * scale;
+  const dispH = imgNatH * scale;
+  const offX = (rect.width - dispW) / 2;
+  const offY = (rect.height - dispH) / 2;
+  const rx = Math.round((e.clientX - rect.left - offX) / scale);
+  const ry = Math.round((e.clientY - rect.top - offY) / scale);
+  return { x: Math.max(0, rx), y: Math.max(0, ry) };
+}
+
+function onMouseMove(e) {
+  const { x, y } = getScaledCoords(e);
+  document.getElementById('cx').textContent = x;
+  document.getElementById('cy').textContent = y;
+}
+
+function onScreenClick(e) {
+  if (e.target.closest('.coords-bar')) return;
+  const { x, y } = getScaledCoords(e);
+  // Ripple visual
+  const ripple = document.createElement('div');
+  ripple.className = 'click-ripple';
+  ripple.style.left = e.clientX - document.getElementById('screenWrap').getBoundingClientRect().left + 'px';
+  ripple.style.top  = e.clientY - document.getElementById('screenWrap').getBoundingClientRect().top + 'px';
+  document.getElementById('screenWrap').appendChild(ripple);
+  setTimeout(() => ripple.remove(), 600);
+
+  // Enviar click
+  doClick(x, y, 1);
+}
+
+// ── Acciones ──────────────────────────────────────────────────────────────────
+async function doClick(x, y, btn) {
+  if (stopped) { setAction('🛑 STOP activo — click ignorado'); return; }
+  pushObservation('click', {x, y, button: btn});
+  try {
+    const r = await fetch('/api/screen/click', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({x, y, button: btn})
+    });
+    const d = await r.json();
+    setAction(d.success ? `Click (${x},${y})` : '❌ click falló');
+    if (d.success) setTimeout(captureNow, 200);
+  } catch(e) { setAction('❌ ' + e.message); }
+}
+
+async function sendType() {
+  const text = document.getElementById('typeText').value;
+  if (!text) return;
+  if (stopped) { setAction('🛑 STOP activo — type ignorado'); return; }
+  pushObservation('type', {text});
+  try {
+    const r = await fetch('/api/screen/type', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({text})
+    });
+    const d = await r.json();
+    setAction(d.success ? `Escribió: "${text.substring(0,20)}"` : '❌ type falló');
+    if (d.success) { document.getElementById('typeText').value = ''; setTimeout(captureNow, 300); }
+  } catch(e) { setAction('❌ ' + e.message); }
+}
+
+async function sendKey(key) {
+  if (!key) return;
+  if (stopped) { setAction('🛑 STOP activo — key ignorado'); return; }
+  pushObservation('key', {key});
+  try {
+    const r = await fetch('/api/screen/key', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({key})
+    });
+    const d = await r.json();
+    setAction(d.success ? `Tecla: ${key}` : '❌ key falló');
+    if (d.success) setTimeout(captureNow, 200);
+  } catch(e) { setAction('❌ ' + e.message); }
+}
+
+async function doOpen() {
+  const target = document.getElementById('openTarget').value;
+  if (target) quickOpen(target);
+}
+
+async function quickOpen(target) {
+  try {
+    const r = await fetch('/api/screen/open', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({target})
+    });
+    const d = await r.json();
+    setAction(d.success ? `Abierto: ${target}` : '❌ ' + d.error);
+    if (d.success) setTimeout(captureNow, 1000);
+  } catch(e) { setAction('❌ ' + e.message); }
+}
+
+// ── EIDOS Topic (investigar) ──────────────────────────────────────────────────
+async function sendTopic() {
+  const topic = document.getElementById('topicInput').value.trim();
+  if (!topic) return;
+  try {
+    const r = await fetch('/api/screen/open', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({target: '__topic__'})   // dummy — usamos la ruta de topic real
+    });
+  } catch(_) {}
+
+  // Escribir al archivo de topic directamente via endpoint
+  try {
+    const r = await fetch('/api/eidos/topic', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({topic})
+    });
+    const d = await r.json();
+    if (d.success) {
+      addTopicResult(`📌 Tema enviado: "${topic}" — EIDOS investigará en la próxima iteración`);
+      document.getElementById('topicInput').value = '';
+    } else {
+      addTopicResult('❌ ' + (d.error || 'error desconocido'));
+    }
+  } catch(e) {
+    addTopicResult('❌ ' + e.message);
+  }
+}
+
+function addTopicResult(msg) {
+  const feed = document.getElementById('topicFeed');
+  const el = document.createElement('div');
+  el.className = 'thought-entry action';
+  el.innerHTML = `<div class="who">🔬 Investigación</div><div class="text">${msg}</div><div class="ts">${new Date().toLocaleTimeString()}</div>`;
+  if (feed.querySelector('.no-thoughts')) feed.innerHTML = '';
+  feed.insertBefore(el, feed.firstChild);
+}
+
+// ── Pensamientos de EIDOS (poll al log de aprendizaje) ────────────────────────
+let lastThoughtLen = 0;
+
+async function pollThoughts() {
+  try {
+    const r = await fetch('/api/learning?limit=5');
+    const d = await r.json();
+    if (d && Array.isArray(d.recent)) {
+      const feed = document.getElementById('thoughtFeed');
+      // Solo mostrar si hay items nuevos
+      if (d.recent.length > 0) {
+        const newItems = d.recent.slice(0, 5);
+        if (JSON.stringify(newItems) !== window._lastThoughts) {
+          window._lastThoughts = JSON.stringify(newItems);
+          feed.innerHTML = '';
+          newItems.forEach(item => {
+            const el = document.createElement('div');
+            const isAction = item.event_type && item.event_type.includes('action');
+            el.className = 'thought-entry' + (isAction ? ' action' : '');
+            const who = (item.character || 'EIDOS').replace('colony_', '').toUpperCase();
+            const text = item.content || item.thought || JSON.stringify(item).substring(0, 120);
+            const ts = item.timestamp ? new Date(item.timestamp * 1000).toLocaleTimeString() : '';
+            el.innerHTML = `<div class="who">🧠 ${who}</div><div class="text">${escapeHtml(text.substring(0, 200))}</div><div class="ts">${ts}</div>`;
+            feed.appendChild(el);
+          });
+        }
+      }
+    }
+  } catch(_) {}
+
+  // También consultar knowledge reciente
+  try {
+    const r = await fetch('/api/knowledge');
+    const d = await r.json();
+    if (d && d.total_nodes) {
+      document.getElementById('statusPill').textContent = `En vivo · ${d.total_nodes} nodos`;
+    }
+  } catch(_) {}
+
+  setTimeout(pollThoughts, 5000);
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function setPill(type, text) {
+  const el = document.getElementById('statusPill');
+  el.className = 'status-pill' + (type === 'err' ? ' err' : type === 'warn' ? ' warn' : '');
+  el.textContent = text;
+}
+
+function setAction(msg) {
+  document.getElementById('lastAction').textContent = msg;
+  setTimeout(() => { document.getElementById('lastAction').textContent = ''; }, 3000);
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const names = ['mind','ctrl','topic'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.tab-pane').forEach(p => {
+    p.classList.toggle('active', p.id === 'tab-' + name);
+  });
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>

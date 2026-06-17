@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Colony Genealogy — EIDOS</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0d0d1a;
+    color: #e0e0ff;
+    font-family: 'Segoe UI', monospace, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  header {
+    background: linear-gradient(135deg, #1a0a2e, #0d1a2e);
+    border-bottom: 1px solid #3a2060;
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  header h1 { font-size: 1.5rem; color: #c084fc; font-weight: 700; }
+  header .sub { color: #7c6fa0; font-size: 0.85rem; margin-top: 2px; }
+  .back-btn {
+    margin-left: auto;
+    background: #2a1a4a;
+    border: 1px solid #5a3a8a;
+    color: #c084fc;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.85rem;
+  }
+  .back-btn:hover { background: #3a2a5a; }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex;
+    gap: 16px;
+    padding: 16px 32px;
+    background: #12101e;
+    border-bottom: 1px solid #2a1a4a;
+    flex-wrap: wrap;
+  }
+  .stat-chip {
+    background: #1a1030;
+    border: 1px solid #3a2060;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    color: #a0a0cc;
+  }
+  .stat-chip span { color: #c084fc; font-weight: 700; }
+
+  /* Árbol container */
+  .tree-container {
+    padding: 32px;
+    overflow-x: auto;
+  }
+  .tree-title {
+    color: #7c6fa0;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 24px;
+  }
+
+  /* Nodos del árbol */
+  .tree {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+  .generation {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .gen-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    color: #3a2060;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-right: 8px;
+    min-width: 20px;
+  }
+  .card {
+    background: #1a1030;
+    border: 1px solid #3a2060;
+    border-radius: 14px;
+    padding: 16px;
+    width: 180px;
+    position: relative;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .card:hover {
+    border-color: #c084fc;
+    background: #231540;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(192,132,252,0.15);
+  }
+  .card.sovereign { border-color: #f59e0b; background: #1a1505; }
+  .card.sovereign:hover { border-color: #fbbf24; background: #221a06; }
+  .card.absorbing { border-color: #22d3ee; background: #051a1a; }
+  .card.learning { border-color: #4ade80; background: #051505; }
+  .card.merge-child { border-color: #f43f5e; background: #1a0510; }
+
+  .card-emoji { font-size: 2rem; margin-bottom: 8px; }
+  .card-name {
+    font-size: 0.8rem;
+    color: #c084fc;
+    font-weight: 600;
+    margin-bottom: 4px;
+    word-break: break-word;
+  }
+  .card-type {
+    font-size: 0.7rem;
+    color: #7c6fa0;
+    margin-bottom: 8px;
+  }
+  .card-status {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+  }
+  .status-sovereign { background: #451a03; color: #f59e0b; }
+  .status-learning  { background: #052e16; color: #4ade80; }
+  .status-absorbing { background: #0c1a20; color: #22d3ee; }
+  .status-retired   { background: #1a1a1a; color: #6b7280; }
+
+  /* Barra de absorción */
+  .absorption-bar {
+    height: 4px;
+    background: #2a1a4a;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .absorption-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+  .fill-sovereign { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+  .fill-absorbing { background: linear-gradient(90deg, #0891b2, #22d3ee); }
+  .fill-learning  { background: linear-gradient(90deg, #15803d, #4ade80); }
+
+  .nodes-count {
+    font-size: 0.7rem;
+    color: #6b5a8a;
+    margin-top: 6px;
+  }
+  .nodes-count span { color: #a78bfa; }
+
+  /* Líneas de parentesco */
+  .parent-line {
+    font-size: 0.65rem;
+    color: #5a3a7a;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid #2a1a4a;
+  }
+  .parent-line .heart { color: #f43f5e; }
+
+  /* Panel de detalle */
+  .detail-panel {
+    position: fixed;
+    right: 0; top: 0; bottom: 0;
+    width: 320px;
+    background: #12101e;
+    border-left: 1px solid #3a2060;
+    padding: 24px;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    z-index: 100;
+    overflow-y: auto;
+  }
+  .detail-panel.open { transform: translateX(0); }
+  .detail-close {
+    position: absolute;
+    top: 12px; right: 12px;
+    background: none;
+    border: none;
+    color: #7c6fa0;
+    font-size: 1.4rem;
+    cursor: pointer;
+  }
+  .detail-emoji { font-size: 3rem; margin: 16px 0 8px; }
+  .detail-name { font-size: 1.2rem; color: #c084fc; font-weight: 700; margin-bottom: 4px; }
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #1e1430;
+    font-size: 0.85rem;
+  }
+  .detail-row .label { color: #7c6fa0; }
+  .detail-row .value { color: #e0e0ff; font-weight: 500; }
+  .detail-section { font-size: 0.7rem; color: #5a3a7a; text-transform: uppercase; letter-spacing: 1px; margin: 16px 0 8px; }
+
+  /* Loading */
+  .loading { text-align: center; color: #5a3a7a; padding: 60px; font-size: 1.1rem; }
+  .pulse { animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+  /* Conexión merge visual */
+  .merge-arrow {
+    align-self: center;
+    font-size: 1.4rem;
+    color: #f43f5e;
+    margin: 0 4px;
+    animation: glow 2s infinite;
+  }
+  @keyframes glow {
+    0%,100% { text-shadow: 0 0 4px #f43f5e; }
+    50% { text-shadow: 0 0 12px #f43f5e; }
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .tree-container { padding: 16px; }
+    .card { width: 150px; }
+    .stats-bar { padding: 12px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🧬 Colony Genealogy</h1>
+    <div class="sub">Árbol de vida — personajes, linajes y absorción</div>
+  </div>
+  <a href="/" class="back-btn">← Dashboard</a>
+</header>
+
+<div class="stats-bar" id="statsBar">
+  <div class="loading pulse">Cargando Colony...</div>
+</div>
+
+<div class="tree-container">
+  <div class="tree-title">Árbol de personajes</div>
+  <div class="tree" id="tree">
+    <div class="loading pulse">🧬 Cargando linaje...</div>
+  </div>
+</div>
+
+<!-- Panel de detalle -->
+<div class="detail-panel" id="detailPanel">
+  <button class="detail-close" onclick="closeDetail()">×</button>
+  <div id="detailContent"></div>
+</div>
+
+<script>
+let allChars = [];
+
+// Personajes originales (no nacidos de lifecycle)
+const ORIGINALS = new Set(['colony_coder','colony_analyst','colony_vision','colony_operator','colony_general','colony_ser','colony_lumen']);
+
+function statusClass(s) {
+  if (s === 'sovereign') return 'sovereign';
+  if (s === 'absorbing') return 'absorbing';
+  if (s === 'learning')  return 'learning';
+  return '';
+}
+function fillClass(s) {
+  if (s === 'sovereign') return 'fill-sovereign';
+  if (s === 'absorbing') return 'fill-absorbing';
+  return 'fill-learning';
+}
+function typeBadge(t) {
+  const map = {
+    'api_llm':'🤖 LLM', 'api_search':'🔍 Search', 'api_translate':'🌐 Translate',
+    'model':'💡 Modelo', 'document':'📄 Doc', 'merge':'🔥 Merge', 'claw':'🦅 Claw',
+  };
+  return map[t] || t;
+}
+function formatDate(ts) {
+  if (!ts) return '—';
+  return new Date(ts * 1000).toLocaleDateString('es-ES', {day:'2-digit',month:'short',year:'numeric'});
+}
+function shortName(n) {
+  return n ? n.replace('colony_','') : '?';
+}
+
+function makeCard(c, extraClass='') {
+  const sc = statusClass(c.status);
+  const fc = fillClass(c.status);
+  const pct = Math.round((c.absorption_pct || 0) * 100);
+  const isMerge = c.connection_type === 'merge';
+  const parentLine = isMerge && c.parent1
+    ? `<div class="parent-line"><span class="heart">♥</span> ${shortName(c.parent1)} + ${shortName(c.parent2)}</div>`
+    : '';
+  return `
+    <div class="card ${sc} ${extraClass}" onclick="showDetail('${c.name}')">
+      <div class="card-emoji">${c.emoji || '🌱'}</div>
+      <div class="card-name">${shortName(c.name)}</div>
+      <div class="card-type">${typeBadge(c.connection_type)}</div>
+      <span class="card-status status-${c.status}">${c.status}</span>
+      <div class="absorption-bar">
+        <div class="absorption-fill ${fc}" style="width:${pct}%"></div>
+      </div>
+      <div class="nodes-count"><span>${c.knowledge_nodes}</span>/${c.target_nodes} nodos</div>
+      ${parentLine}
+    </div>`;
+}
+
+function renderTree(chars) {
+  const originals   = chars.filter(c => ORIGINALS.has(c.name));
+  const merges      = chars.filter(c => c.connection_type === 'merge');
+  const freeApis    = chars.filter(c => !ORIGINALS.has(c.name) && c.connection_type !== 'merge');
+
+  let html = '';
+
+  // Generación 0 — Originales
+  if (originals.length) {
+    html += `<div class="generation">
+      <div class="gen-label">G0 — Originales</div>
+      ${originals.map(c => makeCard(c)).join('')}
+    </div>`;
+  }
+
+  // Merges (soberanos nacidos de combinación)
+  if (merges.length) {
+    html += `<div class="generation">
+      <div class="gen-label">Soberanos merge</div>
+      ${merges.map(c => makeCard(c,'merge-child')).join('')}
+    </div>`;
+  }
+
+  // APIs gratuitas y lifecycle
+  if (freeApis.length) {
+    html += `<div class="generation">
+      <div class="gen-label">Lifecycle & APIs</div>
+      ${freeApis.map(c => makeCard(c)).join('')}
+    </div>`;
+  }
+
+  document.getElementById('tree').innerHTML = html || '<div class="loading">Sin personajes aún</div>';
+}
+
+function renderStats(stats, chars) {
+  const total    = chars.length;
+  const sovereign= chars.filter(c => c.status === 'sovereign').length;
+  const learning = chars.filter(c => c.status === 'learning').length;
+  const absorbing= chars.filter(c => c.status === 'absorbing').length;
+  const totalNodes = chars.reduce((s,c) => s + (c.knowledge_nodes||0), 0);
+
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat-chip">Total <span>${total}</span> personajes</div>
+    <div class="stat-chip">Soberanos <span>${sovereign}</span></div>
+    <div class="stat-chip">Aprendiendo <span>${learning}</span></div>
+    <div class="stat-chip">Absorbiendo <span>${absorbing}</span></div>
+    <div class="stat-chip">Nodos totales <span>${totalNodes}</span></div>
+    ${stats.chroma_vectors ? `<div class="stat-chip">ChromaDB <span>${stats.chroma_vectors}</span> vectores</div>` : ''}
+  `;
+}
+
+function showDetail(name) {
+  const c = allChars.find(x => x.name === name);
+  if (!c) return;
+  const pct = Math.round((c.absorption_pct||0)*100);
+  document.getElementById('detailContent').innerHTML = `
+    <div class="detail-emoji">${c.emoji||'🌱'}</div>
+    <div class="detail-name">${shortName(c.name)}</div>
+    <div class="detail-section">Estado</div>
+    <div class="detail-row"><span class="label">Status</span><span class="value">${c.status}</span></div>
+    <div class="detail-row"><span class="label">Tipo</span><span class="value">${typeBadge(c.connection_type)}</span></div>
+    <div class="detail-row"><span class="label">Absorción</span><span class="value">${pct}%</span></div>
+    <div class="detail-row"><span class="label">Nodos</span><span class="value">${c.knowledge_nodes} / ${c.target_nodes}</span></div>
+    <div class="detail-row"><span class="label">Nacimiento</span><span class="value">${formatDate(c.birth_date)}</span></div>
+    ${c.parent1 ? `
+    <div class="detail-section">Linaje</div>
+    <div class="detail-row"><span class="label">Padre 1</span><span class="value">${c.parent1 ? shortName(c.parent1)+' '+getEmoji(c.parent1) : '—'}</span></div>
+    <div class="detail-row"><span class="label">Padre 2</span><span class="value">${c.parent2 ? shortName(c.parent2)+' '+getEmoji(c.parent2) : '—'}</span></div>
+    ` : ''}
+    <div class="detail-section">Nodo completo</div>
+    <div class="detail-row"><span class="label">ID</span><span class="value" style="font-size:0.7rem">${c.name}</span></div>
+  `;
+  document.getElementById('detailPanel').classList.add('open');
+}
+
+function getEmoji(name) {
+  const c = allChars.find(x => x.name === name);
+  return c ? (c.emoji||'') : '';
+}
+
+function closeDetail() {
+  document.getElementById('detailPanel').classList.remove('open');
+}
+
+// Cargar datos
+async function load() {
+  try {
+    const r = await fetch('/api/genealogy');
+    const d = await r.json();
+    if (!d.success) throw new Error(d.error);
+    allChars = d.characters;
+    renderTree(d.characters);
+    renderStats(d.stats || {}, d.characters);
+    // Recargar cada 15s
+    setTimeout(load, 15000);
+  } catch(e) {
+    document.getElementById('tree').innerHTML = `<div class="loading">Error: ${e.message}</div>`;
+  }
+}
+
+// Click fuera del panel cierra
+document.addEventListener('click', e => {
+  if (!e.target.closest('.card') && !e.target.closest('.detail-panel')) {
+    closeDetail();
+  }
+});
+
+load();
+</script>
+</body>
+</html>

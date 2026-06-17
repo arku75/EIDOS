@@ -1,0 +1,11 @@
+[Unit]
+Description=EIDOS Identity — Sleep diario y consolidación autobiográfica
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -c "from core.eidos_identity import get_identity; idn = get_identity(); result = idn.sleep(); print(f'Sleep #{result[\"sleep_cycle\"]} — independencia: {result[\"independence_pct\"]}%')"
+WorkingDirectory=/home/ser/EIDOS
+Environment=PYTHONPATH=/home/ser/EIDOS
+StandardOutput=append:/home/ser/.eidos/identity_sleep.log
+StandardError=append:/home/ser/.eidos/identity_sleep.log

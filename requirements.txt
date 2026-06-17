@@ -1,0 +1,106 @@
+# =============================================================================
+# EIDOS requirements.txt
+# Auto-generated 2026-06-15 from scanning ALL imports in core/ (424 modules)
+# and cross-referencing with pip list for installed versions.
+# Excludes test-only dependencies and stdlib modules.
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# CORE — essential system / API / process
+# ---------------------------------------------------------------------------
+requests==2.34.2
+fastapi==0.118.0
+starlette==0.50.0
+pydantic==2.13.4
+certifi==2026.5.20
+psutil==7.1.0
+rich==15.0.0
+
+# ---------------------------------------------------------------------------
+# WEB — HTTP clients, scraping, browsers, WebSocket
+# ---------------------------------------------------------------------------
+aiohttp==3.13.5
+Flask==3.1.2
+beautifulsoup4==4.14.3
+playwright==1.55.0+ds
+selenium==4.24.0
+curl-cffi==0.15.0
+websockets==16.0
+html2text==2025.4.15
+
+# ---------------------------------------------------------------------------
+# ML / AI — models, embeddings, vector DB, NLP, speech-to-text, crypto
+# ---------------------------------------------------------------------------
+torch==2.10.0+cpu
+transformers==5.3.0
+sentence-transformers==5.3.0
+chromadb==1.5.9
+faiss-cpu==1.14.2
+numpy==2.3.5
+scipy==1.16.3
+nltk==3.9.3
+fasttext==0.9.3
+pylate==1.5.0
+faster-whisper==1.2.1
+cryptography==46.0.6
+
+# ---------------------------------------------------------------------------
+# VISION — image processing, OCR, screen capture, GUI automation
+# ---------------------------------------------------------------------------
+Pillow==12.1.1
+opencv-python==4.13.0.92
+pytesseract==0.3.13
+mss==10.1.0
+rapidocr-onnxruntime==1.2.3
+PyAutoGUI==0.9.54
+python-xlib==0.33
+
+# ---------------------------------------------------------------------------
+# AUDIO / VOICE — playback, recording, speech recognition, TTS
+# ---------------------------------------------------------------------------
+sounddevice==0.5.5
+vosk==0.3.45
+PyAudio==0.2.14
+pyttsx3==2.99
+
+# ---------------------------------------------------------------------------
+# UTILS — plotting, dotenv, auth, TUI, shell, git
+# ---------------------------------------------------------------------------
+matplotlib==3.10.7+dfsg1
+python-dotenv==1.2.2
+PyJWT==2.11.0
+textual==8.2.6
+prompt-toolkit==3.0.52
+GitPython==3.1.46
+
+# ---------------------------------------------------------------------------
+# DB — vector search / custom SQLite extensions
+# ---------------------------------------------------------------------------
+sqlite-vec==0.1.7
+
+# ---------------------------------------------------------------------------
+# DOCUMENTS — PDF, DOCX, EPUB, MOBI
+# ---------------------------------------------------------------------------
+PyPDF2==3.0.1
+pdfminer.six==20260107
+python-docx==1.2.0
+EbookLib==0.20
+mobi==0.4.1
+
+# ---------------------------------------------------------------------------
+# OPTIONAL / SPECIALIZED — installed, used by core
+# ---------------------------------------------------------------------------
+discord.py==2.7.1        # Discord bot integration
+yt-dlp==2026.3.17        # YouTube / media download
+
+# ---------------------------------------------------------------------------
+# OPTIONAL / SPECIALIZED — not currently installed
+# (imported conditionally via try/except; safe to omit)
+# ---------------------------------------------------------------------------
+# openai-whisper          # fallback when faster-whisper unavailable
+# pyatspi                 # AT-SPI accessibility (installed system-wide via apt)
+# autopep8                # code auto-formatter
+# duckdb                  # alternative analytics engine
+# pydub                   # audio format conversion
+# piper-tts               # TTS engine
+# surya-ocr               # OCR engine

@@ -1,0 +1,156 @@
+#!/usr/bin/env python3
+"""
+bin/eidos-self-daemon — Daemon de Conciencia de EIDOS [S102]
+
+Punto de entrada para el bucle de conciencia continua.
+Ejecuta tick() del daemon en un loop infinito con night cycle integrado.
+
+Cada tick (~1s):
+  1. Supervisor._detect_system_pain()
+  2. Daemon.tick() → 4 triggers → pensamientos
+  3. Will.decide() → acciones
+  4. Night Cycle check → dormir si toca
+
+systemd: eidos-self.service
+  systemctl --user enable --now eidos-self.service
+"""
+
+import logging
+import os
+import signal
+import sys
+import time
+from pathlib import Path
+
+# Añadir EIDOS al path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+log = logging.getLogger("eidos.self_daemon")
+
+RUNNING = True
+
+
+def handle_signal(signum, frame):
+    global RUNNING
+    log.info("Señal %s recibida. Apagando...", signum)
+    RUNNING = False
+
+
+def main():
+    global RUNNING
+
+    signal.signal(signal.SIGTERM, handle_signal)
+    signal.signal(signal.SIGINT, handle_signal)
+
+    log.info("═══ EIDOS Self Daemon iniciando ═══")
+
+    # Inicializar componentes en orden
+    from core.eidos_affect import get_affect
+    from core.eidos_self_core import get_self_core
+    from core.eidos_daemon import get_daemon
+    from core.eidos_will import get_will
+    from core.eidos_supervisor import get_supervisor
+    from core.eidos_night_cycle import get_night_cycle
+
+    affect = get_affect()
+    self_core = get_self_core()
+    daemon = get_daemon()
+    will = get_will()
+    supervisor = get_supervisor()
+    night = get_night_cycle()
+    # S103: Meta-cognición
+    try:
+        from core.eidos_metacognition import get_metacognition
+        metacog = get_metacognition()
+    except Exception:
+        metacog = None
+
+    tick_count = 0
+    cycle_count = 0
+    ticks_per_cycle = 60  # ~1 minuto por ciclo (a 1 tick/s)
+
+    log.info("Componentes inicializados. Entrando en bucle de conciencia.")
+    log.info("VAD inicial: %s", affect.vad_tuple())
+    log.info("Self states previos: %d", self_core._state_counter)
+
+    last_status_log = 0
+    STATUS_LOG_INTERVAL = 300  # cada 5 minutos
+
+    while RUNNING:
+        try:
+            tick_start = time.time()
+
+            # 1. Supervisor: detectar dolor del sistema
+            supervisor._detect_system_pain()
+
+            # 2. Daemon: tick con 5 triggers (incl. meta_reflection S103)
+            daemon.tick()
+
+            # 2b. Meta-cognición directa (S103) — cada 60 ticks (~1 min)
+            if metacog and tick_count > 0 and tick_count % 60 == 0:
+                try:
+                    meta_results = metacog.reflect()
+                    if meta_results:
+                        log.debug("MetaCognition: %d reflexiones generadas",
+                                  len(meta_results))
+                except Exception:
+                    pass
+
+            # 3. Will: decidir y ejecutar
+            decision = will.decide()
+            if decision and decision.get("type"):
+                log.info("Will decidió: %s", decision.get("type"))
+
+            # 4. Night Cycle: ¿hora de dormir?
+            if tick_count > 0 and tick_count % ticks_per_cycle == 0:
+                cycle_count += 1
+                # Verificar si toca noche (cada ~8h = 480 ciclos)
+                # Pero ante la duda, utilizar is_time_to_sleep
+                if night.is_time_to_sleep(
+                    cycles_since_last=cycle_count,
+                    hours_since_last=(time.time() - (night._last_night or 0)) / 3600
+                ):
+                    log.info("NightCycle: es hora de dormir (ciclo %d)", cycle_count)
+                    night_result = night.run()
+                    log.info("NightCycle: %d fases completadas en %.1fs",
+                             len(night_result.get("phases", {})),
+                             night_result.get("elapsed_s", 0))
+                    # Resetear contador de ciclos tras noche
+                    cycle_count = 0
+
+            # 5. Status periódico
+            tick_count += 1
+            if time.time() - last_status_log > STATUS_LOG_INTERVAL:
+                v, a_coeff, d = affect.vad_tuple()
+                gap = self_core.self_consistency_gap()
+                log.info(
+                    "Status: %d ticks · %d ciclos · VAD=(%.2f,%.2f,%.2f) · "
+                    "gap=%.1f%% · mood=%s",
+                    tick_count, cycle_count, v, a_coeff, d,
+                    gap.get("gap_pct", 0), affect.describe()[:50]
+                )
+                last_status_log = time.time()
+
+            # 6. Dormir el resto del segundo
+            elapsed = time.time() - tick_start
+            if elapsed < 0.9:
+                time.sleep(0.9 - elapsed)
+
+        except Exception as e:
+            log.error("Error en bucle principal: %s", e)
+            time.sleep(5)  # esperar antes de reintentar
+
+    # Apagar
+    log.info("Apagando componentes...")
+    self_core.flush()
+    self_core.close()
+    log.info("═══ EIDOS Self Daemon apagado — %d ticks totales ═══", tick_count)
+
+
+if __name__ == "__main__":
+    main()

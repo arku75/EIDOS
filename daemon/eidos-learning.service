@@ -1,0 +1,23 @@
+[Unit]
+Description=EIDOS Learning Daemon - Aprendizaje Continuo 24/7
+After=network.target
+
+[Service]
+Type=simple
+User=ser
+WorkingDirectory=/home/ser/EIDOS
+ExecStart=/usr/bin/python3 /home/ser/EIDOS/eidos_learning_daemon.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/home/ser/.eidos/logs/learning_daemon.log
+StandardError=append:/home/ser/.eidos/logs/learning_daemon_error.log
+
+# Variables de entorno
+Environment="PYTHONUNBUFFERED=1"
+
+# Seguridad
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

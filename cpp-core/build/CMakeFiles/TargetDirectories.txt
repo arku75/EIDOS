@@ -1,0 +1,8 @@
+/home/ser/EIDOS/cpp-core/build/CMakeFiles/eidos_vision.dir
+/home/ser/EIDOS/cpp-core/build/CMakeFiles/eidos_vision_cli.dir
+/home/ser/EIDOS/cpp-core/build/CMakeFiles/edit_cache.dir
+/home/ser/EIDOS/cpp-core/build/CMakeFiles/rebuild_cache.dir
+/home/ser/EIDOS/cpp-core/build/CMakeFiles/list_install_components.dir
+/home/ser/EIDOS/cpp-core/build/CMakeFiles/install.dir
+/home/ser/EIDOS/cpp-core/build/CMakeFiles/install/local.dir
+/home/ser/EIDOS/cpp-core/build/CMakeFiles/install/strip.dir

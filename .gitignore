@@ -1,0 +1,73 @@
+# ── Secretos (NUNCA subir) ───────────────────────────────────────────────
+*.env
+secrets.env
+.env.local
+api_keys.json
+_DOCS_NOTES/
+**/API_KEYS*.md
+*.key
+*.pem
+id_rsa*
+id_ed25519*
+*.kdbx
+
+# ── Datos / bases de datos (privadas, pesadas) ───────────────────────────
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+~/.eidos/
+.eidos/
+memoria_fenix/
+CronosData/
+
+# ── Datos de navegador / perfiles (privados) ─────────────────────────────
+**/Trust Tokens*
+**/Cookies*
+**/Login Data*
+VSEIDOS/data/
+
+# ── Python ───────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+.venv*/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# ── Build / vendor / terceros ────────────────────────────────────────────
+node_modules/
+opensource_research/
+external/
+external_repos/
+vendor/
+models/
+graphify-out/
+maker_output/
+jscpd-report/
+
+# ── Backups / temporales / notas internas ────────────────────────────────
+*.bak
+*.dead
+*.log
+*.tmp
+*.tar.gz
+*.zip
+*.bundle
+_DEAD_DBS_*/
+_SCRIPTS/
+_SYSTEM_INVENTORY/
+TASK.md
+SER_BRAIN.md
+SER_IDENTITY.md
+LUMEN_BRAIN.md
+LUMEN_IDENTITY.md
+FORGE_BRAIN.md
+MENSAJE_PARA_CLAUDE*.md
+INFORME_*.md
+DIAGNOSTICO_*.md
+COMPLETION_REPORT.md
+IMPLEMENTACION_*.md
+PRIORIDADES_LOCAL*

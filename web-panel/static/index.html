@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EIDOS Control Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #312e81 100%);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 5px;
+        }
+
+        .header .subtitle {
+            opacity: 0.8;
+            font-size: 1.1em;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .status-card {
+            flex: 1;
+            min-width: 200px;
+            background: #161b22;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+        }
+
+        .status-card h3 {
+            font-size: 0.9em;
+            color: #8b949e;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .status-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #58a6ff;
+        }
+
+        .status-card .subtext {
+            font-size: 0.85em;
+            color: #8b949e;
+            margin-top: 5px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 1200px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .panel h2 {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            color: #58a6ff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .process-item {
+            background: #0d1117;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border-left: 3px solid #58a6ff;
+        }
+
+        .process-item.running {
+            border-left-color: #3fb950;
+        }
+
+        .process-item.completed {
+            border-left-color: #8b949e;
+        }
+
+        .process-item.failed {
+            border-left-color: #f85149;
+        }
+
+        .process-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .process-name {
+            font-weight: bold;
+            font-size: 1.05em;
+        }
+
+        .process-status {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .process-status.running {
+            background: #1a7f37;
+            color: #fff;
+        }
+
+        .process-status.completed {
+            background: #6e7681;
+            color: #fff;
+        }
+
+        .process-status.failed {
+            background: #da3633;
+            color: #fff;
+        }
+
+        .process-status.queued {
+            background: #6e40c9;
+            color: #fff;
+        }
+
+        .process-meta {
+            font-size: 0.85em;
+            color: #8b949e;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .log-item {
+            background: #0d1117;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border-left: 3px solid #8b949e;
+        }
+
+        .log-item.file_create,
+        .log-item.file_edit {
+            border-left-color: #58a6ff;
+        }
+
+        .log-item.process_start,
+        .log-item.process_complete {
+            border-left-color: #3fb950;
+        }
+
+        .log-item.learning_start,
+        .log-item.learning_complete {
+            border-left-color: #d29922;
+        }
+
+        .log-item.error {
+            border-left-color: #f85149;
+        }
+
+        .log-timestamp {
+            font-size: 0.75em;
+            color: #6e7681;
+        }
+
+        .log-description {
+            margin: 8px 0;
+            font-weight: bold;
+        }
+
+        .log-changes {
+            font-size: 0.9em;
+            color: #8b949e;
+            margin-top: 5px;
+        }
+
+        .log-changes .before {
+            color: #f85149;
+        }
+
+        .log-changes .after {
+            color: #3fb950;
+        }
+
+        .file-link {
+            color: #58a6ff;
+            text-decoration: none;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .file-link:hover {
+            text-decoration: underline;
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            z-index: 1000;
+        }
+
+        .connection-status.connected {
+            background: #1a7f37;
+            color: #fff;
+        }
+
+        .connection-status.disconnected {
+            background: #da3633;
+            color: #fff;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6e7681;
+        }
+
+        .resources-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .resource-bar {
+            margin: 5px 0;
+        }
+
+        .resource-label {
+            font-size: 0.85em;
+            color: #8b949e;
+            margin-bottom: 3px;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #21262d;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #58a6ff;
+            transition: width 0.3s ease;
+        }
+
+        .progress-fill.high {
+            background: #f85149;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+    </style>
+</head>
+<body>
+    <div class="connection-status" id="connectionStatus">Connecting...</div>
+
+    <div class="header">
+        <h1>🤖 EIDOS Control Panel</h1>
+        <div class="subtitle">Real-time System Monitoring & Management</div>
+        <div style="margin-top:12px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+          <a href="/autonomia" style="background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.4);color:#a78bfa;padding:7px 16px;border-radius:8px;text-decoration:none;font-size:0.85rem;font-weight:600">🧠 Dashboard Autonomía</a>
+          <a href="/claw" style="background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.4);color:#93c5fd;padding:7px 16px;border-radius:8px;text-decoration:none;font-size:0.85rem;font-weight:600">🦅 OpenClaw Panel</a>
+          <a href="#" onclick="fetch('/api/launch-viewer?input=1',{method:'POST'}).then(r=>r.json()).then(d=>{this.textContent=d.success?'🖥️ App lanzada ✓':'🖥️ Error';setTimeout(()=>this.textContent='🖥️ Control Pantalla (app)',2500)}).catch(()=>this.textContent='🖥️ Error');return false;" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#f87171;padding:7px 16px;border-radius:8px;text-decoration:none;font-size:0.85rem;font-weight:600">🖥️ Control Pantalla (app)</a>
+          <a href="http://localhost:7777/genealogy" target="_blank" style="background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.4);color:#c084fc;padding:7px 16px;border-radius:8px;text-decoration:none;font-size:0.85rem;font-weight:600">🧬 Colony Genealogy</a>
+          <a href="http://localhost:7777" target="_blank" style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);color:#4ade80;padding:7px 16px;border-radius:8px;text-decoration:none;font-size:0.85rem;font-weight:600">🧠 Colony Dashboard</a>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <div class="status-card">
+            <h3>🔄 Active Processes</h3>
+            <div class="value" id="activeProcesses">0</div>
+            <div class="subtext">of <span id="maxConcurrent">5</span> max</div>
+        </div>
+
+        <div class="status-card">
+            <h3>⏳ Queued Tasks</h3>
+            <div class="value" id="queuedTasks">0</div>
+            <div class="subtext">waiting</div>
+        </div>
+
+        <div class="status-card">
+            <h3>✅ Completed</h3>
+            <div class="value" id="completedTasks">0</div>
+            <div class="subtext">total</div>
+        </div>
+
+        <div class="status-card">
+            <h3>🧠 Knowledge Items</h3>
+            <div class="value" id="knowledgeItems">0</div>
+            <div class="subtext">learned</div>
+        </div>
+
+        <div class="status-card">
+            <h3>💻 System CPU</h3>
+            <div class="value" id="systemCPU">0%</div>
+            <div class="subtext">utilization</div>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="panel full-width">
+            <h2>🚀 Background Processes</h2>
+            <div id="processesList"></div>
+        </div>
+
+        <div class="panel">
+            <h2>📋 Recent Activity Logs</h2>
+            <div id="logsList"></div>
+        </div>
+
+        <div class="panel">
+            <h2>📚 Learning Progress</h2>
+            <div id="learningList"></div>
+        </div>
+    </div>
+
+    <script>
+        let ws;
+        let reconnectInterval;
+
+        function connect() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                updateConnectionStatus(true);
+                if (reconnectInterval) {
+                    clearInterval(reconnectInterval);
+                    reconnectInterval = null;
+                }
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket disconnected');
+                updateConnectionStatus(false);
+                if (!reconnectInterval) {
+                    reconnectInterval = setInterval(() => {
+                        console.log('Attempting to reconnect...');
+                        connect();
+                    }, 3000);
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleUpdate(data);
+            };
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            if (connected) {
+                statusEl.textContent = '🟢 Connected';
+                statusEl.className = 'connection-status connected';
+            } else {
+                statusEl.textContent = '🔴 Disconnected';
+                statusEl.className = 'connection-status disconnected';
+            }
+        }
+
+        function handleUpdate(data) {
+            if (data.type === 'full_update') {
+                updateDashboard(data.data);
+            }
+        }
+
+        function updateDashboard(state) {
+            // Update stats
+            const pm = state.process_manager.stats;
+            document.getElementById('activeProcesses').textContent = pm.active || 0;
+            document.getElementById('maxConcurrent').textContent = pm.max_concurrent || 5;
+            document.getElementById('queuedTasks').textContent = pm.queued || 0;
+            document.getElementById('completedTasks').textContent = pm.completed || 0;
+            document.getElementById('systemCPU').textContent = (pm.system_cpu_percent || 0).toFixed(1) + '%';
+
+            const kb = state.knowledge_db.stats;
+            const langCount = typeof kb.languages === 'object' ? Object.keys(kb.languages).length : kb.languages || 0;
+            const libCount = typeof kb.libraries === 'object' ? Object.keys(kb.libraries).length : kb.libraries || 0;
+            document.getElementById('knowledgeItems').textContent = langCount + libCount;
+
+            // Update processes
+            updateProcessesList(state.process_manager.processes);
+
+            // Update logs
+            updateLogsList(state.logs);
+
+            // Update learning
+            updateLearningList(state.learning);
+        }
+
+        function updateProcessesList(processes) {
+            const container = document.getElementById('processesList');
+
+            if (!processes || processes.length === 0) {
+                container.innerHTML = '<div class="empty-state">No active processes</div>';
+                return;
+            }
+
+            container.innerHTML = processes.map(proc => `
+                <div class="process-item ${proc.status}">
+                    <div class="process-header">
+                        <div class="process-name">${escapeHtml(proc.name)}</div>
+                        <div class="process-status ${proc.status}">${proc.status.toUpperCase()}</div>
+                    </div>
+                    <div class="process-meta">
+                        <span>⚡ ${proc.priority}</span>
+                        <span>💻 CPU: ${proc.cpu_percent.toFixed(1)}%</span>
+                        <span>💾 MEM: ${proc.memory_mb.toFixed(1)} MB</span>
+                        ${proc.started_at ? `<span>🕐 ${formatTime(proc.started_at)}</span>` : ''}
+                        <span>📝 ${proc.changes_count} changes</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateLogsList(logs) {
+            const container = document.getElementById('logsList');
+
+            if (!logs || logs.length === 0) {
+                container.innerHTML = '<div class="empty-state">No logs yet</div>';
+                return;
+            }
+
+            container.innerHTML = logs.slice(-10).reverse().map(log => `
+                <div class="log-item ${log.type}">
+                    <div class="log-timestamp">${formatTime(log.timestamp)}</div>
+                    <div class="log-description">${getLogEmoji(log.type)} ${escapeHtml(log.description)}</div>
+                    ${log.file_link ? `<div><a href="#" class="file-link">${escapeHtml(log.file_link)}</a></div>` : ''}
+                    ${log.before || log.after ? `
+                        <div class="log-changes">
+                            ${log.before ? `<div class="before">⬅️ ${escapeHtml(log.before)}</div>` : ''}
+                            ${log.after ? `<div class="after">➡️ ${escapeHtml(log.after)}</div>` : ''}
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        function updateLearningList(learning) {
+            const container = document.getElementById('learningList');
+
+            if (!learning || !learning.recent_items || learning.recent_items.length === 0) {
+                container.innerHTML = '<div class="empty-state">No learning activity yet</div>';
+                return;
+            }
+
+            const items = learning.recent_items.slice(-5).reverse();
+
+            container.innerHTML = `
+                <div style="margin-bottom: 15px; color: #8b949e;">
+                    Total learned: <strong style="color: #58a6ff;">${learning.total_learned}</strong> items
+                    <br>
+                    Queue: <strong style="color: #d29922;">${learning.queue_size}</strong> pending
+                </div>
+                ${items.map(item => `
+                    <div class="log-item learning_complete">
+                        <div class="log-description">📚 ${escapeHtml(item.title)}</div>
+                        <div class="log-changes">
+                            <span style="color: #8b949e;">Type: ${item.source_type}</span>
+                            <span style="margin-left: 10px; color: #3fb950;">Status: ${item.status}</span>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        function getLogEmoji(type) {
+            const emojis = {
+                'file_create': '📝',
+                'file_edit': '✏️',
+                'function_add': '⚡',
+                'process_start': '🚀',
+                'process_complete': '✅',
+                'learning_start': '📚',
+                'learning_complete': '🎓',
+                'error': '❌',
+                'info': 'ℹ️'
+            };
+            return emojis[type] || '📌';
+        }
+
+        function formatTime(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleTimeString();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Connect on load
+        connect();
+
+        // Keep alive ping
+        setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send('ping');
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

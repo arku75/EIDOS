@@ -1,0 +1,1593 @@
+"""
+EIDOS Browser - Navegador propio integrado con control total
+Basado en Selenium con anti-detección completa
+EIDOS puede controlarlo como extensión de sí mismo
+"""
+import os
+import time
+from pathlib import Path
+from typing import Optional, List, Dict, Any
+from dataclasses import dataclass
+
+# Try Playwright first (venv con chromium propio), fallback to Selenium
+PLAYWRIGHT_AVAILABLE = False
+SELENIUM_AVAILABLE = False
+VENV_PYTHON = "/home/ser/EIDOS/.venv/bin/python"
+
+try:
+    # Intentar primero el playwright del venv EIDOS (tiene chromium propio)
+    import sys as _sys
+    _venv_site = "/home/ser/EIDOS/.venv/lib/python{}.{}/site-packages".format(
+        _sys.version_info.major, _sys.version_info.minor
+    )
+    if _venv_site not in _sys.path:
+        _sys.path.insert(0, _venv_site)
+    from playwright.sync_api import sync_playwright, Browser, Page, BrowserContext
+    # Test rápido que el driver funciona (el del sistema está roto)
+    import subprocess as _sp
+    _test = _sp.run([VENV_PYTHON, "-c", "from playwright.sync_api import sync_playwright"],
+                    capture_output=True, timeout=3)
+    PLAYWRIGHT_AVAILABLE = (_test.returncode == 0)
+except Exception:
+    PLAYWRIGHT_AVAILABLE = False
+
+try:
+    from selenium import webdriver
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.chrome.options import Options as ChromeOptions
+    from selenium.webdriver.chrome.service import Service
+    SELENIUM_AVAILABLE = True
+except ImportError:
+    pass
+
+
+@dataclass
+class UIElement:
+    """Elemento de UI detectado en el navegador"""
+    text: str
+    tag: str
+    x: int
+    y: int
+    x1: int
+    y1: int
+    x2: int
+    y2: int
+    role: str = ""
+    clickable: bool = False
+
+
+class EidosBrowser:
+    """
+    Navegador propio de EIDOS con control total e inteligencia adaptativa
+
+    Capacidades:
+    1. Soporta Playwright (preferido) y Selenium (fallback)
+    2. Anti-detección multi-capa
+    3. **MODO VISION**: Si DOM/JavaScript bloqueado → usa Vision para navegar
+    4. Detección automática de bloqueos anti-bot
+    5. Fullscreen + Vision para sitios ultra-protegidos
+    """
+
+    PROFILE_DIR = Path.home() / ".eidos" / "browser_profile"
+    SCREENSHOT_DIR = Path.home() / ".eidos" / "screenshots"
+    SESSIONS_DIR = Path.home() / ".eidos" / "browser_sessions"
+    COOKIES_FILE = Path.home() / ".eidos" / "browser_profile" / "cookies.json"
+    HISTORY_FILE = Path.home() / ".eidos" / "browser_profile" / "history.jsonl"
+
+    def __init__(self, headless: bool = False, engine: str = "auto", session_name: str = "default"):
+        """
+        Args:
+            headless: Si True, ejecuta sin UI visible
+            engine: "playwright" | "selenium" | "auto" (auto-detecta)
+            session_name: Nombre de sesión para guardar/restaurar estado
+        """
+        self.headless = headless
+        self.engine = self._select_engine(engine)
+        self.session_name = session_name
+        self.browser = None
+        self.page = None
+        self.driver = None  # Para Selenium
+
+        # Modo adaptativo
+        self.vision_mode = False  # Si True, usa Vision en vez de DOM
+        self.dom_blocked = False  # Si detecta que DOM está bloqueado
+
+        # 🆕 Persistencia
+        self.cookies_loaded = False
+        self.history = []
+
+        # Crear directorios
+        self.PROFILE_DIR.mkdir(parents=True, exist_ok=True)
+        self.SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
+        self.SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
+
+        print(f"🌐 [EIDOS Browser] Usando engine: {self.engine}")
+        print(f"💾 [EIDOS Browser] Sesión: {session_name}")
+
+    def _select_engine(self, engine: str) -> str:
+        """Selecciona engine disponible"""
+        if engine == "playwright" and PLAYWRIGHT_AVAILABLE:
+            return "playwright"
+        elif engine == "selenium" and SELENIUM_AVAILABLE:
+            return "selenium"
+        elif engine == "auto":
+            # PRIORIZAR SELENIUM por ahora (Playwright tiene issues en Kali)
+            if SELENIUM_AVAILABLE:
+                return "selenium"
+            elif PLAYWRIGHT_AVAILABLE:
+                return "playwright"
+            else:
+                raise RuntimeError("❌ Ni Playwright ni Selenium están instalados")
+        else:
+            raise RuntimeError(f"❌ Engine '{engine}' no disponible")
+
+    def start(self):
+        """Inicia el navegador"""
+        if self.engine == "playwright":
+            return self._start_playwright()
+        else:
+            return self._start_selenium()
+
+    def _start_playwright(self):
+        """Inicia navegador con Playwright"""
+        self.playwright = sync_playwright().start()
+
+        # Lanzar Chromium con perfil persistente
+        self.browser = self.playwright.chromium.launch_persistent_context(
+            user_data_dir=str(self.PROFILE_DIR),
+            headless=self.headless,
+            viewport={"width": 1920, "height": 1080},
+
+            # Anti-detección
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--disable-dev-shm-usage",
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-gpu",
+            ],
+
+            # User agent real
+            user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+
+            # Bypass anti-bot
+            ignore_https_errors=True,
+        )
+
+        # Página inicial
+        self.page = self.browser.pages[0] if self.browser.pages else self.browser.new_page()
+
+        # Inyectar scripts anti-detección
+        self._inject_stealth_playwright()
+
+        print("✅ [EIDOS Browser] Playwright iniciado")
+        return self.page
+
+    def _start_selenium(self):
+        """Inicia navegador con Selenium + anti-detección"""
+        options = ChromeOptions()
+
+        # Perfil persistente
+        options.add_argument(f"user-data-dir={self.PROFILE_DIR}")
+
+        # Anti-detección
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        options.add_experimental_option('useAutomationExtension', False)
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+
+        # User agent real
+        options.add_argument("user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+        # Headless si se requiere
+        if self.headless:
+            options.add_argument("--headless=new")
+
+        # Preferencias
+        prefs = {
+            "credentials_enable_service": False,
+            "profile.password_manager_enabled": False,
+            "profile.default_content_setting_values.notifications": 2,  # Bloquear notificaciones
+        }
+        options.add_experimental_option("prefs", prefs)
+
+        # Iniciar driver con Service explícito
+        from selenium.webdriver.chrome.service import Service as ChromeService
+
+        # Intentar múltiples configuraciones hasta que funcione
+        driver_attempts = [
+            ("/usr/bin/chromedriver", None),  # System chromedriver
+            ("/usr/bin/chromedriver", "/usr/bin/chromium"),  # Chromium + chromedriver
+            ("/usr/bin/chromedriver", "/usr/bin/google-chrome"),  # Chrome + chromedriver
+            (None, "/usr/bin/chromium"),  # Chromium auto-detect driver
+        ]
+
+        last_error = None
+        for driver_path, binary_loc in driver_attempts:
+            try:
+                if binary_loc:
+                    options.binary_location = binary_loc
+
+                if driver_path:
+                    service = ChromeService(executable_path=driver_path)
+                    self.driver = webdriver.Chrome(service=service, options=options)
+                else:
+                    self.driver = webdriver.Chrome(options=options)
+
+                print(f"✅ Driver iniciado: {driver_path or 'auto'} + {binary_loc or 'auto'}")
+                break
+
+            except Exception as e:
+                last_error = e
+                continue
+
+        if not self.driver:
+            raise RuntimeError(f"❌ No se pudo iniciar navegador. Último error: {last_error}")
+
+        # Inyectar scripts anti-detección
+        self._inject_stealth_selenium()
+
+        print("✅ [EIDOS Browser] Selenium iniciado")
+        return self.driver
+
+    def _inject_stealth_playwright(self):
+        """Inyecta scripts anti-detección en Playwright"""
+        stealth_script = """
+        () => {
+            // Ocultar webdriver
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined
+            });
+
+            // Fake plugins
+            Object.defineProperty(navigator, 'plugins', {
+                get: () => [1, 2, 3, 4, 5]
+            });
+
+            // Fake languages
+            Object.defineProperty(navigator, 'languages', {
+                get: () => ['es-ES', 'es', 'en-US', 'en']
+            });
+
+            // Chrome runtime
+            window.chrome = {
+                runtime: {}
+            };
+
+            // Permisos
+            const originalQuery = window.navigator.permissions.query;
+            window.navigator.permissions.query = (parameters) => (
+                parameters.name === 'notifications' ?
+                Promise.resolve({ state: Notification.permission }) :
+                originalQuery(parameters)
+            );
+        }
+        """
+        self.page.add_init_script(stealth_script)
+
+    def _inject_stealth_selenium(self):
+        """Inyecta scripts anti-detección en Selenium"""
+        stealth_script = """
+        Object.defineProperty(navigator, 'webdriver', {
+            get: () => undefined
+        });
+
+        Object.defineProperty(navigator, 'plugins', {
+            get: () => [1, 2, 3, 4, 5]
+        });
+
+        Object.defineProperty(navigator, 'languages', {
+            get: () => ['es-ES', 'es', 'en-US', 'en']
+        });
+
+        window.chrome = { runtime: {} };
+        """
+
+        self.driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+            "source": stealth_script
+        })
+
+    def goto(self, url: str, wait_until: str = "load"):
+        """Navega a URL"""
+        if self.engine == "playwright":
+            self.page.goto(url, wait_until=wait_until)
+        else:
+            self.driver.get(url)
+            if wait_until == "load":
+                WebDriverWait(self.driver, 10).until(
+                    lambda d: d.execute_script("return document.readyState") == "complete"
+                )
+
+        # 🆕 Guardar en historial automáticamente
+        try:
+            title = self.execute_script("return document.title") if hasattr(self, 'execute_script') else ""
+            self.add_to_history(url, title)
+        except Exception:
+            pass  # error no crítico, continuar
+        print(f"🌐 [Browser] Navegando a: {url}")
+        return self
+
+    def screenshot(self, path: str = None) -> str:
+        """Captura screenshot"""
+        if not path:
+            from datetime import datetime
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            path = str(self.SCREENSHOT_DIR / f"browser_{timestamp}.png")
+
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+
+        if self.engine == "playwright":
+            self.page.screenshot(path=path)
+        else:
+            self.driver.save_screenshot(path)
+
+        print(f"📸 [Browser] Screenshot: {path}")
+        return path
+
+    def get_text(self) -> str:
+        """Obtiene todo el texto visible de la página"""
+        if self.engine == "playwright":
+            return self.page.inner_text("body")
+        else:
+            return self.driver.find_element(By.TAG_NAME, "body").text
+
+    def get_dom_elements(self) -> List[UIElement]:
+        """Obtiene elementos interactivos del DOM"""
+        if self.engine == "playwright":
+            return self._get_dom_elements_playwright()
+        else:
+            return self._get_dom_elements_selenium()
+
+    def _get_dom_elements_playwright(self) -> List[UIElement]:
+        """Extrae elementos del DOM con Playwright"""
+        elements_data = self.page.evaluate("""
+            () => {
+                const elements = [];
+                const clickable = document.querySelectorAll('button, a, input, select, textarea, [onclick]');
+
+                clickable.forEach(el => {
+                    const rect = el.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) {  // Solo elementos visibles
+                        elements.push({
+                            text: el.innerText || el.value || el.placeholder || el.alt || '',
+                            tag: el.tagName.toLowerCase(),
+                            x: Math.round(rect.x + rect.width / 2),
+                            y: Math.round(rect.y + rect.height / 2),
+                            x1: Math.round(rect.x),
+                            y1: Math.round(rect.y),
+                            x2: Math.round(rect.x + rect.width),
+                            y2: Math.round(rect.y + rect.height),
+                            role: el.getAttribute('role') || el.type || el.tagName.toLowerCase(),
+                            clickable: true
+                        });
+                    }
+                });
+
+                return elements;
+            }
+        """)
+
+        return [UIElement(**el) for el in elements_data]
+
+    def _get_dom_elements_selenium(self) -> List[UIElement]:
+        """Extrae elementos del DOM con Selenium"""
+        script = """
+        var elements = [];
+        var clickable = document.querySelectorAll('button, a, input, select, textarea, [onclick]');
+
+        clickable.forEach(function(el) {
+            var rect = el.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+                elements.push({
+                    text: el.innerText || el.value || el.placeholder || el.alt || '',
+                    tag: el.tagName.toLowerCase(),
+                    x: Math.round(rect.x + rect.width / 2),
+                    y: Math.round(rect.y + rect.height / 2),
+                    x1: Math.round(rect.x),
+                    y1: Math.round(rect.y),
+                    x2: Math.round(rect.x + rect.width),
+                    y2: Math.round(rect.y + rect.height),
+                    role: el.getAttribute('role') || el.type || el.tagName.toLowerCase(),
+                    clickable: true
+                });
+            }
+        });
+
+        return elements;
+        """
+
+        elements_data = self.driver.execute_script(script)
+        return [UIElement(**el) for el in elements_data]
+
+    def click(self, selector: str):
+        """Click en elemento por selector CSS"""
+        if self.engine == "playwright":
+            self.page.click(selector)
+        else:
+            element = WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
+            )
+            element.click()
+
+        print(f"🖱️  [Browser] Click: {selector}")
+        return self
+
+    def fill(self, selector: str, text: str):
+        """Rellena campo de texto"""
+        if self.engine == "playwright":
+            self.page.fill(selector, text)
+        else:
+            element = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+            )
+            element.clear()
+            element.send_keys(text)
+
+        print(f"⌨️  [Browser] Fill '{selector}': {text[:50]}...")
+        return self
+
+    def type(self, selector: str, text: str, delay: int = 0):
+        """
+        Tipea texto en un elemento (alias de fill con delay opcional).
+
+        Args:
+            selector: CSS selector del elemento
+            text: Texto a tipear
+            delay: Delay en ms entre teclas (solo Playwright)
+        """
+        if self.engine == "playwright":
+            self.page.type(selector, text, delay=delay)
+        else:
+            # Selenium: usa fill
+            self.fill(selector, text)
+
+        return self
+
+    def wait_for(self, selector: str, timeout: int = 5000):
+        """Espera elemento"""
+        if self.engine == "playwright":
+            self.page.wait_for_selector(selector, timeout=timeout)
+        else:
+            WebDriverWait(self.driver, timeout/1000).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+            )
+
+        return self
+
+    def execute(self, script: str):
+        """Ejecuta JavaScript"""
+        if self.engine == "playwright":
+            return self.page.evaluate(script)
+        else:
+            return self.driver.execute_script(script)
+
+    def execute_script(self, script: str, *args):
+        """
+        Alias de execute() para compatibilidad.
+        Ejecuta JavaScript en el contexto de la página.
+
+        Args:
+            script: Código JavaScript a ejecutar
+            *args: Argumentos para pasar al script
+
+        Returns:
+            Resultado de la ejecución del script
+        """
+        if self.engine == "playwright":
+            # Playwright usa evaluate
+            if args:
+                return self.page.evaluate(f"(...args) => {{ {script} }}", list(args))
+            return self.page.evaluate(script)
+        else:
+            return self.driver.execute_script(script, *args)
+
+    def get_url(self) -> str:
+        """Obtiene URL actual"""
+        if self.engine == "playwright":
+            return self.page.url
+        else:
+            return self.driver.current_url
+
+    def go_back(self):
+        """Navega hacia atrás"""
+        if self.engine == "playwright":
+            self.page.go_back()
+        else:
+            self.driver.back()
+        return self
+
+    def go_forward(self):
+        """Navega hacia adelante"""
+        if self.engine == "playwright":
+            self.page.go_forward()
+        else:
+            self.driver.forward()
+        return self
+
+    def refresh(self):
+        """Recarga la página"""
+        if self.engine == "playwright":
+            self.page.reload()
+        else:
+            self.driver.refresh()
+        return self
+
+    def select(self, selector: str, value: str):
+        """
+        Selecciona una opción en un <select> dropdown.
+
+        Args:
+            selector: CSS selector del elemento <select>
+            value: Valor a seleccionar
+        """
+        if self.engine == "playwright":
+            self.page.select_option(selector, value)
+        else:
+            from selenium.webdriver.support.select import Select
+            element = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+            )
+            Select(element).select_by_value(value)
+
+        print(f"📋 [Browser] Select '{selector}': {value}")
+        return self
+
+    def wait_for_navigation(self, timeout: int = 30000):
+        """
+        Espera a que la navegación se complete.
+
+        Args:
+            timeout: Timeout en milisegundos
+        """
+        if self.engine == "playwright":
+            self.page.wait_for_load_state("networkidle", timeout=timeout)
+        else:
+            # Selenium: esperar que la página esté completamente cargada
+            time.sleep(0.5)  # Pequeño delay
+            WebDriverWait(self.driver, timeout/1000).until(
+                lambda d: d.execute_script("return document.readyState") == "complete"
+            )
+
+        return self
+
+    def hover(self, selector: str):
+        """
+        Mueve el mouse sobre un elemento (hover).
+
+        Args:
+            selector: CSS selector del elemento
+        """
+        if self.engine == "playwright":
+            self.page.hover(selector)
+        else:
+            from selenium.webdriver.common.action_chains import ActionChains
+            element = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+            )
+            ActionChains(self.driver).move_to_element(element).perform()
+
+        print(f"👆 [Browser] Hover: {selector}")
+        return self
+
+    def press_key(self, key: str):
+        """
+        Presiona una tecla (Enter, Escape, etc.).
+
+        Args:
+            key: Nombre de la tecla
+        """
+        if self.engine == "playwright":
+            self.page.keyboard.press(key)
+        else:
+            from selenium.webdriver.common.keys import Keys
+            key_mapping = {
+                "Enter": Keys.ENTER,
+                "Escape": Keys.ESCAPE,
+                "Tab": Keys.TAB,
+                "Backspace": Keys.BACKSPACE,
+                "Delete": Keys.DELETE,
+                "ArrowUp": Keys.ARROW_UP,
+                "ArrowDown": Keys.ARROW_DOWN,
+                "ArrowLeft": Keys.ARROW_LEFT,
+                "ArrowRight": Keys.ARROW_RIGHT,
+            }
+            selenium_key = key_mapping.get(key, key)
+            from selenium.webdriver.common.action_chains import ActionChains
+            ActionChains(self.driver).send_keys(selenium_key).perform()
+
+        print(f"⌨️  [Browser] Press key: {key}")
+        return self
+
+    def get_element_text(self, selector: str) -> str:
+        """
+        Obtiene el texto de un elemento específico.
+
+        Args:
+            selector: CSS selector del elemento
+
+        Returns:
+            Texto del elemento
+        """
+        if self.engine == "playwright":
+            return self.page.text_content(selector) or ""
+        else:
+            element = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+            )
+            return element.text
+
+    def get_attribute(self, selector: str, attribute: str) -> Optional[str]:
+        """
+        Obtiene un atributo de un elemento.
+
+        Args:
+            selector: CSS selector
+            attribute: Nombre del atributo (e.g., "href", "src", "class")
+
+        Returns:
+            Valor del atributo o None
+        """
+        if self.engine == "playwright":
+            return self.page.get_attribute(selector, attribute)
+        else:
+            element = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+            )
+            return element.get_attribute(attribute)
+
+    def scroll_to(self, selector: str):
+        """
+        Hace scroll hasta un elemento.
+
+        Args:
+            selector: CSS selector del elemento
+        """
+        if self.engine == "playwright":
+            self.page.locator(selector).scroll_into_view_if_needed()
+        else:
+            element = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+            )
+            self.driver.execute_script("arguments[0].scrollIntoView(true);", element)
+
+        print(f"📜 [Browser] Scroll to: {selector}")
+        return self
+
+    # ═══════════════════════════════════════════════════════════════════════
+    #  AI-DRIVEN INTERACTION — Basado en openclaw_cli Playwright/CDP patterns
+    #  Ref tracking, accessibility snapshots, context compression
+    # ═══════════════════════════════════════════════════════════════════════
+
+    AI_SNAPSHOT_MAX_CHARS = 80_000
+    AI_SNAPSHOT_EFFICIENT_MAX = 10_000
+    AI_SNAPSHOT_EFFICIENT_DEPTH = 6
+    MAX_ROLE_REFS = 50
+
+    # Roles interactivos que siempre generan ref
+    INTERACTIVE_ROLES = frozenset({
+        "button", "link", "textbox", "checkbox", "radio", "combobox",
+        "listbox", "menuitem", "menuitemcheckbox", "menuitemradio",
+        "option", "searchbox", "slider", "spinbutton", "switch",
+        "tab", "treeitem", "gridcell", "columnheader", "rowheader",
+        "row", "cell", "scrollbar", "meter", "progressbar",
+    })
+
+    # Roles estructurales que se eliminan en modo compacto si no tienen nombre
+    STRUCTURAL_ROLES = frozenset({
+        "generic", "group", "list", "listitem", "navigation",
+        "region", "section", "banner", "complementary", "contentinfo",
+        "main", "form", "article", "figure",
+    })
+
+    def __init_ai_refs(self):
+        """Inicializa el sistema de refs si no existe."""
+        if not hasattr(self, '_ref_map'):
+            self._ref_map: Dict[str, dict] = {}  # e1 -> {role, name, nth, selector}
+            self._ref_counter = 0
+            self._snapshot_cache: List[str] = []
+
+    def _next_ref(self) -> str:
+        """Genera siguiente ref ID: e1, e2, ..."""
+        self.__init_ai_refs()
+        self._ref_counter += 1
+        return f"e{self._ref_counter}"
+
+    def ai_snapshot(self, mode: str = "full") -> str:
+        """
+        Genera un snapshot de la página optimizado para LLM.
+
+        Basado en openclaw's pw-role-snapshot + _snapshotForAI.
+
+        Args:
+            mode: "full" (80K chars) | "efficient" (10K chars, depth=6) | "interactive" (solo interactivos)
+
+        Returns:
+            Texto con accessibility tree + refs numerados (e1, e2, ...)
+        """
+        self.__init_ai_refs()
+        self._ref_map.clear()
+        self._ref_counter = 0
+
+        max_chars = self.AI_SNAPSHOT_MAX_CHARS if mode == "full" else self.AI_SNAPSHOT_EFFICIENT_MAX
+        max_depth = 999 if mode == "full" else self.AI_SNAPSHOT_EFFICIENT_DEPTH
+        interactive_only = (mode == "interactive")
+
+        try:
+            if self.engine == "playwright" and self.page:
+                return self._ai_snapshot_playwright(max_chars, max_depth, interactive_only)
+            elif self.engine == "selenium" and self.driver:
+                return self._ai_snapshot_selenium(max_chars, max_depth, interactive_only)
+        except Exception as e:
+            return f"[SNAPSHOT ERROR] {e}"
+
+        return "[SNAPSHOT] No browser active"
+
+    def _ai_snapshot_playwright(self, max_chars: int, max_depth: int, interactive_only: bool) -> str:
+        """Snapshot usando Playwright aria snapshot o snapshotForAI."""
+        try:
+            # Intentar _snapshotForAI (versiones recientes de Playwright)
+            raw = self.page.evaluate("""() => {
+                if (window._snapshotForAI) return window._snapshotForAI();
+                return null;
+            }""")
+            if raw:
+                return self._process_raw_snapshot(raw, max_chars, max_depth, interactive_only)
+        except Exception:
+            pass  # error no crítico, continuar
+        # Fallback: construir snapshot desde accessibility tree via JS
+        elements_data = self.page.evaluate("""() => {
+            const results = [];
+            const walk = (el, depth) => {
+                if (depth > 20) return;
+                const role = el.getAttribute('role') || el.tagName.toLowerCase();
+                const name = el.getAttribute('aria-label') || el.innerText?.slice(0, 100) || '';
+                const tag = el.tagName.toLowerCase();
+                const rect = el.getBoundingClientRect();
+                const isInteractive = ['a','button','input','select','textarea'].includes(tag) ||
+                                     el.getAttribute('onclick') || el.getAttribute('tabindex');
+
+                if (name.trim() || isInteractive) {
+                    results.push({
+                        role: role, name: name.trim().slice(0, 80), tag: tag,
+                        depth: depth, interactive: !!isInteractive,
+                        x: Math.round(rect.x), y: Math.round(rect.y),
+                        w: Math.round(rect.width), h: Math.round(rect.height),
+                        visible: rect.width > 0 && rect.height > 0
+                    });
+                }
+                for (const child of el.children) walk(child, depth + 1);
+            };
+            walk(document.body, 0);
+            return results;
+        }""")
+
+        return self._build_snapshot_text(elements_data, max_chars, max_depth, interactive_only)
+
+    def _ai_snapshot_selenium(self, max_chars: int, max_depth: int, interactive_only: bool) -> str:
+        """Snapshot usando Selenium (mismo JS, ejecutado via driver)."""
+        elements_data = self.driver.execute_script("""
+            const results = [];
+            const walk = (el, depth) => {
+                if (depth > 20) return;
+                const role = el.getAttribute('role') || el.tagName.toLowerCase();
+                const name = el.getAttribute('aria-label') || (el.innerText || '').slice(0, 100);
+                const tag = el.tagName.toLowerCase();
+                const rect = el.getBoundingClientRect();
+                const isInteractive = ['a','button','input','select','textarea'].includes(tag) ||
+                                     el.getAttribute('onclick') || el.getAttribute('tabindex');
+
+                if (name.trim() || isInteractive) {
+                    results.push({
+                        role: role, name: name.trim().slice(0, 80), tag: tag,
+                        depth: depth, interactive: !!isInteractive,
+                        x: Math.round(rect.x), y: Math.round(rect.y),
+                        w: Math.round(rect.width), h: Math.round(rect.height),
+                        visible: rect.width > 0 && rect.height > 0
+                    });
+                }
+                for (const child of el.children) walk(child, depth + 1);
+            };
+            walk(document.body, 0);
+            return results;
+        """)
+
+        return self._build_snapshot_text(elements_data, max_chars, max_depth, interactive_only)
+
+    def _process_raw_snapshot(self, raw: str, max_chars: int, max_depth: int, interactive_only: bool) -> str:
+        """Procesa snapshot raw de _snapshotForAI."""
+        if len(raw) > max_chars:
+            raw = raw[:max_chars] + "\n[...TRUNCATED]"
+        return raw
+
+    def _build_snapshot_text(self, elements: list, max_chars: int, max_depth: int, interactive_only: bool) -> str:
+        """Construye texto de snapshot con refs desde datos de elementos."""
+        lines = []
+        url = self.get_url()
+        title = ""
+        try:
+            if self.engine == "playwright":
+                title = self.page.title()
+            else:
+                title = self.driver.title
+        except Exception:
+            pass  # error no crítico, continuar
+        lines.append(f"[Page: {title}]")
+        lines.append(f"[URL: {url}]")
+        lines.append("")
+
+        for el in elements:
+            if el.get("depth", 0) > max_depth:
+                continue
+            if not el.get("visible", True):
+                continue
+            if interactive_only and not el.get("interactive"):
+                continue
+
+            role = el.get("role", "?")
+            name = el.get("name", "")
+            tag = el.get("tag", "")
+            depth = el.get("depth", 0)
+            interactive = el.get("interactive", False)
+            indent = "  " * min(depth, 8)
+
+            # Generar ref para elementos interactivos
+            ref = ""
+            if interactive or role in self.INTERACTIVE_ROLES:
+                ref_id = self._next_ref()
+                self._ref_map[ref_id] = {
+                    "role": role, "name": name, "tag": tag,
+                    "x": el.get("x", 0), "y": el.get("y", 0),
+                    "w": el.get("w", 0), "h": el.get("h", 0),
+                }
+                ref = f"[{ref_id}] "
+
+            # Formato compacto
+            if name:
+                lines.append(f"{indent}{ref}{role}: \"{name}\"")
+            elif interactive:
+                lines.append(f"{indent}{ref}{role} ({tag})")
+
+            # Cortar si excede max_chars
+            total = sum(len(l) + 1 for l in lines)
+            if total > max_chars:
+                lines.append("[...TRUNCATED]")
+                break
+
+        # Cache para recovery
+        snapshot = "\n".join(lines)
+        self._snapshot_cache.append(snapshot)
+        if len(self._snapshot_cache) > 10:
+            self._snapshot_cache.pop(0)
+
+        return snapshot
+
+    def ai_click(self, ref: str) -> str:
+        """
+        Click en un elemento por ref ID (e1, e2, ...).
+
+        Basado en openclaw's ref-based interaction system.
+        """
+        self.__init_ai_refs()
+        if ref not in self._ref_map:
+            return f"[ERROR] Ref '{ref}' not found. Take a new ai_snapshot first."
+
+        el = self._ref_map[ref]
+        role = el["role"]
+        name = el["name"]
+        tag = el["tag"]
+
+        try:
+            if self.engine == "playwright" and self.page:
+                # Intentar por role+name primero (más robusto)
+                if name:
+                    locator = self.page.get_by_role(role, name=name)
+                    if locator.count() == 1:
+                        locator.click()
+                        return f"✅ Clicked {ref} ({role}: \"{name}\")"
+                    elif locator.count() > 1:
+                        locator.first.click()
+                        return f"✅ Clicked {ref} first match ({role}: \"{name}\")"
+
+                # Fallback: click por coordenadas
+                x, y = el["x"] + el["w"] // 2, el["y"] + el["h"] // 2
+                self.page.mouse.click(x, y)
+                return f"✅ Clicked {ref} at ({x},{y})"
+
+            elif self.engine == "selenium" and self.driver:
+                # Selenium: intentar por xpath con texto
+                if name and tag:
+                    try:
+                        elem = self.driver.find_element(By.XPATH, f"//{tag}[contains(text(),'{name[:30]}')]")
+                        elem.click()
+                        return f"✅ Clicked {ref} ({role}: \"{name}\")"
+                    except Exception:
+                        pass  # error no crítico, continuar
+                # Fallback: coordenadas
+                from selenium.webdriver.common.action_chains import ActionChains
+                x, y = el["x"] + el["w"] // 2, el["y"] + el["h"] // 2
+                ActionChains(self.driver).move_by_offset(x, y).click().perform()
+                return f"✅ Clicked {ref} at ({x},{y})"
+
+        except Exception as e:
+            return f"[ERROR] Click on {ref} failed: {e}. Element may be hidden or covered. Try scrolling."
+
+        return f"[ERROR] No browser active for click on {ref}"
+
+    def ai_fill(self, ref: str, text: str) -> str:
+        """Rellena un campo por ref ID."""
+        self.__init_ai_refs()
+        if ref not in self._ref_map:
+            return f"[ERROR] Ref '{ref}' not found. Take a new ai_snapshot first."
+
+        el = self._ref_map[ref]
+        role = el["role"]
+        name = el["name"]
+
+        try:
+            if self.engine == "playwright" and self.page:
+                if name:
+                    locator = self.page.get_by_role(role, name=name)
+                    if locator.count() >= 1:
+                        locator.first.fill(text)
+                        return f"✅ Filled {ref} ({role}: \"{name}\") with \"{text[:30]}...\""
+
+                # Fallback: click + type
+                x, y = el["x"] + el["w"] // 2, el["y"] + el["h"] // 2
+                self.page.mouse.click(x, y)
+                self.page.keyboard.type(text)
+                return f"✅ Typed in {ref} at ({x},{y})"
+
+            elif self.engine == "selenium" and self.driver:
+                if name:
+                    try:
+                        elem = self.driver.find_element(By.XPATH, f"//input[@aria-label='{name}'] | //textarea[@aria-label='{name}'] | //input[@placeholder='{name}']")
+                        elem.clear()
+                        elem.send_keys(text)
+                        return f"✅ Filled {ref} ({role}: \"{name}\")"
+                    except Exception:
+                        pass  # error no crítico, continuar
+                from selenium.webdriver.common.action_chains import ActionChains
+                x, y = el["x"] + el["w"] // 2, el["y"] + el["h"] // 2
+                ActionChains(self.driver).move_by_offset(x, y).click().send_keys(text).perform()
+                return f"✅ Typed in {ref} at ({x},{y})"
+
+        except Exception as e:
+            return f"[ERROR] Fill on {ref} failed: {e}. Element may not be a text input."
+
+        return f"[ERROR] No browser active for fill on {ref}"
+
+    def ai_get_refs(self) -> Dict[str, dict]:
+        """Devuelve el mapa actual de refs."""
+        self.__init_ai_refs()
+        return dict(self._ref_map)
+
+    def ai_labeled_screenshot(self, path: str = None) -> str:
+        """
+        Screenshot con labels visuales de refs sobrepuestos.
+
+        Basado en openclaw's labeled screenshot pattern.
+        Inyecta divs temporales con e1, e2, ... sobre cada elemento interactivo.
+        """
+        self.__init_ai_refs()
+        if not self._ref_map:
+            # Generar snapshot primero si no hay refs
+            self.ai_snapshot(mode="interactive")
+
+        # Inyectar labels temporales en la página
+        inject_js = """(refs) => {
+            const overlay = document.createElement('div');
+            overlay.id = '_eidos_labels';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999999';
+            document.body.appendChild(overlay);
+
+            for (const [id, el] of Object.entries(refs)) {
+                const label = document.createElement('div');
+                label.style.cssText = `position:fixed;left:${el.x}px;top:${el.y}px;background:rgba(255,0,0,0.85);color:white;font-size:11px;font-weight:bold;padding:1px 4px;border-radius:3px;z-index:999999;pointer-events:none;font-family:monospace`;
+                label.textContent = id;
+                overlay.appendChild(label);
+
+                // Bounding box
+                const box = document.createElement('div');
+                box.style.cssText = `position:fixed;left:${el.x}px;top:${el.y}px;width:${el.w}px;height:${el.h}px;border:2px solid rgba(255,0,0,0.6);z-index:999998;pointer-events:none`;
+                overlay.appendChild(box);
+            }
+        }"""
+
+        cleanup_js = """() => {
+            const el = document.getElementById('_eidos_labels');
+            if (el) el.remove();
+        }"""
+
+        try:
+            if self.engine == "playwright" and self.page:
+                self.page.evaluate(inject_js, self._ref_map)
+                ss_path = self.screenshot(path)
+                self.page.evaluate(cleanup_js)
+                return ss_path
+            elif self.engine == "selenium" and self.driver:
+                self.driver.execute_script(f"({inject_js})({self._ref_map_as_json()})")
+                ss_path = self.screenshot(path)
+                self.driver.execute_script(f"({cleanup_js})()")
+                return ss_path
+        except Exception as e:
+            # Fallback: screenshot sin labels
+            return self.screenshot(path)
+
+    def _ref_map_as_json(self) -> str:
+        """Serializa ref_map para inyectar en JS."""
+        import json
+        return json.dumps(self._ref_map)
+
+    def close(self):
+        """Cierra el navegador y guarda estado"""
+        # 🆕 Guardar cookies y sesión antes de cerrar
+        self.save_session()
+
+        if self.engine == "playwright":
+            if self.browser:
+                self.browser.close()
+            if hasattr(self, 'playwright'):
+                self.playwright.stop()
+        else:
+            if self.driver:
+                self.driver.quit()
+
+        print("🌐 [EIDOS Browser] Cerrado")
+        print("💾 [EIDOS Browser] Sesión guardada")
+
+    def __enter__(self):
+        """Context manager - entrada"""
+        self.start()
+        return self
+
+    def __exit__(self, *args):
+        """Context manager - salida"""
+        self.close()
+
+    # ═════════════════════════════════════════════════════════════════════════
+    # 🆕 PERSISTENCIA: Cookies, Sesiones, Historial
+    # ═════════════════════════════════════════════════════════════════════════
+
+    def save_cookies(self):
+        """Guarda cookies actuales"""
+        try:
+            if self.engine == "playwright" and self.browser:
+                cookies = self.browser.contexts[0].cookies()
+            elif self.driver:
+                cookies = self.driver.get_cookies()
+            else:
+                return
+
+            with open(self.COOKIES_FILE, 'w') as f:
+                json.dump(cookies, f, indent=2)
+
+            print(f"🍪 [Browser] {len(cookies)} cookies guardadas")
+
+        except Exception as e:
+            print(f"⚠️ [Browser] Error guardando cookies: {e}")
+
+    def load_cookies(self):
+        """Carga cookies guardadas"""
+        if not self.COOKIES_FILE.exists():
+            return
+
+        try:
+            with open(self.COOKIES_FILE, 'r') as f:
+                cookies = json.load(f)
+
+            if self.engine == "playwright" and self.browser:
+                self.browser.contexts[0].add_cookies(cookies)
+            elif self.driver:
+                for cookie in cookies:
+                    self.driver.add_cookie(cookie)
+
+            self.cookies_loaded = True
+            print(f"🍪 [Browser] {len(cookies)} cookies cargadas")
+
+        except Exception as e:
+            print(f"⚠️ [Browser] Error cargando cookies: {e}")
+
+    def save_session(self):
+        """Guarda sesión completa (cookies + local storage + estado)"""
+        session_file = self.SESSIONS_DIR / f"{self.session_name}.json"
+
+        try:
+            # Cookies
+            if self.engine == "playwright" and self.browser:
+                cookies = self.browser.contexts[0].cookies()
+                # Local Storage
+                local_storage = self.execute_script("return JSON.stringify(localStorage)")
+                # Session Storage
+                session_storage = self.execute_script("return JSON.stringify(sessionStorage)")
+            elif self.driver:
+                cookies = self.driver.get_cookies()
+                local_storage = self.driver.execute_script("return JSON.stringify(localStorage)")
+                session_storage = self.driver.execute_script("return JSON.stringify(sessionStorage)")
+            else:
+                return
+
+            session_data = {
+                "session_name": self.session_name,
+                "timestamp": time.time(),
+                "cookies": cookies,
+                "local_storage": local_storage,
+                "session_storage": session_storage,
+                "current_url": self.get_url() if hasattr(self, 'get_url') else None
+            }
+
+            with open(session_file, 'w') as f:
+                json.dump(session_data, f, indent=2)
+
+            print(f"💾 [Browser] Sesión '{self.session_name}' guardada")
+
+        except Exception as e:
+            print(f"⚠️ [Browser] Error guardando sesión: {e}")
+
+    def restore_session(self, session_name: str = None):
+        """Restaura sesión completa"""
+        if not session_name:
+            session_name = self.session_name
+
+        session_file = self.SESSIONS_DIR / f"{session_name}.json"
+
+        if not session_file.exists():
+            print(f"⚠️ [Browser] Sesión '{session_name}' no existe")
+            return False
+
+        try:
+            with open(session_file, 'r') as f:
+                session_data = json.load(f)
+
+            # Restaurar cookies
+            if self.engine == "playwright" and self.browser:
+                self.browser.contexts[0].add_cookies(session_data["cookies"])
+            elif self.driver:
+                for cookie in session_data["cookies"]:
+                    self.driver.add_cookie(cookie)
+
+            # Navegar a última URL si existe
+            if session_data.get("current_url"):
+                self.goto(session_data["current_url"])
+
+            # Restaurar Local Storage
+            if session_data.get("local_storage"):
+                self.execute_script(f"Object.assign(localStorage, {session_data['local_storage']})")
+
+            # Restaurar Session Storage
+            if session_data.get("session_storage"):
+                self.execute_script(f"Object.assign(sessionStorage, {session_data['session_storage']})")
+
+            print(f"✅ [Browser] Sesión '{session_name}' restaurada")
+            return True
+
+        except Exception as e:
+            print(f"⚠️ [Browser] Error restaurando sesión: {e}")
+            return False
+
+    def add_to_history(self, url: str, title: str = ""):
+        """Agrega URL al historial"""
+        try:
+            history_entry = {
+                "timestamp": time.time(),
+                "url": url,
+                "title": title,
+                "session": self.session_name
+            }
+
+            self.history.append(history_entry)
+
+            # Guardar a disco
+            with open(self.HISTORY_FILE, 'a') as f:
+                f.write(json.dumps(history_entry) + '\n')
+
+        except Exception:
+            pass  # error no crítico, continuar
+    def get_history(self, limit: int = 100) -> list:
+        """Obtiene historial de navegación"""
+        if not self.HISTORY_FILE.exists():
+            return []
+
+        try:
+            history = []
+            with open(self.HISTORY_FILE, 'r') as f:
+                for line in f:
+                    history.append(json.loads(line))
+
+            # Retornar últimas N entradas
+            return history[-limit:]
+
+        except Exception:
+            return []
+
+    def clear_session(self, session_name: str = None):
+        """Limpia una sesión guardada"""
+        if not session_name:
+            session_name = self.session_name
+
+        session_file = self.SESSIONS_DIR / f"{session_name}.json"
+
+        if session_file.exists():
+            session_file.unlink()
+            print(f"🗑️ [Browser] Sesión '{session_name}' eliminada")
+
+    def list_sessions(self) -> list:
+        """Lista todas las sesiones guardadas"""
+        sessions = []
+        for session_file in self.SESSIONS_DIR.glob("*.json"):
+            try:
+                with open(session_file, 'r') as f:
+                    data = json.load(f)
+                    sessions.append({
+                        "name": data["session_name"],
+                        "timestamp": data["timestamp"],
+                        "url": data.get("current_url")
+                    })
+            except Exception:
+                pass  # error no crítico, continuar
+        return sorted(sessions, key=lambda x: x["timestamp"], reverse=True)
+
+    # ═════════════════════════════════════════════════════════════════════════
+    # Session 11: Multi-Tab, File Upload, Drag&Drop, Wait Gone
+    # ═════════════════════════════════════════════════════════════════════════
+
+    def new_tab(self, url: str = "about:blank"):
+        """Abre nueva pestaña y navega a URL."""
+        if self.engine == "playwright":
+            self.page = self.browser.new_page()
+            if url != "about:blank":
+                self.page.goto(url)
+        else:
+            self.driver.execute_script(f"window.open('{url}', '_blank');")
+            self.driver.switch_to.window(self.driver.window_handles[-1])
+        print(f"📑 [Browser] New tab: {url}")
+        return self
+
+    def switch_tab(self, index: int = 0):
+        """Cambia a pestaña por índice."""
+        if self.engine == "playwright":
+            pages = self.browser.pages
+            if 0 <= index < len(pages):
+                self.page = pages[index]
+        else:
+            handles = self.driver.window_handles
+            if 0 <= index < len(handles):
+                self.driver.switch_to.window(handles[index])
+        print(f"📑 [Browser] Switched to tab {index}")
+        return self
+
+    def close_tab(self):
+        """Cierra pestaña actual y vuelve a la anterior."""
+        if self.engine == "playwright":
+            self.page.close()
+            pages = self.browser.pages
+            if pages:
+                self.page = pages[-1]
+        else:
+            self.driver.close()
+            handles = self.driver.window_handles
+            if handles:
+                self.driver.switch_to.window(handles[-1])
+        return self
+
+    def get_tab_count(self) -> int:
+        """Número de pestañas abiertas."""
+        if self.engine == "playwright":
+            return len(self.browser.pages)
+        else:
+            return len(self.driver.window_handles)
+
+    def upload_file(self, selector: str, file_path: str):
+        """Sube un archivo a un input[type=file]."""
+        if self.engine == "playwright":
+            self.page.set_input_files(selector, file_path)
+        else:
+            element = self.driver.find_element(By.CSS_SELECTOR, selector)
+            element.send_keys(str(Path(file_path).resolve()))
+        print(f"📎 [Browser] Upload: {file_path} → {selector}")
+        return self
+
+    def drag_and_drop(self, source_selector: str, target_selector: str):
+        """Drag and drop entre dos elementos."""
+        if self.engine == "playwright":
+            self.page.drag_and_drop(source_selector, target_selector)
+        else:
+            from selenium.webdriver.common.action_chains import ActionChains
+            source = self.driver.find_element(By.CSS_SELECTOR, source_selector)
+            target = self.driver.find_element(By.CSS_SELECTOR, target_selector)
+            ActionChains(self.driver).drag_and_drop(source, target).perform()
+        print(f"🔄 [Browser] Drag: {source_selector} → {target_selector}")
+        return self
+
+    def wait_for_element_gone(self, selector: str, timeout: int = 10000):
+        """Espera a que un elemento desaparezca del DOM."""
+        if self.engine == "playwright":
+            self.page.wait_for_selector(selector, state="hidden", timeout=timeout)
+        else:
+            WebDriverWait(self.driver, timeout / 1000).until(
+                EC.invisibility_of_element_located((By.CSS_SELECTOR, selector))
+            )
+        return self
+
+    def get_page_metrics(self) -> Dict:
+        """Obtiene métricas de rendimiento de la página."""
+        js = """() => {
+            const perf = performance.getEntriesByType('navigation')[0] || {};
+            return {
+                load_time: perf.loadEventEnd - perf.startTime || 0,
+                dom_ready: perf.domContentLoadedEventEnd - perf.startTime || 0,
+                first_paint: (performance.getEntriesByType('paint')[0] || {}).startTime || 0,
+                resources: performance.getEntriesByType('resource').length,
+                dom_elements: document.getElementsByTagName('*').length,
+                memory: navigator.deviceMemory || 'unknown'
+            };
+        }"""
+        if self.engine == "playwright":
+            return self.page.evaluate(js)
+        else:
+            return self.driver.execute_script(f"return ({js})()")
+
+    def scroll_page(self, direction: str = "down", amount: int = 500):
+        """Scroll la página. direction: 'down', 'up', 'top', 'bottom'."""
+        scroll_map = {
+            "down": f"window.scrollBy(0, {amount})",
+            "up": f"window.scrollBy(0, -{amount})",
+            "top": "window.scrollTo(0, 0)",
+            "bottom": "window.scrollTo(0, document.body.scrollHeight)",
+        }
+        script = scroll_map.get(direction, scroll_map["down"])
+        if self.engine == "playwright":
+            self.page.evaluate(script)
+        else:
+            self.driver.execute_script(script)
+        return self
+
+    def find_elements_by_text(self, text: str, tag: str = "*") -> List[UIElement]:
+        """Busca elementos que contienen un texto específico."""
+        js = f"""() => {{
+            const results = [];
+            const elements = document.querySelectorAll('{tag}');
+            const search = '{text}'.toLowerCase();
+            elements.forEach(el => {{
+                if ((el.innerText || '').toLowerCase().includes(search)) {{
+                    const rect = el.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) {{
+                        results.push({{
+                            text: (el.innerText || '').slice(0, 200),
+                            tag: el.tagName.toLowerCase(),
+                            x: Math.round(rect.x), y: Math.round(rect.y),
+                            x2: Math.round(rect.x + rect.width),
+                            y2: Math.round(rect.y + rect.height),
+                            role: el.getAttribute('role') || '',
+                            clickable: ['a','button','input'].includes(el.tagName.toLowerCase())
+                        }});
+                    }}
+                }}
+            }});
+            return results.slice(0, 20);
+        }}"""
+        if self.engine == "playwright":
+            data = self.page.evaluate(js)
+        else:
+            data = self.driver.execute_script(f"return ({js})()")
+
+        return [
+            UIElement(
+                text=d["text"], tag=d["tag"],
+                x=d["x"], y=d["y"],
+                x1=d["x"], y1=d["y"],
+                x2=d["x2"], y2=d["y2"],
+                role=d.get("role", ""),
+                clickable=d.get("clickable", False)
+            )
+            for d in (data or [])
+        ]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Funciones de conveniencia para integración con EIDOS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def deep_dive(url: str, topic: str = "", depth: int = 2,
+              max_pages: int = 5) -> Dict[str, Any]:
+    """
+    Inmersión profunda en una URL: navega, extrae texto, sigue enlaces
+    hasta `depth` niveles, limitado a `max_pages` páginas totales.
+
+    Args:
+        url: URL de partida
+        topic: Tema de investigación (para contexto)
+        depth: Profundidad máxima de rastreo (default 2)
+        max_pages: Máximo de páginas a visitar (default 5)
+
+    Returns:
+        Dict con: ok, url, topic, pages_visited, total_text_chars,
+        key_concepts, findings[], errors[]
+    """
+    import re
+    from urllib.parse import urljoin, urlparse
+
+    result: Dict[str, Any] = {
+        "ok": False,
+        "url": url,
+        "topic": topic,
+        "depth": depth,
+        "max_pages": max_pages,
+        "pages_visited": 0,
+        "total_text_chars": 0,
+        "key_concepts": [],
+        "findings": [],
+        "errors": [],
+    }
+
+    visited: set = set()
+    to_visit: List[tuple] = [(url, 0)]  # (url, current_depth)
+
+    try:
+        with EidosBrowser(headless=True) as browser:
+            while to_visit and result["pages_visited"] < max_pages:
+                current_url, current_depth = to_visit.pop(0)
+                if current_url in visited:
+                    continue
+                visited.add(current_url)
+
+                try:
+                    browser.goto(current_url)
+                    time.sleep(2)  # esperar carga
+
+                    page_text = browser.get_text()
+                    if not page_text or len(page_text) < 50:
+                        continue
+
+                    result["pages_visited"] += 1
+                    result["total_text_chars"] += len(page_text)
+
+                    # Extraer conceptos clave del texto (palabras largas distintivas)
+                    words = re.findall(r'\b[a-zA-Z]{6,20}\b', page_text.lower())
+                    word_freq: Dict[str, int] = {}
+                    for w in words:
+                        word_freq[w] = word_freq.get(w, 0) + 1
+                    # Top concepts by frequency (excluding common stopwords)
+                    stopwords = {"this", "that", "with", "from", "your", "have",
+                                "about", "which", "their", "there", "would", "could",
+                                "should", "other", "these", "those", "because"}
+                    sorted_words = sorted(
+                        [(w, c) for w, c in word_freq.items() if w not in stopwords],
+                        key=lambda x: -x[1],
+                    )[:10]
+                    for w, count in sorted_words:
+                        if w not in result["key_concepts"]:
+                            result["key_concepts"].append(w)
+
+                    # Guardar finding
+                    finding = {
+                        "url": current_url,
+                        "depth": current_depth,
+                        "text_preview": page_text[:300],
+                        "chars": len(page_text),
+                        "top_terms": [w for w, _ in sorted_words[:5]],
+                    }
+                    result["findings"].append(finding)
+
+                    # Seguir enlaces si no hemos llegado al depth máximo
+                    if current_depth < depth:
+                        try:
+                            links_js = browser.execute(
+                                "return Array.from(document.querySelectorAll('a[href]'))"
+                                ".map(a => a.href).slice(0, 10);"
+                            )
+                            if links_js:
+                                import json as _json
+                                links = _json.loads(links_js) if isinstance(links_js, str) else links_js
+                                base_domain = urlparse(current_url).netloc
+                                for link in links:
+                                    if not isinstance(link, str):
+                                        continue
+                                    link_domain = urlparse(link).netloc
+                                    # Solo seguir enlaces del mismo dominio
+                                    if link_domain == base_domain and link not in visited:
+                                        to_visit.append((link, current_depth + 1))
+                        except Exception:
+                            pass  # No pudimos extraer enlaces, seguir adelante
+
+                except Exception as page_err:
+                    result["errors"].append(f"{current_url}: {page_err}")
+                    continue
+
+            result["ok"] = result["pages_visited"] > 0
+            result["key_concepts"] = result["key_concepts"][:20]
+
+    except Exception as e:
+        result["errors"].append(f"Browser init failed: {e}")
+
+    return result
+
+
+def browse(url: str, action: str = "read", **kwargs) -> str:
+    """
+    Función simplificada para navegar con EIDOS
+
+    Args:
+        url: URL a visitar
+        action: "read" | "screenshot" | "click" | "fill" | "extract"
+        **kwargs: Parámetros específicos de cada acción
+
+    Returns:
+        Resultado de la acción
+    """
+    with EidosBrowser(headless=kwargs.get('headless', False)) as browser:
+        browser.goto(url)
+        time.sleep(kwargs.get('wait', 2))  # Esperar carga
+
+        if action == "read":
+            return browser.get_text()
+
+        elif action == "screenshot":
+            path = kwargs.get('path')
+            return browser.screenshot(path)
+
+        elif action == "click":
+            selector = kwargs.get('selector')
+            if not selector:
+                return "❌ Falta parámetro 'selector'"
+            browser.click(selector)
+            time.sleep(1)
+            return f"✅ Click en {selector}"
+
+        elif action == "fill":
+            selector = kwargs.get('selector')
+            text = kwargs.get('text')
+            if not selector or not text:
+                return "❌ Faltan parámetros 'selector' y/o 'text'"
+            browser.fill(selector, text)
+            return f"✅ Rellenado {selector}"
+
+        elif action == "extract":
+            elements = browser.get_dom_elements()
+            return {
+                "url": browser.get_url(),
+                "title": browser.execute("return document.title"),
+                "elements": len(elements),
+                "elements_data": [
+                    {
+                        "text": el.text[:50],
+                        "tag": el.tag,
+                        "role": el.role,
+                        "position": (el.x, el.y)
+                    }
+                    for el in elements[:20]  # Primeros 20
+                ]
+            }
+
+        else:
+            return f"❌ Acción desconocida: {action}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Test
+# ─────────────────────────────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    print("=== Test EIDOS Browser ===\n")
+
+    # Test 1: Navegación básica
+    print("Test 1: Navegación y extracción de texto")
+    with EidosBrowser(headless=True) as browser:
+        browser.goto("https://example.com")
+        text = browser.get_text()
+        print(f"Texto: {text[:100]}...\n")
+
+    # Test 2: Screenshot
+    print("Test 2: Screenshot")
+    result = browse("https://example.com", action="screenshot", headless=True)
+    print(f"Screenshot: {result}\n")
+
+    # Test 3: Extracción de elementos
+    print("Test 3: Extracción de elementos DOM")
+    result = browse("https://example.com", action="extract", headless=True)
+    print(f"Elementos detectados: {result['elements']}")
+    print(f"Título: {result['title']}")
+
+    print("\n✅ Tests completados")

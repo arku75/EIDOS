@@ -1,0 +1,17 @@
+[Unit]
+Description=EIDOS WebSocket Server — Streaming en tiempo real
+After=network.target
+Wants=eidos-bridge.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -m core.eidos_websocket
+WorkingDirectory=/home/ser/EIDOS
+Environment=PYTHONPATH=/home/ser/EIDOS
+Restart=always
+RestartSec=5
+StandardOutput=append:/home/ser/.eidos/websocket.log
+StandardError=append:/home/ser/.eidos/websocket.log
+
+[Install]
+WantedBy=default.target

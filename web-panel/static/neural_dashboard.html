@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EIDOS Neural Dashboard</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #0a0e1a; color: #c8d6e5; overflow: hidden; height: 100vh; }
+#app { display: flex; height: 100vh; }
+
+#sidebar { width: 360px; min-width: 360px; background: #111827; border-right: 1px solid #1e293b; display: flex; flex-direction: column; overflow-y: auto; }
+#sidebar::-webkit-scrollbar { width: 4px; }
+#sidebar::-webkit-scrollbar-track { background: #111827; }
+#sidebar::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+
+.sidebar-header { padding: 16px; background: linear-gradient(135deg, #1e3a5f, #0a1628); border-bottom: 1px solid #1e293b; }
+.sidebar-header h1 { font-size: 18px; color: #60a5fa; margin-bottom: 4px; }
+.sidebar-header p { font-size: 11px; color: #64748b; }
+
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; }
+.stat-card { background: #1a2332; border-radius: 8px; padding: 10px; border: 1px solid #1e293b; }
+.stat-card .label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-card .value { font-size: 22px; font-weight: 700; color: #e2e8f0; margin-top: 2px; }
+.stat-card .value.neuron-color { color: #60a5fa; }
+.stat-card .value.synapse-color { color: #a78bfa; }
+.stat-card .value.brain-color { color: #34d399; }
+.stat-card .value.chroma-color { color: #f472b6; }
+
+#search-box { margin: 8px 12px; padding: 8px 12px; background: #1a2332; border: 1px solid #2d3a4e; border-radius: 6px; color: #e2e8f0; font-size: 13px; outline: none; transition: border 0.2s; }
+#search-box:focus { border-color: #60a5fa; }
+#search-box::placeholder { color: #475569; }
+
+.info-panel { flex: 1; padding: 12px; overflow-y: auto; }
+.info-panel h3 { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.node-detail { background: #1a2332; border-radius: 8px; padding: 12px; border: 1px solid #1e293b; margin-bottom: 8px; display: none; }
+.node-detail.visible { display: block; }
+.node-detail .name { font-size: 15px; font-weight: 600; color: #60a5fa; margin-bottom: 4px; }
+.node-detail .meta { font-size: 11px; color: #64748b; margin-bottom: 2px; }
+.node-detail .confidence-bar { height: 4px; background: #1e293b; border-radius: 2px; margin-top: 6px; overflow: hidden; }
+.node-detail .confidence-fill { height: 100%; background: linear-gradient(90deg, #34d399, #60a5fa); border-radius: 2px; transition: width 0.5s; }
+
+.related-list { margin-top: 8px; }
+.related-item { display: flex; justify-content: space-between; padding: 4px 8px; background: #0f172a; border-radius: 4px; margin-bottom: 3px; font-size: 12px; cursor: pointer; transition: background 0.2s; }
+.related-item:hover { background: #1e293b; }
+.related-item .rel-type { color: #a78bfa; font-size: 10px; }
+
+.neuron-list { max-height: 200px; overflow-y: auto; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px; }
+.legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #64748b; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+#graph-container { flex: 1; position: relative; background: #0a0e1a; }
+#graph-container svg { width: 100%; height: 100%; }
+.graph-overlay { position: absolute; bottom: 12px; right: 12px; font-size: 10px; color: #475569; background: rgba(17,24,39,0.8); padding: 6px 10px; border-radius: 4px; }
+
+.tooltip { position: absolute; background: #1a2332; border: 1px solid #2d3a4e; border-radius: 6px; padding: 8px 12px; font-size: 12px; pointer-events: none; display: none; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+
+.activation-indicator { display: flex; align-items: center; gap: 6px; padding: 8px 12px; }
+.activation-dot { width: 10px; height: 10px; border-radius: 50%; transition: all 0.3s; }
+.activation-dot.active { background: #34d399; box-shadow: 0 0 8px #34d399; }
+.activation-dot.inactive { background: #475569; }
+.activation-dot.searching { background: #fbbf24; box-shadow: 0 0 8px #fbbf24; }
+
+#loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+#loading .spinner { width: 40px; height: 40px; border: 3px solid #1e293b; border-top-color: #60a5fa; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading p { color: #64748b; font-size: 13px; }
+
+.node circle { stroke-width: 2px; cursor: pointer; transition: r 0.2s; }
+.node text { font-size: 9px; pointer-events: none; fill: #94a3b8; }
+.link { stroke-opacity: 0.15; }
+</style>
+</head>
+<body>
+<div id="app">
+<div id="sidebar">
+<div class="sidebar-header">
+<h1>🧠 EIDOS Neural Graph</h1>
+<p>Interactive Knowledge Network</p>
+</div>
+<div class="stats-grid" id="stats-grid">
+<div class="stat-card"><div class="label">Neuronas</div><div class="value neuron-color" id="stat-nodes">0</div></div>
+<div class="stat-card"><div class="label">Sinapsis</div><div class="value synapse-color" id="stat-edges">0</div></div>
+<div class="stat-card"><div class="label">Brain DB</div><div class="value brain-color" id="stat-brain">0</div></div>
+<div class="stat-card"><div class="label">ChromaDB</div><div class="value chroma-color" id="stat-chroma">0</div></div>
+</div>
+<div class="activation-indicator">
+<div class="activation-dot inactive" id="activation-dot"></div>
+<span style="font-size:11px;color:#64748b" id="activation-label">Inactivo</span>
+</div>
+<input type="text" id="search-box" placeholder="Buscar concepto... (e.g. docker, python, ai)">
+<div class="legend" id="legend"></div>
+<div class="info-panel">
+<h3>Detalle del Nodo</h3>
+<div class="node-detail" id="node-detail">
+<div class="name" id="node-name">—</div>
+<div class="meta" id="node-category">Categoría: —</div>
+<div class="meta" id="node-source">Fuente: —</div>
+<div class="meta" id="node-confidence">Confianza: 0%</div>
+<div class="confidence-bar"><div class="confidence-fill" id="node-conf-fill" style="width:0%"></div></div>
+<div style="margin-top:8px"><div class="meta">Conexiones directas:</div>
+<div class="related-list" id="node-related"></div></div>
+</div>
+<h3>Neuronas Activas</h3>
+<div class="neuron-list" id="neuron-list"></div>
+</div>
+</div>
+<div id="graph-container">
+<div id="loading"><div class="spinner"></div><p>Cargando grafo neuronal...</p></div>
+<svg id="graph-svg"></svg>
+<div class="graph-overlay" id="graph-overlay">Arrastra · Rueda para zoom</div>
+</div>
+</div>
+<div class="tooltip" id="tooltip"></div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+const API = 'http://127.0.0.1:8003';
+let graphData = { nodes: [], edges: [] };
+let simulation, svg, linkElements, nodeElements, labelElements;
+let zoomTransform = null;
+let activeSearch = '';
+
+const colorScale = d3.scaleOrdinal(d3.schemeTableau10);
+const categoryColors = {};
+
+function getCatColor(cat) {
+if (!categoryColors[cat]) categoryColors[cat] = colorScale(Object.keys(categoryColors).length);
+return categoryColors[cat];
+}
+
+async function fetchJSON(url) {
+try {
+const r = await fetch(url);
+return await r.json();
+} catch(e) { return null; }
+}
+
+function updateActivationDot(status) {
+const dot = document.getElementById('activation-dot');
+const label = document.getElementById('activation-label');
+if (status === 'active') {
+dot.className = 'activation-dot active';
+label.textContent = 'Red activa';
+} else if (status === 'searching') {
+dot.className = 'activation-dot searching';
+label.textContent = 'Buscando...';
+} else {
+dot.className = 'activation-dot inactive';
+label.textContent = 'Inactivo';
+}
+}
+
+async function loadStats() {
+const brain = await fetchJSON(`${API}/brain`);
+const graph = await fetchJSON(`${API}/graph/stats`);
+const chroma = await fetchJSON(`${API}/chroma_stats`);
+document.getElementById('stat-nodes').textContent = graph?.graph_nodes?.toLocaleString() || '0';
+document.getElementById('stat-edges').textContent = graph?.graph_edges?.toLocaleString() || '0';
+document.getElementById('stat-brain').textContent = brain?.total?.toLocaleString() || '0';
+document.getElementById('stat-chroma').textContent = chroma?.count?.toLocaleString() || chroma?.vector_count?.toLocaleString() || '0';
+if (graph?.ready) updateActivationDot('active');
+}
+
+async function loadLegend() {
+const brain = await fetchJSON(`${API}/brain`);
+const cats = brain?.by_category || [];
+const legendEl = document.getElementById('legend');
+legendEl.innerHTML = '<span style="font-size:10px;color:#64748b;margin-right:4px">Categorías:</span>';
+cats.slice(0, 12).forEach(c => {
+const div = document.createElement('span');
+div.className = 'legend-item';
+const dot = document.createElement('span');
+dot.className = 'legend-dot';
+dot.style.background = getCatColor(c.category || 'sin_categoria');
+div.appendChild(dot);
+div.appendChild(document.createTextNode(`${c.category || 'sin_categoria'} (${c.count})`));
+legendEl.appendChild(div);
+});
+}
+
+async function loadGraph() {
+const data = await fetchJSON(`${API}/graph/visualize?max_nodes=300`);
+if (!data || !data.ready) {
+document.getElementById('loading').innerHTML = '<p style="color:#ef4444">Error cargando grafo</p>';
+return;
+}
+graphData = data;
+document.getElementById('loading').style.display = 'none';
+initGraph();
+}
+
+function initGraph() {
+const container = document.getElementById('graph-container');
+const width = container.clientWidth;
+const height = container.clientHeight;
+svg = d3.select('#graph-svg');
+svg.selectAll('*').remove();
+
+const defs = svg.append('defs');
+defs.append('marker').attr('id','arrow').attr('viewBox','0 -5 10 10').attr('refX',15).attr('refY',0)
+.attr('markerWidth',4).attr('markerHeight',4).attr('orient','auto')
+.append('path').attr('d','M0,-5L10,0L0,5').attr('fill','#475569');
+
+const g = svg.append('g');
+
+const zoom = d3.zoom().scaleExtent([0.1, 8]).on('zoom', (event) => {
+g.attr('transform', event.transform);
+zoomTransform = event.transform;
+});
+svg.call(zoom);
+
+linkElements = g.append('g').selectAll('line');
+nodeElements = g.append('g').selectAll('circle');
+labelElements = g.append('g').selectAll('text');
+
+simulation = d3.forceSimulation(graphData.nodes)
+.force('link', d3.forceLink(graphData.edges).id(d => d.id).distance(80).strength(d => Math.min(d.weight || 0.5, 1) * 0.3))
+.force('charge', d3.forceManyBody().strength(-120))
+.force('center', d3.forceCenter(width / 2, height / 2))
+.force('collision', d3.forceCollide().radius(d => Math.sqrt((d.confidence || 0.5) * 12) + 4));
+
+function updateGraph() {
+linkElements = linkElements.data(graphData.edges, d => `${d.source}_${d.target}`);
+linkElements.exit().remove();
+const linkEnter = linkElements.enter().append('line');
+linkElements = linkEnter.merge(linkElements)
+.attr('class', 'link')
+.attr('stroke', '#475569')
+.attr('stroke-width', d => Math.max(0.3, (d.weight || 0.5) * 2))
+.attr('marker-end', 'url(#arrow)');
+
+nodeElements = nodeElements.data(graphData.nodes, d => d.id);
+nodeElements.exit().remove();
+const nodeEnter = nodeElements.enter().append('circle');
+nodeElements = nodeEnter.merge(nodeElements)
+.attr('r', d => Math.max(3, Math.sqrt((d.confidence || 0.5) * 20) + 2))
+.attr('fill', d => getCatColor(d.category || 'sin_categoria'))
+.attr('stroke', d => d3.color(getCatColor(d.category || 'sin_categoria')).darker(0.5))
+.attr('stroke-width', 1.5)
+.style('cursor', 'pointer')
+.on('click', (event, d) => showNodeDetail(d))
+.on('mouseenter', (event, d) => showTooltip(event, d))
+.on('mouseleave', hideTooltip)
+.call(d3.drag()
+.on('start', (event, d) => { if (!event.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+.on('drag', (event, d) => { d.fx = event.x; d.fy = event.y; })
+.on('end', (event, d) => { if (!event.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; })
+);
+
+labelElements = labelElements.data(graphData.nodes, d => d.id);
+labelElements.exit().remove();
+const labelEnter = labelElements.enter().append('text');
+labelElements = labelEnter.merge(labelElements)
+.attr('dx', d => Math.max(3, Math.sqrt((d.confidence || 0.5) * 20) + 4))
+.attr('dy', 3)
+.text(d => d.concept?.length > 20 ? d.concept.slice(0, 18) + '…' : d.concept || d.id);
+
+simulation.nodes(graphData.nodes);
+simulation.force('link').links(graphData.edges);
+simulation.alpha(1).restart();
+
+simulation.on('tick', () => {
+linkElements
+.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+.attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+nodeElements.attr('cx', d => d.x).attr('cy', d => d.y);
+labelElements.attr('x', d => d.x).attr('y', d => d.y);
+});
+}
+
+updateGraph();
+
+window.addEventListener('resize', () => {
+const w = container.clientWidth, h = container.clientHeight;
+svg.attr('width', w).attr('height', h);
+simulation.force('center', d3.forceCenter(w/2, h/2));
+simulation.alpha(0.3).restart();
+});
+}
+
+function showTooltip(event, d) {
+const tip = document.getElementById('tooltip');
+tip.innerHTML = `<strong style="color:#60a5fa">${d.concept || d.id}</strong><br>
+<span style="color:#64748b">${d.category || 'sin categoría'}</span> · confianza ${(d.confidence * 100).toFixed(0)}%`;
+tip.style.display = 'block';
+const rect = document.getElementById('graph-container').getBoundingClientRect();
+tip.style.left = (event.clientX - rect.left + 12) + 'px';
+tip.style.top = (event.clientY - rect.top - 10) + 'px';
+}
+
+function hideTooltip() {
+document.getElementById('tooltip').style.display = 'none';
+}
+
+function showNodeDetail(d) {
+const detail = document.getElementById('node-detail');
+detail.classList.add('visible');
+document.getElementById('node-name').textContent = d.concept || d.id;
+document.getElementById('node-category').textContent = `Categoría: ${d.category || 'sin categoría'}`;
+document.getElementById('node-source').textContent = `Fuente: ${d.source || 'desconocida'}`;
+const conf = (d.confidence || 0) * 100;
+document.getElementById('node-confidence').textContent = `Confianza: ${conf.toFixed(1)}%`;
+document.getElementById('node-conf-fill').style.width = conf + '%';
+
+const related = graphData.edges.filter(e => e.source === d.id || e.source?.id === d.id || e.target === d.id || e.target?.id === d.id);
+const list = document.getElementById('node-related');
+list.innerHTML = '';
+related.slice(0, 20).forEach(e => {
+const src = e.source?.id || e.source;
+const tgt = e.target?.id || e.target;
+const other = src === d.id || src === d.id ? tgt : src;
+const otherNode = graphData.nodes.find(n => n.id === other);
+const item = document.createElement('div');
+item.className = 'related-item';
+item.innerHTML = `<span style="color:#94a3b8">${otherNode?.concept || other}</span><span class="rel-type">${e.type || 'relacionado'} (${(e.weight || 0.5).toFixed(2)})</span>`;
+item.onclick = () => {
+const target = graphData.nodes.find(n => n.id === other);
+if (target) showNodeDetail(target);
+};
+list.appendChild(item);
+});
+}
+
+function highlightSearch(query) {
+updateActivationDot('searching');
+const q = query.toLowerCase();
+svg.selectAll('circle').attr('stroke-width', 1.5).attr('stroke', d => d3.color(getCatColor(d.category || 'sin_categoria')).darker(0.5));
+svg.selectAll('text').attr('font-weight', 'normal');
+if (!q) { updateActivationDot('active'); return; }
+let found = false;
+svg.selectAll('circle').filter(d => (d.concept || '').toLowerCase().includes(q)).each(function(d) {
+d3.select(this).attr('stroke-width', 3).attr('stroke', '#fbbf24');
+found = true;
+}).attr('r', d => Math.max(5, Math.sqrt((d.confidence || 0.5) * 25) + 3));
+svg.selectAll('text').filter(d => (d.concept || '').toLowerCase().includes(q)).attr('font-weight', 'bold');
+if (found) updateActivationDot('active'); else updateActivationDot('inactive');
+}
+
+document.getElementById('search-box').addEventListener('input', (e) => {
+activeSearch = e.target.value;
+highlightSearch(activeSearch);
+});
+
+async function loadActiveNeurons() {
+const neurons = await fetchJSON(`${API}/brain/neurons?limit=20`);
+const list = document.getElementById('neuron-list');
+list.innerHTML = '';
+if (!neurons?.neurons?.length) { list.innerHTML = '<div style="color:#475569;font-size:11px">Sin datos de neuronas activas</div>'; return; }
+neurons.neurons.forEach(n => {
+const div = document.createElement('div');
+div.className = 'related-item';
+div.innerHTML = `<span style="color:#94a3b8">${n.concept || n.id}</span><span style="color:#64748b;font-size:10px">${(n.activation || 0).toFixed(2)}</span>`;
+div.onclick = () => {
+const node = graphData.nodes.find(nd => nd.id === n.id || nd.concept === n.concept);
+if (node) showNodeDetail(node);
+};
+list.appendChild(div);
+});
+}
+
+async function loadAll() {
+await loadStats();
+await loadLegend();
+await loadGraph();
+loadActiveNeurons();
+setInterval(loadStats, 5000);
+setInterval(loadActiveNeurons, 10000);
+}
+
+loadAll();
+</script>
+</body>
+</html>

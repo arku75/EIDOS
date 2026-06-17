@@ -1,0 +1,623 @@
+"""
+Agent Swarm - Dynamic Agent Spawning (Kimi K2.5 inspired)
+Spawn dinámico de agentes especializados para tareas complejas
+"""
+
+import json
+import time
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Callable, Any, Set, Tuple
+from enum import Enum
+from pathlib import Path
+import os
+import sys
+
+EIDOS_ROOT = Path(__file__).parent.parent.parent.resolve()
+sys.path.insert(0, str(EIDOS_ROOT))
+
+
+class SwarmTaskType(Enum):
+    """Tipos de tareas que pueden requerir swarm"""
+    RESEARCH = "research"           # Investigación multi-fuente
+    CODE_REVIEW = "code_review"     # Revisión de código complejo
+    DEBUGGING = "debugging"         # Debugging multi-nivel
+    ARCHITECTURE = "architecture"   # Diseño arquitectónico
+    ANALYSIS = "analysis"           # Análisis profundo de datos
+    CREATIVE = "creative"           # Creación de contenido multi-formato
+    TESTING = "testing"             # Testing exhaustivo
+    DOCUMENTATION = "documentation" # Documentación completa
+
+
+@dataclass
+class SwarmAgent:
+    """Agente dinámico del swarm"""
+    agent_id: str
+    role: str  # 'researcher', 'critic', 'implementer', 'tester', 'documenter'
+    specialty: str
+    parent_task: str
+    status: str = "idle"  # idle, working, completed, failed
+    created_at: float = field(default_factory=time.time)
+    completed_at: Optional[float] = None
+    result: Any = None
+    confidence: float = 0.0
+    dependencies: Set[str] = field(default_factory=set)  # IDs de agentes que debe esperar
+
+
+@dataclass
+class SwarmTask:
+    """Tarea compleja que requiere swarm"""
+    task_id: str
+    description: str
+    task_type: SwarmTaskType
+    complexity_score: float  # 0-1
+    subtasks: List[str] = field(default_factory=list)
+    agents_spawned: List[str] = field(default_factory=list)
+    status: str = "pending"  # pending, running, completed, failed
+    created_at: float = field(default_factory=time.time)
+    completed_at: Optional[float] = None
+    final_result: Any = None
+    parallel_agents: int = 5  # Cuántos agentes en paralelo
+
+
+class AgentSwarmController:
+    """
+    Controlador de Agent Swarm - inspirado en Kimi K2.5 Agent Swarm.
+    
+    Características:
+    - Spawn dinámico de agentes especializados según la tarea
+    - Hasta 50 agentes simultáneos (vs 5 fijos actuales)
+    - Coordinación automática de dependencias
+    - Ejecución paralela con thread pooling
+    - Auto-consolidación de resultados
+    """
+    
+    MAX_AGENTS = 50
+    DEFAULT_PARALLEL = 5
+    
+    # Mapeo de roles a especialidades
+    ROLE_SPECIALTIES = {
+        "researcher": ["buscar", "investigar", "recopilar", "find", "search", "gather"],
+        "critic": ["revisar", "evaluar", "critique", "review", "assess", "validate"],
+        "implementer": ["implementar", "codificar", "build", "code", "develop", "create"],
+        "tester": ["testear", "probar", "verificar", "test", "verify", "check"],
+        "documenter": ["documentar", "explicar", "document", "explain", "describe"],
+        "optimizer": ["optimizar", "mejorar", "optimize", "improve", "refine"],
+        "architect": ["diseñar", "estructurar", "design", "structure", "architect"],
+    }
+    
+    def __init__(self):
+        self._lock = threading.RLock()
+        self._active_agents: Dict[str, SwarmAgent] = {}
+        self._active_tasks: Dict[str, SwarmTask] = {}
+        self._agent_counter = 0
+        self._task_counter = 0
+        self._pool = ThreadPoolExecutor(max_workers=10)
+        self._history: List[Dict] = []
+        self._storage_path = Path.home() / ".eidos" / "swarm_history.jsonl"
+        
+    def _generate_agent_id(self) -> str:
+        """Genera ID único para agente"""
+        with self._lock:
+            self._agent_counter += 1
+            return f"swarm_agent_{self._agent_counter}_{int(time.time())}"
+    
+    def _generate_task_id(self) -> str:
+        """Genera ID único para tarea"""
+        with self._lock:
+            self._task_counter += 1
+            return f"swarm_task_{self._task_counter}_{int(time.time())}"
+    
+    def should_use_swarm(self, task_description: str) -> Tuple[bool, SwarmTaskType, float]:
+        """
+        Determina si una tarea amerita swarm basado en descripción.
+        
+        Returns:
+            (usar_swarm, tipo_tarea, complejidad)
+        """
+        desc_lower = task_description.lower()
+        
+        # Indicadores de complejidad
+        complexity_indicators = {
+            SwarmTaskType.RESEARCH: [
+                "research", "investigate", "survey", "compare multiple", "estado del arte",
+                "state of the art", "literature review", "benchmark"
+            ],
+            SwarmTaskType.CODE_REVIEW: [
+                "code review", "review code", "audit code", "security audit",
+                "vulnerability assessment", "refactor", "legacy code"
+            ],
+            SwarmTaskType.DEBUGGING: [
+                "debug", "fix bug", "trace", "root cause", "intermittent issue",
+                "race condition", "memory leak", "performance issue"
+            ],
+            SwarmTaskType.ARCHITECTURE: [
+                "design system", "architecture", "microservices", "scalability",
+                "system design", "infrastructure", "distributed"
+            ],
+            SwarmTaskType.ANALYSIS: [
+                "deep analysis", "comprehensive analysis", "data analysis",
+                "correlation", "pattern detection", "anomaly detection"
+            ],
+            SwarmTaskType.CREATIVE: [
+                "create content", "generate multiple", "brainstorm", "creative writing",
+                "story generation", "marketing campaign"
+            ],
+            SwarmTaskType.TESTING: [
+                "comprehensive test", "test suite", "integration test",
+                "end-to-end", "regression test", "load test"
+            ],
+            SwarmTaskType.DOCUMENTATION: [
+                "full documentation", "api docs", "user manual", "technical docs",
+                "tutorial series", "documentation site"
+            ],
+        }
+        
+        # Contar matches por tipo
+        scores = {}
+        for task_type, indicators in complexity_indicators.items():
+            score = sum(1 for ind in indicators if ind in desc_lower)
+            if score > 0:
+                scores[task_type] = score
+        
+        if not scores:
+            # Calcular complejidad por longitud y estructura
+            word_count = len(task_description.split())
+            complexity = min(word_count / 50, 1.0)  # Normalizar
+            
+            # Si tiene múltiples pasos mencionados
+            step_words = ["step", "phase", "part", "section", "primero", "segundo", "then", "next"]
+            step_count = sum(1 for w in step_words if w in desc_lower)
+            complexity += min(step_count * 0.1, 0.3)
+            
+            return complexity > 0.6, SwarmTaskType.ANALYSIS, min(complexity, 1.0)
+        
+        # Encontrar el tipo con mayor score
+        best_type = max(scores, key=scores.get)
+        best_score = scores[best_type]
+        complexity = min(best_score / 3, 1.0)  # Normalizar
+        
+        return complexity > 0.4, best_type, complexity
+    
+    def spawn_swarm(
+        self,
+        task_description: str,
+        task_type: Optional[SwarmTaskType] = None,
+        complexity: Optional[float] = None,
+        max_agents: int = None,
+        callback: Optional[Callable[[SwarmAgent], None]] = None
+    ) -> SwarmTask:
+        """
+        Spawnea un swarm de agentes para una tarea compleja.
+        
+        Args:
+            task_description: Descripción de la tarea
+            task_type: Tipo de tarea (auto-detectado si None)
+            complexity: Score de complejidad (auto-calculado si None)
+            max_agents: Máximo de agentes a spawnear
+            callback: Llamado cuando cada agente completa
+        
+        Returns:
+            SwarmTask con información de la operación
+        """
+        # Auto-detectar si es necesario
+        if task_type is None or complexity is None:
+            use_swarm, detected_type, detected_complexity = self.should_use_swarm(task_description)
+            task_type = task_type or detected_type
+            complexity = complexity or detected_complexity
+        
+        # Crear tarea
+        task_id = self._generate_task_id()
+        
+        # Determinar número de agentes basado en complejidad
+        if max_agents is None:
+            max_agents = max(3, min(int(complexity * 10), self.MAX_AGENTS))
+        
+        # Descomponer en sub-tareas
+        subtasks = self._decompose_task(task_description, task_type, max_agents)
+        
+        task = SwarmTask(
+            task_id=task_id,
+            description=task_description,
+            task_type=task_type,
+            complexity_score=complexity,
+            subtasks=subtasks,
+            parallel_agents=min(max_agents, len(subtasks)),
+            status="running"
+        )
+        
+        with self._lock:
+            self._active_tasks[task_id] = task
+        
+        # Spawn agentes para cada sub-tarea
+        for i, subtask in enumerate(subtasks):
+            role = self._assign_role(subtask, task_type, i)
+            self._spawn_agent(task_id, subtask, role, callback)
+        
+        return task
+    
+    def _decompose_task(
+        self,
+        task_description: str,
+        task_type: SwarmTaskType,
+        num_subtasks: int
+    ) -> List[str]:
+        """Descompone una tarea en sub-tareas"""
+        
+        # Templates de descomposición por tipo
+        decompositions = {
+            SwarmTaskType.RESEARCH: [
+                "Buscar información actualizada sobre {topic}",
+                "Recopilar fuentes relevantes y papers",
+                "Sintetizar hallazgos clave",
+                "Identificar gaps en la investigación",
+                "Generar resumen ejecutivo"
+            ],
+            SwarmTaskType.CODE_REVIEW: [
+                "Revisar estructura y arquitectura",
+                "Analizar código buscando bugs",
+                "Verificar seguridad y vulnerabilidades",
+                "Evaluar performance y optimización",
+                "Verificar documentación y tests"
+            ],
+            SwarmTaskType.DEBUGGING: [
+                "Reproducir el issue identificado",
+                "Tracear flujo de ejecución",
+                "Identificar root cause",
+                "Proponer fix o workaround",
+                "Verificar solución con tests"
+            ],
+            SwarmTaskType.ARCHITECTURE: [
+                "Analizar requerimientos y constraints",
+                "Diseñar arquitectura de alto nivel",
+                "Definir componentes y interfaces",
+                "Evaluar trade-offs y alternativas",
+                "Crear plan de implementación"
+            ],
+            SwarmTaskType.ANALYSIS: [
+                "Recolectar y limpiar datos",
+                "Analizar patrones y tendencias",
+                "Detectar anomalías y outliers",
+                "Correlacionar variables",
+                "Generar insights y recomendaciones"
+            ],
+            SwarmTaskType.TESTING: [
+                "Diseñar casos de test",
+                "Implementar tests unitarios",
+                "Implementar tests de integración",
+                "Ejecutar tests y reportar resultados",
+                "Verificar cobertura de código"
+            ],
+            SwarmTaskType.DOCUMENTATION: [
+                "Estructurar documentación",
+                "Documentar API y interfaces",
+                "Crear guías de usuario",
+                "Escriber tutoriales y ejemplos",
+                "Revisar y formatear documentación"
+            ],
+            SwarmTaskType.CREATIVE: [
+                "Brainstorm ideas iniciales",
+                "Desarrollar conceptos seleccionados",
+                "Crear contenido para cada formato",
+                "Revisar y refinar contenido",
+                "Finalizar y preparar entregables"
+            ],
+        }
+        
+        templates = decompositions.get(task_type, [
+            "Analizar requerimientos",
+            "Diseñar solución",
+            "Implementar componentes",
+            "Verificar y testear",
+            "Documentar y entregar"
+        ])
+        
+        # Ajustar número de sub-tareas
+        if num_subtasks <= len(templates):
+            return templates[:num_subtasks]
+        else:
+            # Si necesitamos más, duplicar con variaciones
+            subtasks = templates.copy()
+            for i in range(num_subtasks - len(templates)):
+                subtasks.append(f"Iteración adicional {i+1}: {templates[i % len(templates)]}")
+            return subtasks
+    
+    def _assign_role(self, subtask: str, task_type: SwarmTaskType, index: int) -> str:
+        """Asigna el rol óptimo para una sub-tarea"""
+        subtask_lower = subtask.lower()
+        
+        # Detectar rol por palabras clave
+        for role, keywords in self.ROLE_SPECIALTIES.items():
+            if any(kw in subtask_lower for kw in keywords):
+                return role
+        
+        # Fallback por índice y tipo
+        role_rotation = {
+            SwarmTaskType.RESEARCH: ["researcher", "documenter", "critic"],
+            SwarmTaskType.CODE_REVIEW: ["critic", "researcher", "implementer"],
+            SwarmTaskType.DEBUGGING: ["researcher", "implementer", "tester"],
+            SwarmTaskType.ARCHITECTURE: ["architect", "critic", "documenter"],
+            SwarmTaskType.ANALYSIS: ["researcher", "critic", "documenter"],
+            SwarmTaskType.TESTING: ["tester", "implementer", "critic"],
+            SwarmTaskType.DOCUMENTATION: ["documenter", "critic", "researcher"],
+            SwarmTaskType.CREATIVE: ["implementer", "critic", "documenter"],
+        }
+        
+        roles = role_rotation.get(task_type, ["implementer", "critic"])
+        return roles[index % len(roles)]
+    
+    def _spawn_agent(
+        self,
+        task_id: str,
+        subtask: str,
+        role: str,
+        callback: Optional[Callable[[SwarmAgent], None]]
+    ) -> SwarmAgent:
+        """Spawnea un agente individual"""
+        agent_id = self._generate_agent_id()
+        
+        agent = SwarmAgent(
+            agent_id=agent_id,
+            role=role,
+            specialty=subtask,
+            parent_task=task_id
+        )
+        
+        with self._lock:
+            self._active_agents[agent_id] = agent
+            if task_id in self._active_tasks:
+                self._active_tasks[task_id].agents_spawned.append(agent_id)
+        
+        # Ejecutar agente en thread
+        self._pool.submit(self._run_agent, agent, callback)
+        
+        return agent
+    
+    def _run_agent(self, agent: SwarmAgent, callback: Optional[Callable] = None):
+        """Ejecuta la lógica de un agente"""
+        try:
+            agent.status = "working"
+            
+            # Simular trabajo (aquí iría la llamada real a Ollama)
+            # Por ahora, generar un resultado simulado
+            result = self._execute_agent_task(agent)
+            
+            agent.result = result
+            agent.status = "completed"
+            agent.completed_at = time.time()
+            agent.confidence = result.get("confidence", 0.7)
+            
+            # Verificar si todos los agentes de la tarea completaron
+            self._check_task_completion(agent.parent_task)
+            
+            if callback:
+                callback(agent)
+                
+        except Exception as e:
+            agent.status = "failed"
+            agent.result = {"error": str(e)}
+            agent.completed_at = time.time()
+    
+    def _execute_agent_task(self, agent: SwarmAgent) -> Dict:
+        """Ejecuta la tarea de un agente (simulado por ahora)"""
+        # Aquí se integraría con Ollama para ejecución real
+        # Por ahora, simulamos resultados
+        
+        prompts = {
+            "researcher": f"Investiga y recopila información sobre: {agent.specialty}",
+            "critic": f"Revisa y critica constructivamente: {agent.specialty}",
+            "implementer": f"Implementa o crea: {agent.specialty}",
+            "tester": f"Testea y verifica: {agent.specialty}",
+            "documenter": f"Documenta y explica: {agent.specialty}",
+            "optimizer": f"Optimiza y mejora: {agent.specialty}",
+            "architect": f"Diseña la arquitectura para: {agent.specialty}",
+        }
+        
+        prompt = prompts.get(agent.role, agent.specialty)
+        
+        # Simular llamada a Ollama
+        return {
+            "role": agent.role,
+            "prompt": prompt,
+            "result": f"[Simulated] Agent {agent.agent_id} completed task: {agent.specialty}",
+            "confidence": 0.75 + (0.2 * (hash(agent.agent_id) % 100) / 100),
+            "timestamp": time.time()
+        }
+    
+    def _check_task_completion(self, task_id: str):
+        """Verifica si todos los agentes de una tarea completaron"""
+        with self._lock:
+            if task_id not in self._active_tasks:
+                return
+            
+            task = self._active_tasks[task_id]
+            if not task.agents_spawned:
+                return
+            
+            # Verificar status de todos los agentes
+            all_completed = True
+            any_failed = False
+            results = []
+            
+            for agent_id in task.agents_spawned:
+                agent = self._active_agents.get(agent_id)
+                if not agent:
+                    continue
+                
+                if agent.status == "failed":
+                    any_failed = True
+                elif agent.status != "completed":
+                    all_completed = False
+                else:
+                    results.append(agent.result)
+            
+            if all_completed or (any_failed and self._all_done(task)):
+                task.status = "completed" if not any_failed else "partial"
+                task.completed_at = time.time()
+                task.final_result = self._consolidate_results(results, task)
+                self._save_to_history(task)
+    
+    def _all_done(self, task: SwarmTask) -> bool:
+        """Verifica si todos los agentes terminaron (completados o fallidos)"""
+        for agent_id in task.agents_spawned:
+            agent = self._active_agents.get(agent_id)
+            if agent and agent.status in ["idle", "working"]:
+                return False
+        return True
+    
+    def _consolidate_results(self, results: List[Dict], task: SwarmTask) -> Dict:
+        """Consolida resultados de múltiples agentes"""
+        return {
+            "task_type": task.task_type.value,
+            "description": task.description,
+            "agents_used": len(results),
+            "sub_results": results,
+            "summary": f"Swarm completed {task.description} with {len(results)} agents",
+            "avg_confidence": sum(r.get("confidence", 0) for r in results) / max(len(results), 1),
+            "elapsed_time": task.completed_at - task.created_at if task.completed_at else 0
+        }
+    
+    def _save_to_history(self, task: SwarmTask):
+        """Guarda la tarea en historial"""
+        entry = {
+            "task_id": task.task_id,
+            "task_type": task.task_type.value,
+            "description": task.description,
+            "complexity": task.complexity_score,
+            "agents_count": len(task.agents_spawned),
+            "status": task.status,
+            "created_at": task.created_at,
+            "completed_at": task.completed_at,
+            "elapsed": task.completed_at - task.created_at if task.completed_at else None
+        }
+        self._history.append(entry)
+        
+        # Guardar en archivo
+        try:
+            with open(self._storage_path, 'a') as f:
+                f.write(json.dumps(entry) + "\n")
+        except Exception:
+            pass  # error no crítico, continuar
+    def get_swarm_status(self, task_id: str) -> Optional[Dict]:
+        """Obtiene el estado de un swarm"""
+        with self._lock:
+            if task_id not in self._active_tasks:
+                return None
+            
+            task = self._active_tasks[task_id]
+            
+            agents_status = []
+            for agent_id in task.agents_spawned:
+                agent = self._active_agents.get(agent_id)
+                if agent:
+                    agents_status.append({
+                        "id": agent.agent_id,
+                        "role": agent.role,
+                        "status": agent.status,
+                        "confidence": agent.confidence
+                    })
+            
+            return {
+                "task_id": task_id,
+                "description": task.description,
+                "status": task.status,
+                "task_type": task.task_type.value,
+                "complexity": task.complexity_score,
+                "agents_total": len(task.agents_spawned),
+                "agents_completed": sum(1 for a in agents_status if a["status"] == "completed"),
+                "agents_failed": sum(1 for a in agents_status if a["status"] == "failed"),
+                "agents_working": sum(1 for a in agents_status if a["status"] == "working"),
+                "agents": agents_status,
+                "elapsed": time.time() - task.created_at,
+                "result": task.final_result
+            }
+    
+    def get_active_swarms(self) -> List[Dict]:
+        """Lista todos los swarms activos"""
+        with self._lock:
+            return [
+                self.get_swarm_status(tid)
+                for tid in self._active_tasks.keys()
+            ]
+    
+    def get_statistics(self) -> Dict:
+        """Estadísticas del swarm controller"""
+        with self._lock:
+            total_agents = len(self._active_agents)
+            total_tasks = len(self._active_tasks)
+            
+            completed_tasks = sum(1 for t in self._active_tasks.values() if t.status == "completed")
+            
+            return {
+                "max_agents_limit": self.MAX_AGENTS,
+                "active_agents": total_agents,
+                "active_tasks": total_tasks,
+                "completed_tasks": completed_tasks,
+                "total_spawned": self._agent_counter,
+                "total_tasks_created": self._task_counter,
+                "history_entries": len(self._history)
+            }
+
+
+# ─── Singleton ───────────────────────────────────────────────────────────────
+
+_swarm_controller: Optional[AgentSwarmController] = None
+
+
+def get_swarm_controller() -> AgentSwarmController:
+    """Obtiene instancia singleton del swarm controller"""
+    global _swarm_controller
+    if _swarm_controller is None:
+        _swarm_controller = AgentSwarmController()
+    return _swarm_controller
+
+
+# ─── CLI / Test ─────────────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    import sys
+    
+    print("=" * 60)
+    print("Agent Swarm Controller (Kimi K2.5 inspired)")
+    print("=" * 60)
+    
+    if len(sys.argv) < 2:
+        print("\nUso: python agent_swarm.py '<descripción de tarea>'")
+        print("\nEjemplos:")
+        print('  python agent_swarm.py "Research quantum computing applications"')
+        print('  python agent_swarm.py "Code review of authentication system"')
+        print('  python agent_swarm.py "Debug intermittent memory leak"')
+        sys.exit(1)
+    
+    task_desc = sys.argv[1]
+    
+    controller = get_swarm_controller()
+    
+    # Verificar si amerita swarm
+    use_swarm, task_type, complexity = controller.should_use_swarm(task_desc)
+    
+    print(f"\n🎯 Tarea: {task_desc}")
+    print(f"📊 Tipo detectado: {task_type.value}")
+    print(f"📈 Complejidad: {complexity:.1%}")
+    print(f"🐝 Amerita swarm: {use_swarm}")
+    
+    if use_swarm:
+        print(f"\n🚀 Spawneando swarm...")
+        task = controller.spawn_swarm(task_desc, task_type, complexity)
+        
+        print(f"   Task ID: {task.task_id}")
+        print(f"   Sub-tareas: {len(task.subtasks)}")
+        print(f"   Agentes a spawnear: {task.parallel_agents}")
+        
+        # Esperar un poco y mostrar status
+        time.sleep(2)
+        
+        status = controller.get_swarm_status(task.task_id)
+        if status:
+            print(f"\n📊 Status del swarm:")
+            print(f"   Completados: {status['agents_completed']}/{status['agents_total']}")
+            print(f"   Fallados: {status['agents_failed']}")
+            print(f"   Trabajando: {status['agents_working']}")
+    else:
+        print("\n💡 Esta tarea parece simple. Usa el Colony Engine normal.")

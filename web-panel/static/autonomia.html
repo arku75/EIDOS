@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EIDOS — Dashboard de Autonomía</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#06080d;color:#c8d6e5;padding:16px;min-height:100vh}
+h1{font-size:22px;color:#60a5fa;margin-bottom:4px}
+h1 .ver{font-size:11px;color:#475569;margin-left:8px;font-weight:400}
+h2{font-size:13px;color:#64748b;margin:16px 0 8px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #1e293b;padding-bottom:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-bottom:16px}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-bottom:12px}
+.card{background:#0d1117;border:1px solid #1e293b;border-radius:10px;padding:14px;transition:border-color 0.3s}
+.card:hover{border-color:#30363d}
+.card h3{font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px}
+.stat-row{display:flex;justify-content:space-between;padding:3px 0;font-size:13px}
+.stat-row .label{color:#8b949e}
+.stat-row .value{color:#e2e8f0;font-weight:600}
+.value.ok{color:#34d399}
+.value.warn{color:#fbbf24}
+.value.err{color:#ef4444}
+.value.blue{color:#60a5fa}
+.value.purple{color:#a78bfa}
+.value.pink{color:#f472b6}
+.value.cyan{color:#22d3ee}
+.bar{height:5px;background:#1e293b;border-radius:3px;margin-top:5px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:width 0.8s ease}
+.bar-fill.green{background:linear-gradient(90deg,#34d399,#10b981)}
+.bar-fill.blue{background:linear-gradient(90deg,#60a5fa,#3b82f6)}
+.bar-fill.yellow{background:linear-gradient(90deg,#fbbf24,#f59e0b)}
+.bar-fill.purple{background:linear-gradient(90deg,#a78bfa,#8b5cf6)}
+.bar-fill.red{background:linear-gradient(90deg,#ef4444,#dc2626)}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.tag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;margin:2px;font-weight:500}
+.tag.green{background:rgba(52,211,153,0.12);color:#34d399;border:1px solid rgba(52,211,153,0.2)}
+.tag.red{background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.2)}
+.tag.yellow{background:rgba(251,191,36,0.12);color:#fbbf24;border:1px solid rgba(251,191,36,0.2)}
+.tag.blue{background:rgba(96,165,250,0.12);color:#60a5fa;border:1px solid rgba(96,165,250,0.2)}
+.tag.purple{background:rgba(168,85,247,0.12);color:#a78bfa;border:1px solid rgba(168,85,247,0.2)}
+#timestamp{font-size:11px;color:#475569;margin-bottom:12px}
+#identity-card{background:linear-gradient(135deg,#0f172a 0%,#1a1040 100%);border:1px solid #312e81;border-radius:12px;padding:20px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+#identity-card .id-left h2{font-size:18px;color:#a78bfa;border:none;margin:0 0 4px;padding:0;text-transform:none;letter-spacing:0}
+#identity-card .id-left .hash{font-family:monospace;font-size:11px;color:#475569}
+#identity-card .id-right{text-align:right}
+#identity-card .id-right .big-number{font-size:36px;font-weight:700;color:#60a5fa}
+#identity-card .id-right .big-label{font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:1px}
+.pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.pill{padding:4px 10px;border-radius:12px;font-size:11px;display:flex;align-items:center;gap:5px}
+.pill.ok{background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);color:#34d399}
+.pill.warn{background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.25);color:#fbbf24}
+.pill.err{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#ef4444}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dot.green{background:#34d399;box-shadow:0 0 5px #34d399}
+.dot.yellow{background:#fbbf24;box-shadow:0 0 5px #fbbf24}
+.dot.red{background:#ef4444;box-shadow:0 0 5px #ef4444}
+#nav-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+#nav-bar a{background:rgba(30,41,59,0.6);border:1px solid #1e293b;color:#94a3b8;padding:6px 14px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:500;transition:all 0.2s}
+#nav-bar a:hover{background:rgba(59,130,246,0.1);border-color:rgba(59,130,246,0.3);color:#60a5fa}
+#nav-bar a.active{background:rgba(59,130,246,0.15);border-color:rgba(59,130,246,0.4);color:#60a5fa}
+.cap-row{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px}
+.cap-row .cap-name{color:#e2e8f0;flex:1}
+.cap-row .cap-via{font-size:10px;color:#475569}
+.cap-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.cap-dot.avail{background:#34d399;box-shadow:0 0 4px #34d399}
+.cap-dot.unavail{background:#ef4444;opacity:0.4}
+.mini-chart{display:flex;align-items:flex-end;gap:2px;height:40px;margin-top:6px}
+.mini-bar{flex:1;min-height:2px;border-radius:1px 1px 0 0;background:#60a5fa;opacity:0.6}
+@media(max-width:600px){.grid{grid-template-columns:1fr}#identity-card{flex-direction:column;text-align:center}}
+</style>
+</head>
+<body>
+
+<div id="nav-bar">
+  <a href="/">🏠 Panel</a>
+  <a href="/monitor.html" class="static-link">📊 Monitor</a>
+  <a href="/autonomia" class="active">🧠 Autonomía</a>
+  <a href="/neural_dashboard.html" class="static-link">🧬 Neural</a>
+  <a href="#" onclick="fetch('/api/launch-viewer?input=1',{method:'POST'});return false;">🖥️ App Pantalla</a>
+  <a href="/claw">🦅 Claw</a>
+</div>
+
+<h1>🧠 Dashboard de Autonomía <span class="ver" id="version-tag">—</span></h1>
+<div id="timestamp">Conectando...</div>
+
+<!-- Identity + Health -->
+<div id="identity-card">
+  <div class="id-left">
+    <h2>EIDOS <span style="font-weight:400;color:#64748b;font-size:13px;">v<span id="eidos-ver">—</span></span></h2>
+    <div class="hash">hash: <span id="eidos-hash">—</span></div>
+    <div class="pill-row" id="identity-pills"></div>
+  </div>
+  <div class="id-right">
+    <div class="big-number" id="health-pct">—%</div>
+    <div class="big-label">Salud General</div>
+  </div>
+</div>
+
+<!-- Componentes -->
+<h2>🔧 Componentes</h2>
+<div class="grid" id="components-grid"></div>
+
+<!-- Métricas de autonomía -->
+<h2>📐 Métricas de Autonomía</h2>
+<div class="grid">
+  <div class="card">
+    <h3>🧠 Motor Lógico</h3>
+    <div id="logic-stats">—</div>
+  </div>
+  <div class="card">
+    <h3>🔀 SemanticRouter</h3>
+    <div id="router-stats">—</div>
+  </div>
+  <div class="card">
+    <h3>🔍 Research Loop</h3>
+    <div id="research-stats">—</div>
+  </div>
+  <div class="card">
+    <h3>💭 Curiosidad</h3>
+    <div id="curiosity-stats">—</div>
+  </div>
+  <div class="card">
+    <h3>📡 Servicios</h3>
+    <div id="services-stats">—</div>
+  </div>
+  <div class="card">
+    <h3>⚡ Runtime</h3>
+    <div id="runtime-stats">—</div>
+  </div>
+</div>
+
+<!-- Capacidades -->
+<h2>🎯 Capacidades</h2>
+<div class="grid" id="capabilities-grid"></div>
+
+<!-- Anomalías + Traits -->
+<h2>🔍 Introspección</h2>
+<div class="grid">
+  <div class="card">
+    <h3>⚠️ Anomalías</h3>
+    <div id="anomalies-list">—</div>
+  </div>
+  <div class="card">
+    <h3>🧬 Rasgos</h3>
+    <div id="traits-list">—</div>
+  </div>
+  <div class="card">
+    <h3>📊 Grafo</h3>
+    <div id="graph-metrics">—</div>
+  </div>
+  <div class="card">
+    <h3>📝 Resumen</h3>
+    <div id="summary-text" style="font-size:12px;line-height:1.5;color:#94a3b8">—</div>
+  </div>
+</div>
+
+<script>
+const API = '/api/autonomy';
+let ws = null;
+let reconnectTimer = null;
+
+function $(id) { return document.getElementById(id); }
+
+function escapeHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function statusTag(status) {
+  if (status === 'healthy' || status === 'ok') return '<span class="tag green">✔ healthy</span>';
+  if (status === 'degraded' || status === 'warning') return '<span class="tag yellow">⚠ degraded</span>';
+  if (status === 'unhealthy' || status === 'critical' || status === 'err') return '<span class="tag red">✘ unhealthy</span>';
+  return '<span class="tag blue">? unknown</span>';
+}
+
+function healthBar(score, color) {
+  const pct = Math.round(score * 100);
+  const c = color || (pct >= 80 ? 'green' : pct >= 50 ? 'yellow' : 'red');
+  return `<div class="bar"><div class="bar-fill ${c}" style="width:${pct}%"></div></div>`;
+}
+
+function renderIdentity(data) {
+  const id = data.identity || {};
+  $('eidos-ver').textContent = id.version || '?';
+  $('eidos-hash').textContent = id.hash || '?';
+  $('version-tag').textContent = id.version || '';
+
+  const pills = $('identity-pills');
+  let html = '';
+  if (id.autonomous_mode) html += '<span class="pill ok"><span class="dot green"></span>Autónomo</span>';
+  if (id.llm_dependency === false) html += '<span class="pill ok"><span class="dot green"></span>Sin dep. LLM</span>';
+  if (id.logic_engine_ready) html += '<span class="pill ok"><span class="dot green"></span>Motor Lógico</span>';
+  if (id.cloud_dependency === 'optional') html += '<span class="pill ok"><span class="dot green"></span>Cloud opcional</span>';
+  if (!id.chroma_ready) html += '<span class="pill warn"><span class="dot yellow"></span>ChromaDB offline</span>';
+  pills.innerHTML = html;
+
+  $('health-pct').textContent = Math.round(data.health_score * 100) + '%';
+}
+
+function renderComponents(data) {
+  const comps = data.components || [];
+  let html = '';
+  for (const c of comps) {
+    html += `<div class="card">
+      <h3>${escapeHtml(c.name)} ${statusTag(c.status)}</h3>
+      ${healthBar(c.health || 0)}
+      <div class="stat-row"><span class="label">Estado</span><span class="value ${c.status === 'healthy' ? 'ok' : c.status === 'degraded' ? 'warn' : 'err'}">${c.status}</span></div>
+      ${c.detail ? `<div class="stat-row"><span class="label">Detalle</span><span class="value" style="font-size:11px;font-weight:400">${escapeHtml(c.detail)}</span></div>` : ''}
+    </div>`;
+  }
+  $('components-grid').innerHTML = html || '<div class="card"><span style="color:#475569">Sin datos de componentes</span></div>';
+}
+
+function renderCapabilities(data) {
+  const caps = data.capabilities || [];
+  const byCat = {};
+  for (const c of caps) {
+    if (!byCat[c.category]) byCat[c.category] = [];
+    byCat[c.category].push(c);
+  }
+  const catNames = {reasoning:'🧠 Razonar', research:'🔍 Investigar', creation:'🎨 Crear', communication:'💬 Comunicar', system:'⚙️ Sistema'};
+  let html = '';
+  for (const [cat, items] of Object.entries(byCat)) {
+    html += `<div class="card"><h3>${catNames[cat] || cat}</h3>`;
+    for (const c of items) {
+      html += `<div class="cap-row">
+        <span class="cap-dot ${c.available ? 'avail' : 'unavail'}"></span>
+        <span class="cap-name">${escapeHtml(c.name)}</span>
+        <span class="cap-via">${escapeHtml(c.via || '')}</span>
+      </div>`;
+    }
+    html += '</div>';
+  }
+  $('capabilities-grid').innerHTML = html || '<div class="card"><span style="color:#475569">Sin datos de capacidades</span></div>';
+}
+
+function renderLogicStats(data) {
+  const logic = data.logic_engine || {};
+  let html = '';
+  html += `<div class="stat-row"><span class="label">Hechos aprendidos</span><span class="value blue">${logic.learned_facts ?? '—'}</span></div>`;
+  html += `<div class="stat-row"><span class="label">Hechos semilla</span><span class="value">${logic.seed_facts ?? '—'}</span></div>`;
+  html += `<div class="stat-row"><span class="label">Reglas de inferencia</span><span class="value">${logic.rules ?? '—'}</span></div>`;
+  html += `<div class="stat-row"><span class="label">Modo autónomo</span><span class="value ok">${logic.autonomous_mode ? '✓' : '✗'}</span></div>`;
+  html += `<div class="stat-row"><span class="label">DB</span><span class="value" style="font-size:10px;font-family:monospace">${escapeHtml(logic.db_path || '—')}</span></div>`;
+  $('logic-stats').innerHTML = html;
+}
+
+function renderRouterStats(data) {
+  const r = data.semantic_router || {};
+  let html = '';
+  html += `<div class="stat-row"><span class="label">Total consultas</span><span class="value blue">${r.total ?? 0}</span></div>`;
+  html += `<div class="stat-row"><span class="label">Aciertos léxicos</span><span class="value ok">${r.lexical_hits ?? 0}</span></div>`;
+  html += `<div class="stat-row"><span class="label">Aciertos embedding</span><span class="value purple">${r.embedding_hits ?? 0}</span></div>`;
+  html += `<div class="stat-row"><span class="label">Cache hits</span><span class="value cyan">${r.cache_hits ?? 0}</span></div>`;
+  html += `<div class="stat-row"><span class="label">Fallbacks</span><span class="value ${(r.fallback || 0) > 0 ? 'warn' : 'ok'}">${r.fallback ?? 0}</span></div>`;
+  html += `<div class="stat-row"><span class="label">Tamaño caché</span><span class="value">${r.cache_size ?? 0} / 256</span></div>`;
+  const hitRate = r.total > 0 ? Math.round(((r.cache_hits || 0) + (r.lexical_hits || 0)) / r.total * 100) : 0;
+  html += `<div class="stat-row"><span class="label">Tasa acierto (léx+caché)</span><span class="value ${hitRate >= 80 ? 'ok' : 'warn'}">${hitRate}%</span></div>`;
+  html += healthBar(hitRate / 100);
+  $('router-stats').innerHTML = html;
+}
+
+function renderResearchStats(data) {
+  const r = data.research_loop || {};
+  let html = '';
+  html += `<div class="stat-row"><span class="label">Investigaciones hoy</span><span class="value blue">${r.today_count ?? '—'}</span></div>`;
+  html += `<div class="stat-row"><span class="label">Máx por día</span><span class="value">${r.max_per_day ?? '—'}</span></div>`;
+  html += `<div class="stat-row"><span class="label">Intervalo</span><span class="value">${r.interval_secs ?? '—'}s</span></div>`;
+  html += `<div class="stat-row"><span class="label">Último topic</span><span class="value" style="font-size:11px">${escapeHtml(r.last_topic || '—')}</span></div>`;
+  html += `<div class="stat-row"><span class="label">Hechos extraídos</span><span class="value pink">${r.total_facts_extracted ?? '—'}</span></div>`;
+  html += `<div class="stat-row"><span class="label">Total histórico</span><span class="value">${r.total_research || '—'}</span></div>`;
+  $('research-stats').innerHTML = html;
+}
+
+function renderCuriosityStats(data) {
+  const c = data.curiosity || {};
+  let html = '';
+  html += `<div class="stat-row"><span class="label">Ticks</span><span class="value blue">${c.ticks ?? '—'}</span></div>`;
+  html += `<div class="stat-row"><span class="label">Preguntas generadas</span><span class="value purple">${c.questions_generated ?? '—'}</span></div>`;
+  html += `<div class="stat-row"><span class="label">Respuestas aprendidas</span><span class="value ok">${c.answers_learned ?? '—'}</span></div>`;
+  html += `<div class="stat-row"><span class="label">Cola pendiente</span><span class="value ${(c.queue_size || 0) > 20 ? 'warn' : 'ok'}">${c.queue_size ?? '—'}</span></div>`;
+  html += `<div class="stat-row"><span class="label">Iniciado</span><span class="value" style="font-size:10px">${escapeHtml(c.started_at || '—')}</span></div>`;
+  $('curiosity-stats').innerHTML = html;
+}
+
+function renderServices(data) {
+  const svc = data.services || {};
+  let html = '';
+  for (const [name, up] of Object.entries(svc)) {
+    html += `<div class="stat-row">
+      <span class="label">${escapeHtml(name)}</span>
+      <span class="value ${up ? 'ok' : 'err'}">${up ? '✓ UP' : '✗ DOWN'}</span>
+    </div>`;
+  }
+  $('services-stats').innerHTML = html || '<span style="color:#475569">Sin datos</span>';
+}
+
+function renderRuntime(data) {
+  const probes = data.runtime_probes || [];
+  let html = '';
+  for (const p of probes) {
+    const valClass = p.status === 'warning' ? 'warn' : p.status === 'critical' ? 'err' : 'ok';
+    html += `<div class="stat-row">
+      <span class="label">${escapeHtml(p.name)}</span>
+      <span class="value ${valClass}">${p.value ?? '—'} ${p.unit || ''}</span>
+    </div>`;
+  }
+  $('runtime-stats').innerHTML = html || '<span style="color:#475569">Sin datos</span>';
+}
+
+function renderAnomalies(data) {
+  const anoms = data.anomalies || [];
+  if (anoms.length === 0) {
+    $('anomalies-list').innerHTML = '<span style="color:#34d399">✓ Sin anomalías detectadas</span>';
+    return;
+  }
+  let html = '';
+  for (const a of anoms) {
+    html += `<div class="stat-row" style="margin-bottom:4px">
+      <span class="label">${escapeHtml(a.type || '?')}</span>
+      <span class="value warn">${escapeHtml(a.detail || '')}</span>
+    </div>`;
+  }
+  $('anomalies-list').innerHTML = html;
+}
+
+function renderTraits(data) {
+  const traits = data.traits || {};
+  const entries = Object.entries(traits).sort((a,b) => b[1] - a[1]);
+  if (entries.length === 0) {
+    $('traits-list').innerHTML = '<span style="color:#475569">Sin datos de rasgos</span>';
+    return;
+  }
+  let html = '';
+  for (const [trait, score] of entries) {
+    const pct = Math.round(score * 100);
+    const color = pct >= 60 ? 'green' : pct >= 30 ? 'yellow' : 'red';
+    html += `<div class="stat-row">
+      <span class="label">${escapeHtml(trait)}</span>
+      <span class="value ${color === 'green' ? 'ok' : color === 'yellow' ? 'warn' : 'err'}">${pct}%</span>
+    </div>`;
+    html += `<div class="bar"><div class="bar-fill ${color}" style="width:${pct}%"></div></div>`;
+  }
+  $('traits-list').innerHTML = html;
+}
+
+function renderGraphMetrics(data) {
+  const g = data.graph_metrics || {};
+  let html = '';
+  html += `<div class="stat-row"><span class="label">Nodos totales</span><span class="value blue">${(g.total_nodes || 0).toLocaleString()}</span></div>`;
+  html += `<div class="stat-row"><span class="label">Aristas</span><span class="value">${(g.edges || g.total_edges || 0).toLocaleString()}</span></div>`;
+  html += `<div class="stat-row"><span class="label">Componentes conexas</span><span class="value">${g.connected_components ?? '—'}</span></div>`;
+  html += `<div class="stat-row"><span class="label">Densidad</span><span class="value">${g.density ?? '—'}</span></div>`;
+  if (g.top_categories) {
+    html += '<div style="margin-top:6px;font-size:10px;color:#64748b">Top categorías:</div>';
+    for (const [cat, count] of Object.entries(g.top_categories).slice(0, 5)) {
+      html += `<div class="stat-row"><span class="label" style="font-size:10px">${escapeHtml(cat)}</span><span class="value" style="font-size:10px">${count}</span></div>`;
+    }
+  }
+  $('graph-metrics').innerHTML = html;
+}
+
+function renderSummary(data) {
+  $('summary-text').textContent = data.summary || 'Sin resumen disponible';
+}
+
+function updateAll(data) {
+  if (!data) return;
+  $('timestamp').textContent = 'Actualizado: ' + (data.timestamp || new Date().toISOString());
+  renderIdentity(data);
+  renderComponents(data);
+  renderCapabilities(data);
+  renderLogicStats(data);
+  renderRouterStats(data);
+  renderResearchStats(data);
+  renderCuriosityStats(data);
+  renderServices(data);
+  renderRuntime(data);
+  renderAnomalies(data);
+  renderTraits(data);
+  renderGraphMetrics(data);
+  renderSummary(data);
+}
+
+async function fetchData() {
+  try {
+    const resp = await fetch(API);
+    const data = await resp.json();
+    updateAll(data);
+  } catch (e) {
+    console.error('fetch error:', e);
+    $('timestamp').textContent = 'Error de conexión — reintentando...';
+  }
+}
+
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const url = proto + '//' + location.host + '/ws';
+  ws = new WebSocket(url);
+
+  ws.onopen = () => {
+    $('timestamp').textContent = 'WebSocket conectado — esperando datos...';
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  };
+
+  ws.onmessage = (evt) => {
+    try {
+      const msg = JSON.parse(evt.data);
+      if (msg.type === 'full_update' && msg.data) {
+        updateAll(msg.data.autonomy || msg.data);
+      } else if (msg.data) {
+        updateAll(msg.data.autonomy || msg.data);
+      }
+    } catch (e) {
+      console.error('ws parse error:', e);
+    }
+  };
+
+  ws.onclose = () => {
+    $('timestamp').textContent = 'WebSocket desconectado — reintentando en 3s...';
+    reconnectTimer = setTimeout(connectWS, 3000);
+  };
+
+  ws.onerror = () => {
+    ws.close();
+  };
+}
+
+// Init
+fetchData();
+connectWS();
+
+// Fallback polling cada 10s si WS falla
+setInterval(() => {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    fetchData();
+  }
+}, 10000);
+</script>
+</body>
+</html>

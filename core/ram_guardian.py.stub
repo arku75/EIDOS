@@ -1,0 +1,107 @@
+"""
+EIDOS core/ram_guardian.py — RAM Guardian v3.0
+Libera caches del kernel y monitorea la memoria del sistema.
+Corre como daemon vía eidos-ram-guardian.service.
+"""
+from __future__ import annotations
+
+import logging
+import os
+import subprocess
+import time
+from pathlib import Path
+
+log = logging.getLogger("eidos.ram_guardian")
+
+INTERVAL_S = 120        # revisar cada 2 min
+RAM_WARN_PCT = 80       # avisar si RAM > 80%
+RAM_CRIT_PCT = 90       # liberar cache si RAM > 90%
+DROP_CACHES_CMD = "sync && echo 1 > /proc/sys/vm/drop_caches"
+
+_state = {"cleanups": 0, "last_cleanup": 0.0}
+
+
+def _ram_pct() -> float:
+    try:
+        import psutil
+        return psutil.virtual_memory().percent
+    except Exception:
+        # Fallback sin psutil
+        with open("/proc/meminfo") as f:
+            lines = {l.split(":")[0]: int(l.split()[1]) for l in f if ":" in l}
+        total = lines.get("MemTotal", 1)
+        avail = lines.get("MemAvailable", total)
+        return round((1 - avail / total) * 100, 1)
+
+
+def _drop_caches() -> bool:
+    """Intenta liberar page cache del kernel (requiere sudo o cap)."""
+    try:
+        r = subprocess.run(
+            ["sh", "-c", DROP_CACHES_CMD],
+            capture_output=True, timeout=10
+        )
+        return r.returncode == 0
+    except Exception:
+        return False
+
+
+def _kill_zombie_ollama() -> None:
+    """Si Ollama tiene >11 GB y EIDOS no está usando modelos grandes, lo libera."""
+    try:
+        import psutil
+        for p in psutil.process_iter(["name", "memory_info"]):
+            if "ollama" in p.info["name"].lower():
+                mem_gb = p.info["memory_info"].rss / 1e9
+                if mem_gb > 11:
+                    log.warning("Ollama usando %.1f GB RAM — considera reiniciarlo si está idle", mem_gb)
+    except Exception:
+        pass
+
+
+def quick_check() -> dict:
+    """Devuelve estado actual de RAM para consultas externas."""
+    pct = _ram_pct()
+    return {
+        "ram_pct": pct,
+        "cleanups": _state["cleanups"],
+        "last_cleanup": _state["last_cleanup"],
+        "status": "ok" if pct < RAM_WARN_PCT else ("warn" if pct < RAM_CRIT_PCT else "critical"),
+    }
+
+
+def run_daemon() -> None:
+    """Loop principal del daemon."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [ram-guardian] %(message)s"
+    )
+    log.info("RAM Guardian iniciado (intervalo=%ds, warn=%d%%, crítico=%d%%)",
+             INTERVAL_S, RAM_WARN_PCT, RAM_CRIT_PCT)
+
+    while True:
+        try:
+            pct = _ram_pct()
+            log.info("RAM: %.1f%%", pct)
+
+            if pct >= RAM_CRIT_PCT:
+                log.warning("RAM CRÍTICA (%.1f%%) — liberando caches...", pct)
+                ok = _drop_caches()
+                _kill_zombie_ollama()
+                _state["cleanups"] += 1
+                _state["last_cleanup"] = time.time()
+                pct_after = _ram_pct()
+                log.info("Tras limpieza: %.1f%% (drop_caches=%s)", pct_after, ok)
+
+            elif pct >= RAM_WARN_PCT:
+                log.warning("RAM alta: %.1f%%", pct)
+                _kill_zombie_ollama()
+
+        except Exception as e:
+            log.error("Error en ciclo guardian: %s", e)
+
+        time.sleep(INTERVAL_S)
+
+
+if __name__ == "__main__":
+    run_daemon()

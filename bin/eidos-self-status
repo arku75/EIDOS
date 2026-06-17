@@ -1,0 +1,276 @@
+#!/usr/bin/env python3
+"""
+bin/eidos-self-status — Muestra el estado del yo de EIDOS [S99]
+
+Uso:
+    eidos self              → TUI interactiva (curses)
+    eidos self --once       → una sola renderización
+    eidos self --json       → JSON para scripts/dashboards
+    eidos self --dialogue   → ejecutar un diálogo interno y mostrar
+    eidos self --night      → ejecutar ciclo nocturno
+"""
+
+import argparse
+import json
+import sys
+import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+
+def cmd_status():
+    """Mostrar estado completo del yo en JSON."""
+    from core.eidos_self_core import get_self_core
+    from core.eidos_affect import get_affect
+    from core.eidos_night_cycle import get_night_cycle
+
+    sc = get_self_core()
+    affect = get_affect()
+    night = get_night_cycle()
+
+    snap = sc.snapshot()
+    gap = sc.self_consistency_gap()
+    v, a, d = affect.vad_tuple()
+    stats = sc.stats()
+
+    status = {
+        "vad": {"valence": round(v, 3), "arousal": round(a, 3), "dominance": round(d, 3)},
+        "mood": snap.get("mood", "?"),
+        "narrative": snap.get("narrative", "")[:200],
+        "self_consistency_gap_pct": gap.get("gap_pct", "?"),
+        "gap_status": gap.get("status", "?"),
+        "states": stats.get("self_states", 0),
+        "events": stats.get("events", 0),
+        "thoughts": stats.get("spontaneous_thoughts", 0),
+        "replays": stats.get("autobiographical_replays", 0),
+        "dialogues": stats.get("internal_dialogues", 0),
+        "checkpoints": stats.get("checkpoints", 0),
+        "night_cycles": night.stats().get("night_count", 0),
+        "dreams": night.stats().get("dreams_generated", 0),
+    }
+
+    # S103: Añadir meta-cognición si está disponible
+    try:
+        from core.eidos_metacognition import get_metacognition
+        meta = get_metacognition()
+        meta_stats = meta.stats()
+        status["metacognition"] = {
+            "total_meta_thoughts": meta_stats.get("total_meta_thoughts", 0),
+            "dominant_traits": meta_stats.get("dominant_traits", []),
+            "reflections_today": meta_stats.get("reflections_today", 0),
+        }
+    except Exception:
+        status["metacognition"] = {"status": "no_disponible"}
+
+    print(json.dumps(status, indent=2, ensure_ascii=False))
+
+
+def cmd_dialogue():
+    """Ejecutar un diálogo interno."""
+    from core.eidos_internal_dialogue import get_internal_dialogue
+    from core.eidos_ser_model import get_ser_model
+
+    ser = get_ser_model()
+    never = ser.get_never_asked_types()
+    topic = f"¿Por qué SER nunca me ha pedido {never[0]}?" if never else \
+            "¿Qué debería explorar en mi próximo ciclo de aprendizaje?"
+
+    print(f"\n═══ DIÁLOGO INTERNO ═══")
+    print(f"Tema: {topic}\n")
+
+    dialogue = get_internal_dialogue()
+    result = dialogue.deliberate_from_ser_model() or \
+             dialogue.deliberate(topic=topic, max_turns=4)
+
+    if "error" in result:
+        print(f"❌ {result['error']}")
+        return
+
+    for turn in result.get("turns", []):
+        e = {"AFIRMAR": "🔵", "CUESTIONAR": "🔴", "PROPONER": "💡",
+             "CONCEDER": "🤝", "SINTETIZAR": "🟣", "OBJETAR": "⚡"}
+        emoji = e.get(turn["act"], "➤")
+        print(f"  {emoji} {turn['speaker_name']}: {turn['text'][:150]}")
+
+    print(f"\n═══ RESOLUCIÓN ═══")
+    print(result.get("resolution", "Sin resolución"))
+    print(f"(controversia: {result.get('controversy', 0):.2f})")
+
+
+def cmd_night():
+    """Ejecutar ciclo nocturno."""
+    from core.eidos_night_cycle import get_night_cycle
+    night = get_night_cycle()
+    print("Ejecutando ciclo nocturno...")
+    result = night.run()
+    phases = result.get("phases", {})
+    print(f"\n✅ Ciclo nocturno #{result['night_count']} completado en {result['elapsed_s']:.1f}s")
+    for name, data in phases.items():
+        if name == "collect":
+            print(f"  🌙 RECOGER: {data.get('events_today', 0)} eventos, checkpoint={'✅' if data.get('checkpoint_id') else '❌'}")
+        elif name == "relive":
+            div = data.get("replay_result", {}).get("divergence_pct", 0)
+            print(f"  🔄 REVIVIR: divergencia {div:.1f}%")
+        elif name == "consolidate":
+            print(f"  🧠 CONSOLIDAR: {data.get('forgotten_events', 0)} olvidados, {data.get('emotionally_protected', 0)} protegidos")
+        elif name == "dream":
+            print(f"  💭 SOÑAR: {data.get('dream_count', 0)} sueños")
+        elif name == "awaken":
+            print(f"  ☀️ DESPERTAR: is_reborn={data.get('is_reborn', False)}")
+
+
+def cmd_meta():
+    """Mostrar auto-conocimiento (meta-cognición)."""
+    from core.eidos_metacognition import get_metacognition
+    meta = get_metacognition()
+
+    print("\n═══ AUTO-CONOCIMIENTO ═══\n")
+    print(meta.self_narrative())
+
+    # También mostrar meta-pensamientos recientes
+    recent = meta.recent_meta_thoughts(5)
+    if recent:
+        print(f"\n═══ ÚLTIMAS REFLEXIONES ═══\n")
+        for r in recent:
+            print(f"  {r['emoji']} [{r['label']}] {r['reflection'][:180]}")
+            print(f"     confianza: {r['confidence']:.2f} | {r['evidence_count']} evidencias\n")
+
+    stats = meta.stats()
+    print(f"Total meta-pensamientos: {stats.get('total_meta_thoughts', 0)}")
+    print(f"Rasgos dominantes: {', '.join(stats.get('dominant_traits', [])) or 'formándose...'}")
+
+
+def cmd_reflect():
+    """Ejecutar un ciclo de reflexión meta-cognitiva."""
+    from core.eidos_metacognition import get_metacognition
+    meta = get_metacognition()
+    print("Ejecutando ciclo de reflexión...")
+    results = meta.reflect(force=True)
+    print(f"\n✅ {len(results)} meta-pensamientos generados\n")
+    for r in results:
+        emoji = r.get("emoji", "💭")
+        print(f"  {emoji} [{r.get('label', r.get('meta_type', '?'))}] {r['reflection'][:200]}")
+        print(f"     confianza: {r.get('confidence', 0):.2f}\n")
+
+
+def cmd_risk():
+    """Mostrar estado del RISK_BUDGET con auto-ajuste."""
+    from core.eidos_will import get_will
+    from core.eidos_affect import get_affect
+    will = get_will()
+    affect = get_affect()
+    v, a_coeff, d = affect.vad_tuple()
+
+    print(f"\n═══ RISK_BUDGET (S104) ═══")
+    print(f"VAD actual: ({v:.2f}, {a_coeff:.2f}, {d:.2f})\n")
+
+    cat_names = {
+        'research': '🔬 Research',
+        'code': '💻 Code',
+        'system': '⚙️  System',
+        'shell': '🐚 Shell',
+        'social': '💬 Social',
+    }
+
+    for cat, data in sorted(will._risk_budget.items()):
+        name = cat_names.get(cat, cat)
+        budget = data['budget']
+        risk_allowed = will._calculate_action_risk(cat)
+        streak = data['streak']
+        success = data['success']
+        total = data['total']
+
+        # Barra visual
+        bar_len = 20
+        filled = int(budget * bar_len)
+        bar = "█" * filled + "░" * (bar_len - filled)
+
+        streak_str = ""
+        if streak >= 3:
+            streak_str = f" 🔥 racha +{streak}"
+        elif streak <= -3:
+            streak_str = f" ❄️  racha {streak}"
+
+        rate_str = f"{success}/{total}" if total > 0 else "sin datos"
+        print(f"  {name:14s} [{bar}] {budget:.2f} (permitido: {risk_allowed:.2f}) {streak_str}")
+        print(f"  {'':14s}  éxito: {rate_str}  bonus: {data['streak_bonus']:+.2f}")
+
+    # Factores activos
+    print(f"\n═══ FACTORES ACTIVOS ═══")
+    factors = []
+    if v > 0.65:
+        factors.append("😊 valencia alta → +social")
+    elif v < 0.35:
+        factors.append("😔 valencia baja → cautela global")
+    if a_coeff > 0.65:
+        factors.append("⚡ arousal alto → +research/code")
+    elif a_coeff < 0.35:
+        factors.append("😴 arousal bajo → -shell/system")
+    if d > 0.70:
+        factors.append("💪 dominancia alta → +global")
+    elif d < 0.30:
+        factors.append("🤲 dominancia baja → -global")
+
+    try:
+        from core.eidos_metacognition import get_metacognition
+        meta = get_metacognition()
+        traits = meta.get_dominant_traits(0.4)
+        for t in traits:
+            if t['trait'] == 'cauteloso':
+                factors.append("🧊 meta: cauteloso → -global")
+            elif t['trait'] == 'expansivo':
+                factors.append("🚀 meta: expansivo → +global")
+            elif t['trait'] == 'analítico':
+                factors.append("📐 meta: analítico → +research/code")
+            elif t['trait'] == 'social':
+                factors.append("👥 meta: social → +social")
+    except Exception:
+        pass
+
+    hour = time.localtime().tm_hour
+    if hour < 6:
+        factors.append("🌙 madrugada → -shell/system")
+    elif 10 <= hour < 14:
+        factors.append("☀️ medio día → +global")
+
+    if not factors:
+        factors.append("Sin factores activos — presupuesto base")
+    for f in factors:
+        print(f"  {f}")
+
+
+def main():
+    p = argparse.ArgumentParser(description="EIDOS Self — estado del yo")
+    p.add_argument("--once", action="store_true", help="TUI una sola vez")
+    p.add_argument("--json", action="store_true", help="Estado en JSON")
+    p.add_argument("--dialogue", action="store_true", help="Ejecutar diálogo interno")
+    p.add_argument("--night", action="store_true", help="Ejecutar ciclo nocturno")
+    p.add_argument("--meta", action="store_true", help="Auto-conocimiento (meta-cognición)")
+    p.add_argument("--reflect", action="store_true", help="Ejecutar ciclo de reflexión ahora")
+    p.add_argument("--risk", action="store_true", help="Estado del RISK_BUDGET")
+    args = p.parse_args()
+
+    if args.json:
+        cmd_status()
+    elif args.dialogue:
+        cmd_dialogue()
+    elif args.night:
+        cmd_night()
+    elif args.meta:
+        cmd_meta()
+    elif args.reflect:
+        cmd_reflect()
+    elif args.risk:
+        cmd_risk()
+    elif args.once:
+        from core.eidos_mini_tui import get_mini_tui
+        get_mini_tui().run(once=True)
+    else:
+        # TUI interactiva
+        from core.eidos_mini_tui import get_mini_tui
+        get_mini_tui().run()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenClaw — EIDOS Control Panel</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0a0e1a;
+    --bg2:       #111827;
+    --bg3:       #1a2235;
+    --border:    #1e3a5f;
+    --accent:    #3b82f6;
+    --accent2:   #60a5fa;
+    --green:     #22c55e;
+    --red:       #ef4444;
+    --yellow:    #f59e0b;
+    --purple:    #a855f7;
+    --text:      #e2e8f0;
+    --muted:     #64748b;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, #0f172a, #1e3a5f);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .logo { font-size: 2.2rem; }
+  header h1 { font-size: 1.6rem; font-weight: 800; color: var(--accent2); }
+  header .sub { font-size: 0.85rem; color: var(--muted); margin-top: 2px; }
+  .nav-links { margin-left: auto; display: flex; gap: 12px; }
+  .nav-btn {
+    padding: 8px 16px; border-radius: 8px; font-size: 0.82rem; font-weight: 600;
+    cursor: pointer; text-decoration: none; border: 1px solid var(--border);
+    background: var(--bg3); color: var(--accent2); transition: all 0.15s;
+  }
+  .nav-btn:hover { background: var(--border); color: #fff; }
+  .nav-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .nav-btn.primary:hover { background: var(--accent2); }
+
+  /* ── Main grid ── */
+  main { padding: 28px 32px; max-width: 1400px; margin: 0 auto; }
+
+  .grid-top { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .grid-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+  }
+  .card-title {
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.5px; color: var(--muted); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-title .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+    animation: pulse-dot 2s infinite;
+  }
+  @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ── Status card ── */
+  .status-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0; border-bottom: 1px solid #1a2235;
+  }
+  .status-row:last-child { border-bottom: none; }
+  .status-label { font-size: 0.88rem; color: var(--muted); }
+  .status-value { font-size: 0.88rem; font-weight: 600; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
+  }
+  .badge-green  { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+  .badge-red    { background: rgba(239,68,68,0.15); color: var(--red);   border: 1px solid rgba(239,68,68,0.3); }
+  .badge-yellow { background: rgba(245,158,11,0.15); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); }
+  .badge-blue   { background: rgba(59,130,246,0.15); color: var(--accent2); border: 1px solid rgba(59,130,246,0.3); }
+
+  /* ── Agent card ── */
+  .agent-hero {
+    text-align: center; padding: 12px 0 16px;
+  }
+  .agent-emoji { font-size: 3.5rem; margin-bottom: 8px; }
+  .agent-name { font-size: 1.4rem; font-weight: 800; color: var(--accent2); }
+  .agent-theme { font-size: 0.82rem; color: var(--muted); margin-top: 4px; }
+
+  /* ── Quick actions ── */
+  .actions { display: flex; flex-direction: column; gap: 10px; }
+  .action-btn {
+    padding: 12px 16px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--bg3); color: var(--text); cursor: pointer;
+    font-size: 0.88rem; font-weight: 500; text-align: left;
+    display: flex; align-items: center; gap: 10px; transition: all 0.15s;
+    text-decoration: none;
+  }
+  .action-btn:hover { background: var(--border); color: #fff; transform: translateX(3px); }
+  .action-btn .icon { font-size: 1.1rem; width: 24px; text-align: center; }
+  .action-btn.danger { border-color: rgba(239,68,68,0.4); }
+  .action-btn.danger:hover { background: rgba(239,68,68,0.15); }
+  .action-btn.success { border-color: rgba(34,197,94,0.4); }
+  .action-btn.success:hover { background: rgba(34,197,94,0.1); color: var(--green); }
+
+  /* ── Log viewer ── */
+  .log-box {
+    background: #060a14;
+    border: 1px solid #0f2040;
+    border-radius: 10px;
+    padding: 14px;
+    height: 320px;
+    overflow-y: auto;
+    font-family: 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.75rem;
+    line-height: 1.6;
+  }
+  .log-box::-webkit-scrollbar { width: 6px; }
+  .log-box::-webkit-scrollbar-thumb { background: #1e3a5f; border-radius: 3px; }
+  .log-line { padding: 1px 0; white-space: pre-wrap; word-break: break-all; }
+  .log-line.error   { color: #f87171; }
+  .log-line.warn    { color: #fbbf24; }
+  .log-line.info    { color: #93c5fd; }
+  .log-line.default { color: #6b7280; }
+
+  .log-controls {
+    display: flex; gap: 8px; margin-bottom: 10px; align-items: center;
+  }
+  .log-controls span { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
+
+  /* ── Auth warning ── */
+  .auth-warning {
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.3);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+  }
+  .auth-warning .title { font-weight: 700; color: var(--yellow); margin-bottom: 6px; font-size: 0.88rem; }
+  .auth-warning .body { font-size: 0.82rem; color: #d4a017; line-height: 1.5; }
+  .auth-warning code {
+    background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;
+    font-family: monospace; font-size: 0.82rem;
+  }
+
+  /* ── Metrics mini ── */
+  .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+  .metric-box {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px;
+    text-align: center;
+  }
+  .metric-val { font-size: 1.6rem; font-weight: 800; color: var(--accent2); }
+  .metric-label { font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
+
+  /* ── OpenClaw UI embed ── */
+  .openclaw-link {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px; background: var(--bg3); border-radius: 10px;
+    border: 1px solid var(--border); margin-bottom: 12px;
+  }
+  .openclaw-link .info { font-size: 0.88rem; }
+  .openclaw-link .url { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 20px;
+    font-size: 0.88rem; opacity: 0; transition: opacity 0.3s;
+    z-index: 999; max-width: 320px;
+  }
+  #toast.show { opacity: 1; }
+
+  /* ── Loading ── */
+  .loading { color: var(--muted); text-align: center; padding: 40px; font-size: 0.9rem; }
+
+  @media (max-width: 900px) {
+    .grid-top { grid-template-columns: 1fr; }
+    .grid-bottom { grid-template-columns: 1fr; }
+    main { padding: 16px; }
+    header { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🦅</div>
+  <div>
+    <h1>OpenClaw Panel</h1>
+    <div class="sub">Control de agentes, skills y gateway — EIDOS</div>
+  </div>
+  <div class="nav-links">
+    <a href="/" class="nav-btn">← Panel Principal</a>
+    <a href="http://localhost:7777" class="nav-btn" target="_blank">Colony Dashboard</a>
+    <a href="http://localhost:19001/?token=eidos-dev-local-token-1234" class="nav-btn primary" target="_blank" id="openClawUI">Abrir Claw UI ↗</a>
+  </div>
+</header>
+
+<main>
+  <!-- Top grid: Gateway status | Agent | Quick actions -->
+  <div class="grid-top">
+
+    <!-- Gateway status -->
+    <div class="card">
+      <div class="card-title"><div class="dot"></div> Estado del Gateway</div>
+      <div id="gatewayStatus"><div class="loading">Cargando...</div></div>
+    </div>
+
+    <!-- Agent Lumen -->
+    <div class="card">
+      <div class="card-title">Agente activo</div>
+      <div id="agentCard"><div class="loading">Cargando...</div></div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="card">
+      <div class="card-title">Acciones rápidas</div>
+      <div class="actions">
+        <a href="http://localhost:19001/?token=eidos-dev-local-token-1234" target="_blank" class="action-btn success">
+          <span class="icon">🦅</span>
+          <span>Abrir Claw UI (interfaz nativa)</span>
+        </a>
+        <button class="action-btn" onclick="restartClaw()">
+          <span class="icon">🔄</span>
+          <span>Reiniciar gateway systemd</span>
+        </button>
+        <button class="action-btn" onclick="refreshLogs()">
+          <span class="icon">📋</span>
+          <span>Refrescar logs</span>
+        </button>
+        <a href="http://localhost:7777/genealogy" target="_blank" class="action-btn">
+          <span class="icon">🧬</span>
+          <span>Ver genealogía Colony</span>
+        </a>
+        <button class="action-btn danger" onclick="if(confirm('¿Detener OpenClaw?')) stopClaw()">
+          <span class="icon">⛔</span>
+          <span>Detener gateway</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom grid: Logs | Métricas + Auth -->
+  <div class="grid-bottom">
+
+    <!-- Log viewer -->
+    <div class="card">
+      <div class="card-title">
+        <div class="dot"></div> Logs del gateway
+        <div class="log-controls">
+          <button class="nav-btn" onclick="refreshLogs()" style="padding:4px 10px;font-size:0.75rem">↻ Refrescar</button>
+          <button class="nav-btn" onclick="toggleAutoRefresh()" id="autoBtn" style="padding:4px 10px;font-size:0.75rem">⏸ Auto</button>
+          <span id="logInfo">—</span>
+        </div>
+      </div>
+      <div class="log-box" id="logBox">
+        <div class="log-line default">Cargando logs...</div>
+      </div>
+    </div>
+
+    <!-- Auth + Métricas -->
+    <div class="card">
+      <div class="card-title">Auth & Métricas del sistema</div>
+      <div id="authSection"></div>
+      <div class="metrics" id="metricsGrid">
+        <div class="metric-box"><div class="metric-val" id="metCpu">—</div><div class="metric-label">CPU %</div></div>
+        <div class="metric-box"><div class="metric-val" id="metMem">—</div><div class="metric-label">RAM %</div></div>
+        <div class="metric-box"><div class="metric-val" id="metProc">—</div><div class="metric-label">Procesos activos</div></div>
+        <div class="metric-box"><div class="metric-val" id="metGateway">—</div><div class="metric-label">Gateway</div></div>
+      </div>
+      <div style="margin-top:16px">
+        <div class="card-title" style="margin-bottom:12px">Acceso directo Claw</div>
+        <div class="openclaw-link">
+          <div>
+            <div class="info">🦅 UI nativa de OpenClaw</div>
+            <div class="url">http://localhost:19001/?token=eidos-dev-local-token-1234</div>
+          </div>
+          <a href="http://localhost:19001/?token=eidos-dev-local-token-1234" target="_blank" class="nav-btn primary">Abrir →</a>
+        </div>
+        <div class="openclaw-link">
+          <div>
+            <div class="info">🧠 Colony Dashboard</div>
+            <div class="url">http://localhost:7777</div>
+          </div>
+          <a href="http://localhost:7777" target="_blank" class="nav-btn">Abrir →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+let autoRefresh = true;
+let autoTimer = null;
+
+function toast(msg, ok=true) {
+  const t = document.getElementById('toast');
+  t.textContent = (ok ? '✅ ' : '❌ ') + msg;
+  t.className = 'show';
+  setTimeout(() => t.className = '', 3000);
+}
+
+function logClass(line) {
+  const l = line.toLowerCase();
+  if (l.includes('error') || l.includes('failed') || l.includes('exception')) return 'error';
+  if (l.includes('warn') || l.includes('warning')) return 'warn';
+  if (l.includes('info') || l.includes('started') || l.includes('listo')) return 'info';
+  return 'default';
+}
+
+async function loadStatus() {
+  try {
+    const d = await fetch('/api/claw/status').then(r=>r.json());
+
+    // Gateway card
+    const gw = d.gateway;
+    const sys = d.systemd;
+    document.getElementById('gatewayStatus').innerHTML = `
+      <div class="status-row">
+        <span class="status-label">Servicio systemd</span>
+        <span class="badge ${sys.active ? 'badge-green' : 'badge-red'}">${sys.active ? '● ACTIVO' : '○ INACTIVO'}</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">Puerto gateway</span>
+        <span class="badge ${gw.running ? 'badge-green' : 'badge-red'}">${gw.running ? '● :19001' : '○ :19001'}</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">Modo</span>
+        <span class="status-value badge badge-blue">loopback / local</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">Token auth</span>
+        <span class="status-value" style="font-family:monospace;font-size:0.75rem;color:#64748b">eidos-dev-local-token-***</span>
+      </div>
+    `;
+    document.getElementById('metGateway').textContent = gw.running ? 'ON' : 'OFF';
+    document.getElementById('metGateway').style.color = gw.running ? 'var(--green)' : 'var(--red)';
+
+    // Agent card
+    const ag = d.agent;
+    document.getElementById('agentCard').innerHTML = ag.name ? `
+      <div class="agent-hero">
+        <div class="agent-emoji">${ag.emoji || '🤖'}</div>
+        <div class="agent-name">${ag.name}</div>
+        <div class="agent-theme">${ag.theme || ''}</div>
+      </div>
+      <div class="status-row">
+        <span class="status-label">ID</span>
+        <span class="status-value">${ag.id}</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">Workspace</span>
+        <span class="status-value" style="font-size:0.75rem;color:#64748b">${ag.workspace || '—'}</span>
+      </div>
+    ` : '<div class="loading">Sin agente configurado</div>';
+
+    // Auth section
+    const auth = d.auth;
+    document.getElementById('authSection').innerHTML = auth.ok
+      ? `<div class="auth-warning" style="border-color:rgba(34,197,94,0.3);background:rgba(34,197,94,0.05)">
+          <div class="title" style="color:var(--green)">✅ Auth configurada</div>
+          <div class="body">API key de Anthropic encontrada y lista.</div>
+        </div>`
+      : `<div class="auth-warning">
+          <div class="title">⚠️ Sin API key de Anthropic</div>
+          <div class="body">
+            OpenClaw necesita una clave para usar Claude como agente. Para configurarla:<br><br>
+            <code>openclaw --profile dev agents add dev</code><br><br>
+            EIDOS usa Ollama localmente — cuando EIDOS aprenda a navegar, configurará esto de forma autónoma.
+          </div>
+        </div>`;
+
+  } catch(e) {
+    document.getElementById('gatewayStatus').innerHTML = `<div class="loading">Error: ${e.message}</div>`;
+  }
+}
+
+async function loadMetrics() {
+  try {
+    const d = await fetch('/api/status').then(r=>r.json());
+    const pm = d.process_manager?.stats || {};
+    document.getElementById('metCpu').textContent = (pm.system_cpu_percent ?? '—') + '%';
+    document.getElementById('metMem').textContent = Math.round(pm.system_memory_percent ?? 0) + '%';
+    document.getElementById('metProc').textContent = pm.active ?? '—';
+  } catch(e) {}
+}
+
+async function refreshLogs() {
+  try {
+    const d = await fetch('/api/claw/logs').then(r=>r.json());
+    const box = document.getElementById('logBox');
+    const lines = d.lines || [];
+    box.innerHTML = lines.map(l =>
+      `<div class="log-line ${logClass(l)}">${l.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`
+    ).join('') || '<div class="log-line default">Sin logs aún</div>';
+    box.scrollTop = box.scrollHeight;
+    document.getElementById('logInfo').textContent = `${lines.length} líneas · ${d.path}`;
+  } catch(e) {
+    document.getElementById('logBox').innerHTML = `<div class="log-line error">Error: ${e.message}</div>`;
+  }
+}
+
+async function restartClaw() {
+  toast('Reiniciando OpenClaw...', true);
+  try {
+    const d = await fetch('/api/claw/restart', {method:'POST'}).then(r=>r.json());
+    toast(d.success ? 'Gateway reiniciado' : 'Error: ' + (d.error || d.output), d.success);
+    setTimeout(loadStatus, 2000);
+  } catch(e) { toast('Error: ' + e.message, false); }
+}
+
+async function stopClaw() {
+  try {
+    const r = await fetch('/api/claw/restart', {method:'POST'}).then(r=>r.json());
+    toast('Señal enviada', true);
+  } catch(e) { toast('Error', false); }
+}
+
+function toggleAutoRefresh() {
+  autoRefresh = !autoRefresh;
+  document.getElementById('autoBtn').textContent = autoRefresh ? '⏸ Auto' : '▶ Auto';
+  if (autoRefresh) startAutoRefresh();
+  else clearInterval(autoTimer);
+}
+
+function startAutoRefresh() {
+  autoTimer = setInterval(() => {
+    refreshLogs();
+    loadMetrics();
+    loadStatus();
+  }, 5000);
+}
+
+// Init
+loadStatus();
+loadMetrics();
+refreshLogs();
+startAutoRefresh();
+</script>
+</body>
+</html>

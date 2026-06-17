@@ -1,0 +1,3 @@
+#!/bin/bash
+cd "$HOME/EIDOS" && python3 -m core.eidos_input_safety unfreeze
+echo "✅ Freno liberado."

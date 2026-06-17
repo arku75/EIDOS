@@ -1,0 +1,11 @@
+[Unit]
+Description=EIDOS Hebbian Pruning — Poda y consolidación diaria
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -c "from core.eidos_hebbian_pruning import get_pruner; p = get_pruner(); preview = p.prune(dry_run=True); print(f'Dry-run: {preview.get(\"edges_pruned\",0)} edges, {preview.get(\"nodes_orphaned\",0)} nodes'); result = p.prune(dry_run=False); cons = p.consolidate(dry_run=False); print(f'Prune: {result.get(\"edges_pruned\",0)} edges, {result.get(\"nodes_pruned\",0)} nodes, {cons.get(\"edges_strengthened\",0)} consolidated')"
+WorkingDirectory=/home/ser/EIDOS
+Environment=PYTHONPATH=/home/ser/EIDOS
+StandardOutput=append:/home/ser/.eidos/pruning.log
+StandardError=append:/home/ser/.eidos/pruning.log

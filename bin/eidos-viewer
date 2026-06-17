@@ -1,0 +1,934 @@
+#!/usr/bin/env python3
+"""
+eidos-viewer — App nativa AnyDesk-style con chat bidireccional Colony (S125-L)
+================================================================================
+
+Pantalla en vivo + chat con los personajes de EIDOS (⚡ EIDOS, 💡 Lumen,
+🔧 Forge, 👨‍💻 Coder, 🔍 Analyst, 👁 Vision, 🖥 Operator, 👑 SER...).
+
+Flujo:
+  - Pantalla en vivo a la izquierda (click = interactuar con el escritorio)
+  - Chat a la derecha con TODOS los personajes de Colony
+  - Escribes una instrucción → Colony delibera → EIDOS actúa
+  - Mueves el ratón sobre la pantalla → auto-pausa → EIDOS te observa
+  - EIDOS percibe (OCR) → screenshots en el chat
+  - SIN bucle a sí mismo (ventana excluida de captura)
+
+Uso:
+  bin/eidos-viewer                        # local, http://127.0.0.1:8080
+  bin/eidos-viewer --host 100.64.0.5      # remoto vía Tailscale
+  bin/eidos-viewer --target root          # escritorio entero
+  bin/eidos-viewer --no-input             # solo lectura
+  bin/eidos-viewer --self-test            # verifica conexión sin GUI
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import time
+import threading
+import urllib.request
+import urllib.error
+import io
+import logging
+from typing import Optional, Dict, List, Any
+from pathlib import Path
+
+LOG = logging.getLogger("eidos-viewer")
+
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = 8080
+BRIDGE_PORT = 8003
+DEFAULT_RATE_MS = 1500
+DEFAULT_TARGET = "firefox"
+WINDOW_TITLE = "EIDOS — Screen Viewer"
+
+# Emojis por personaje para el chat
+CHAR_EMOJI = {
+    "colony_general": "⚡",
+    "colony_lumen": "💡",
+    "colony_coder": "👨‍💻",
+    "colony_analyst": "🔍",
+    "colony_vision": "👁",
+    "colony_operator": "🖥",
+    "colony_forge": "🔧",
+    "colony_ser": "👑",
+    "colony_centinela": "🛡",
+    "colony_aurora": "✨",
+    "colony_omega": "🌊",
+    "colony_potemtakem": "🎵",
+    "action_executor": "🎬",
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Cliente HTTP contra el web-panel (pantalla, clicks, teclas)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class EidosClient:
+    def __init__(self, host: str, port: int, timeout: float = 8.0):
+        self.base = f"http://{host}:{port}"
+        self.timeout = timeout
+
+    def _req(self, method: str, path: str, body: Optional[dict] = None) -> dict:
+        url = self.base + path
+        data = None
+        headers = {"Accept": "application/json"}
+        if body is not None:
+            data = json.dumps(body).encode()
+            headers["Content-Type"] = "application/json"
+        req = urllib.request.Request(url, data=data, method=method, headers=headers)
+        with urllib.request.urlopen(req, timeout=self.timeout) as r:
+            txt = r.read().decode("utf-8", errors="replace")
+            return json.loads(txt) if txt else {}
+
+    def get_png(self, target: str = "firefox") -> bytes:
+        url = f"{self.base}/api/screen/live.png?target={target}&t={int(time.time()*1000)}"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=self.timeout) as r:
+            return r.read()
+
+    def click(self, x: int, y: int, button: int = 1) -> dict:
+        return self._req("POST", "/api/screen/click", {"x": x, "y": y, "button": button})
+
+    def type_text(self, text: str) -> dict:
+        return self._req("POST", "/api/screen/type", {"text": text})
+
+    def key(self, key: str) -> dict:
+        return self._req("POST", "/api/screen/key", {"key": key})
+
+    def stop(self) -> dict:
+        return self._req("POST", "/api/screen/stop")
+
+    def status(self) -> dict:
+        return self._req("GET", "/api/status")
+
+    def observation_start(self) -> dict:
+        return self._req("POST", "/api/observation/start")
+
+    def observation_event(self, sid: str, kind: str, payload: dict) -> dict:
+        return self._req("POST", "/api/observation/event",
+                         {"session_id": sid, "kind": kind, "payload": payload, "ts": time.time()})
+
+    def observation_stop(self, sid: str, ser_message: str = "") -> dict:
+        return self._req("POST", "/api/observation/stop",
+                         {"session_id": sid, "ser_message": ser_message})
+
+    def instruct(self, instruction: str, max_steps: int = 6, dry_run: bool = False) -> dict:
+        old = self.timeout
+        self.timeout = 300
+        try:
+            return self._req("POST", "/api/screen/instruct",
+                             {"instruction": instruction, "max_steps": max_steps, "dry_run": dry_run})
+        finally:
+            self.timeout = old
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Cliente HTTP contra el bridge (Colony - chat, deliberación)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class BridgeClient:
+    """Habla con Colony vía bridge :8003."""
+
+    API_KEY = "eidos-2026-bridge-key"
+
+    def __init__(self, host: str = "127.0.0.1", port: int = BRIDGE_PORT, timeout: float = 120.0):
+        self.base = f"http://{host}:{port}"
+        self.timeout = timeout
+
+    def _req(self, method: str, path: str, body: Optional[dict] = None) -> dict:
+        url = self.base + path
+        data = None
+        headers = {
+            "Accept": "application/json",
+            "X-API-Key": self.API_KEY,
+        }
+        if body is not None:
+            data = json.dumps(body).encode()
+            headers["Content-Type"] = "application/json"
+        req = urllib.request.Request(url, data=data, method=method, headers=headers)
+        with urllib.request.urlopen(req, timeout=self.timeout) as r:
+            txt = r.read().decode("utf-8", errors="replace")
+            return json.loads(txt) if txt else {}
+
+    def talk(self, message: str) -> dict:
+        """Envía mensaje a Colony, recibe respuesta con agentes consultados."""
+        return self._req("POST", "/talk",
+                         {"message": message})
+
+    def reason(self, concept: str) -> dict:
+        """Razonamiento neuronal puro (sin LLM)."""
+        return self._req("POST", "/reason", {"query": concept})
+
+    def research(self, topic: str) -> dict:
+        """Auto-investigación: EIDOS busca en man/apt/wiki/ddg."""
+        return self._req("POST", "/auto_learn", {"topic": topic})
+
+    def health(self) -> dict:
+        return self._req("GET", "/health")
+
+    def graph_stats(self) -> dict:
+        return self._req("GET", "/graph/stats")
+
+    def identity(self) -> dict:
+        return self._req("GET", "/identity/dashboard")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# GUI — tkinter
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _build_gui(client: EidosClient, target: str, rate_ms: int, no_input: bool):
+    import tkinter as tk
+    from tkinter import ttk
+    from PIL import Image, ImageTk
+
+    bridge = BridgeClient()
+
+    root = tk.Tk()
+    root.title(WINDOW_TITLE)
+    root.geometry("1440x860")
+    root.configure(bg="#0d1117")
+    root.resizable(True, True)
+    root.minsize(900, 600)
+    try:
+        root.attributes("-fullscreen", False)
+        try:
+            root.attributes("-zoomed", False)
+        except Exception:
+            pass
+        root.state("normal")
+        root.overrideredirect(False)
+        root.update_idletasks()
+        sw, sh = root.winfo_screenwidth(), root.winfo_screenheight()
+        x, y = max(0, (sw - 1440) // 2), max(0, (sh - 860) // 2)
+        root.geometry(f"1440x860+{x}+{y}")
+    except Exception:
+        pass
+
+    state = {
+        "target": target,
+        "rate_ms": rate_ms,
+        "running": True,
+        "paused": False,
+        "observe_sid": None,
+        "img_native_size": (1920, 1080),
+        "tk_img": None,
+        "stop_active": False,
+        "no_input": no_input,
+        "auto_pause": True,
+        "fps": 0.0,
+        "fps_count": 0,
+        "fps_t0": time.time(),
+        # Keylogger durante pausa
+        "keys_logged": [],
+        "clicks_logged": [],
+        "mouse_trail": [],
+    }
+
+    # ── Top bar ─────────────────────────────────────────────────────────────────
+    top = tk.Frame(root, bg="#161b22", height=44)
+    top.pack(fill="x", side="top")
+
+    def mk_btn(parent, text, cmd, bg="#21262d", fg="#c9d1d9", bold=False):
+        b = tk.Button(parent, text=text, command=cmd,
+                      bg=bg, fg=fg, activebackground="#30363d",
+                      activeforeground="#c9d1d9", bd=0, padx=10, pady=6,
+                      font=("Helvetica", 10, "bold" if bold else "normal"),
+                      cursor="hand2")
+        b.pack(side="left", padx=3, pady=6)
+        return b
+
+    btn_pause = mk_btn(top, "⏸ PAUSE", lambda: toggle_pause(), bg="#bf8700", fg="#fff", bold=True)
+    btn_stop = mk_btn(top, "🛑 STOP", lambda: toggle_stop(), bg="#da3633", fg="#fff", bold=True)
+    btn_obs = mk_btn(top, "👁 OBSERVA", lambda: toggle_observe())
+    btn_autopause = mk_btn(top, "🖱 Auto-pausa: ON", lambda: toggle_autopause(),
+                           bg="#1f6feb", fg="#fff", bold=True)
+    mk_btn(top, "🔁 REPETIR", lambda: do_repeat_last())
+    mk_btn(top, "🎯 Toggle", lambda: toggle_target())
+
+    target_lbl = tk.Label(top, text=f"vista: {state['target']}", bg="#161b22", fg="#58a6ff",
+                          font=("Helvetica", 9, "bold"))
+    target_lbl.pack(side="left", padx=10)
+
+    # Indicador de conexión Colony
+    bridge_lbl = tk.Label(top, text="Colony: ...", bg="#161b22", fg="#8b949e",
+                          font=("Helvetica", 9))
+    bridge_lbl.pack(side="left", padx=10)
+
+    fps_lbl = tk.Label(top, text="0.0 fps", bg="#161b22", fg="#3fb950",
+                       font=("Helvetica", 9))
+    fps_lbl.pack(side="right", padx=10)
+
+    # ── Zona central: pantalla (izq) + chat (der) ───────────────────────────────
+    middle = tk.Frame(root, bg="#0d1117")
+    middle.pack(fill="both", expand=True)
+
+    # ── Panel de CHAT (derecha, side="right" PRIMERO para pack geometry) ────────
+    chat_panel = tk.Frame(middle, bg="#0d1117", width=400)
+    chat_panel.pack(side="right", fill="y", padx=(0, 8), pady=6)
+    chat_panel.pack_propagate(False)
+
+    tk.Label(chat_panel, text="💬 Colony Chat",
+             bg="#0d1117", fg="#58a6ff",
+             font=("Helvetica", 10, "bold")).pack(anchor="w", pady=(0, 4))
+
+    # Scrollable chat log
+    chat_frame = tk.Frame(chat_panel, bg="#0d1117")
+    chat_frame.pack(fill="both", expand=True)
+
+    chat_canvas = tk.Canvas(chat_frame, bg="#0d1117", highlightthickness=0)
+    chat_scrollbar = tk.Scrollbar(chat_frame, orient="vertical", command=chat_canvas.yview)
+    chat_messages_frame = tk.Frame(chat_canvas, bg="#0d1117")
+
+    chat_messages_frame.bind("<Configure>",
+                             lambda e: chat_canvas.configure(scrollregion=chat_canvas.bbox("all")))
+    chat_canvas.create_window((0, 0), window=chat_messages_frame, anchor="nw", tags="msg_frame")
+    chat_canvas.configure(yscrollcommand=chat_scrollbar.set)
+
+    chat_canvas.pack(side="left", fill="both", expand=True)
+    chat_scrollbar.pack(side="right", fill="y")
+
+    def _on_chat_canvas_configure(event):
+        chat_canvas.itemconfig("msg_frame", width=event.width - 4)
+    chat_canvas.bind("<Configure>", _on_chat_canvas_configure)
+
+    def _on_mousewheel(event):
+        chat_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+    chat_canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+    # ── Canvas de pantalla (izquierda, se expande) ──────────────────────────────
+    canvas_wrap = tk.Frame(middle, bg="#0d1117")
+    canvas_wrap.pack(side="left", fill="both", expand=True, padx=8, pady=6)
+
+    canvas = tk.Canvas(canvas_wrap, bg="#000", highlightthickness=1,
+                       highlightbackground="#30363d", cursor="crosshair")
+    canvas.pack(fill="both", expand=True)
+
+    status_bar = tk.Label(canvas_wrap, text="x:- y:-  ·  esperando primer frame…",
+                          bg="#161b22", fg="#8b949e", anchor="w",
+                          font=("Monaco", 9), padx=8, pady=3)
+    status_bar.pack(fill="x")
+
+    # ── Bottom: input de chat ───────────────────────────────────────────────────
+    bottom = tk.Frame(root, bg="#161b22")
+    bottom.pack(fill="x", side="bottom", padx=8, pady=6)
+
+    tk.Label(bottom, text="🎓 Instrucción para EIDOS (Ctrl+Enter envía):",
+             bg="#161b22", fg="#d4a72c", font=("Helvetica", 9, "bold")).pack(anchor="w")
+    instruct_frame = tk.Frame(bottom, bg="#161b22")
+    instruct_frame.pack(fill="x", pady=3)
+    send_btn = tk.Button(instruct_frame, text="🎓 ENVIAR A COLONY",
+                         command=lambda: do_send_to_colony(),
+                         bg="#238636", fg="#fff",
+                         activebackground="#2ea043", activeforeground="#fff",
+                         bd=0, padx=14, pady=8,
+                         font=("Helvetica", 10, "bold"), cursor="hand2")
+    send_btn.pack(side="right", padx=(6, 0))
+    instruct_entry = tk.Text(instruct_frame, height=2, bg="#0d1117", fg="#c9d1d9",
+                             insertbackground="#c9d1d9", font=("Helvetica", 10),
+                             relief="flat", padx=6, pady=4, wrap="word")
+    instruct_entry.pack(side="left", fill="x", expand=True)
+
+    instruct_log = tk.Label(bottom, text="💡 Escribe y pulsa ENVIAR — Colony delibera y EIDOS actúa",
+                            bg="#161b22", fg="#8b949e",
+                            anchor="w", font=("Monaco", 8), wraplength=1400, justify="left")
+    instruct_log.pack(fill="x", pady=2)
+
+    def _send_on_ctrl_enter(e):
+        do_send_to_colony()
+        return "break"
+    instruct_entry.bind("<Control-Return>", _send_on_ctrl_enter)
+
+    # ── Funciones del chat ──────────────────────────────────────────────────────
+
+    def _add_chat_msg(who: str, emoji: str, text: str, color: str = "#c9d1d9", is_ser: bool = False):
+        """Añade un mensaje al chat con el emoji del personaje."""
+        msg_frame = tk.Frame(chat_messages_frame, bg="#0d1117", pady=3, padx=4)
+        msg_frame.pack(fill="x", anchor="w")
+
+        header_color = "#3fb950" if is_ser else "#58a6ff"
+        header = tk.Label(msg_frame, text=f"{emoji} {who}",
+                          bg="#0d1117", fg=header_color,
+                          font=("Helvetica", 9, "bold"), anchor="w")
+        header.pack(anchor="w")
+
+        # Texto del mensaje (multilínea, wrappeable)
+        text_label = tk.Label(msg_frame, text=text[:2000],
+                              bg="#0d1117", fg=color,
+                              font=("Monaco", 8), anchor="w",
+                              justify="left", wraplength=360)
+        text_label.pack(anchor="w", fill="x")
+
+        sep = tk.Frame(chat_messages_frame, bg="#21262d", height=1)
+        sep.pack(fill="x", padx=4, pady=1)
+
+        # Scroll al final
+        root.after(50, lambda: chat_canvas.yview_moveto(1.0))
+
+    def _add_system_msg(text: str, color: str = "#8b949e"):
+        """Mensaje del sistema (no de un personaje)."""
+        msg_frame = tk.Frame(chat_messages_frame, bg="#0d1117", pady=1, padx=4)
+        msg_frame.pack(fill="x", anchor="w")
+        lbl = tk.Label(msg_frame, text=text, bg="#0d1117", fg=color,
+                       font=("Monaco", 7), anchor="w", wraplength=370, justify="left")
+        lbl.pack(anchor="w", fill="x")
+        root.after(50, lambda: chat_canvas.yview_moveto(1.0))
+
+    def _char_name(agent_id: str) -> str:
+        names = {
+            "colony_general": "EIDOS", "colony_lumen": "Lumen",
+            "colony_coder": "Coder", "colony_analyst": "Analyst",
+            "colony_vision": "Vision", "colony_operator": "Operator",
+            "colony_forge": "Forge", "colony_ser": "SER",
+            "colony_centinela": "Centinela", "colony_aurora": "Aurora",
+            "colony_omega": "Omega", "colony_potemtakem": "Potemtakem",
+            "action_executor": "EIDOS (acción)",
+        }
+        return names.get(agent_id, agent_id.replace("colony_", "").replace("_", " ").title())
+
+    def do_send_to_colony():
+        instr = instruct_entry.get("1.0", "end").strip()
+        if not instr:
+            return
+        # Mostrar mensaje del usuario en el chat
+        _add_chat_msg("Tú", "👤", instr, color="#c9d1d9", is_ser=True)
+        instruct_entry.delete("1.0", "end")
+        _add_system_msg("⏳ Enviando a Colony...", "#d4a72c")
+
+        def _run():
+            try:
+                resp = bridge.talk(instr)
+                agents = resp.get("agents_used", resp.get("agents_consulted", []))
+                response_text = resp.get("text", resp.get("response", ""))
+                from_knowledge = resp.get("from_knowledge", False)
+                elapsed = resp.get("elapsed_s", resp.get("elapsed_sec", 0))
+
+                root.after(0, lambda: _add_system_msg(
+                    f"✓ {len(agents)} agente(s) · {elapsed:.1f}s · {'desde grafo' if from_knowledge else 'desde razonamiento'}",
+                    "#3fb950"))
+
+                if response_text:
+                    root.after(0, lambda: _add_chat_msg(
+                        "EIDOS", "⚡", response_text, color="#c9d1d9"))
+
+                # Si hay acción ejecutada, percibir y mostrar
+                if "action_executor" in agents or "abre" in instr.lower() or "busca" in instr.lower():
+                    root.after(800, lambda: _perceive_and_research())
+
+            except Exception as e:
+                root.after(0, lambda: _add_system_msg(f"❌ Error: {e}", "#f85149"))
+
+        threading.Thread(target=_run, daemon=True).start()
+
+    def _perceive_and_research():
+        """Captura pantalla con OCR, investiga conceptos encontrados en background,
+        y muestra resultados en el chat. Visión + comprensión combinadas."""
+        _add_system_msg("📸 Percibiendo pantalla...", "#8b949e")
+
+        def _run():
+            try:
+                # Fase 1: Visión (OCR)
+                img_data = client.get_png(state["target"])
+                import tempfile
+                with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                    tmp.write(img_data)
+                    shot_path = tmp.name
+
+                from PIL import Image
+                import pytesseract
+                img = Image.open(shot_path)
+                # Reducir si es muy grande
+                if img.width > 1920:
+                    ratio = 1920 / img.width
+                    img = img.resize((1920, int(img.height * ratio)), Image.LANCZOS)
+                ocr_text = pytesseract.image_to_string(img, lang="spa+eng")
+                os.unlink(shot_path)
+
+                # Limpiar líneas
+                lines = [l.strip() for l in ocr_text.splitlines() if len(l.strip()) > 2]
+                import re
+                lines = [l for l in lines if re.search(r"[a-zA-Z0-9]{3,}", l)]
+                clean_text = "\n".join(lines[:20])
+
+                if not clean_text:
+                    root.after(0, lambda: _add_system_msg(
+                        "📸 No detecté texto claro en pantalla", "#8b949e"))
+                    return
+
+                root.after(0, lambda: _add_chat_msg(
+                    "EIDOS", "⚡",
+                    f"Veo en pantalla:\n{clean_text[:600]}\n\n🔍 Investigando conceptos encontrados...",
+                    color="#c9d1d9"))
+
+                # Fase 2: Comprensión — investigar conceptos clave en background
+                import subprocess
+                concepts_found = []
+                # Extraer palabras significativas (4+ letras, sin stopwords)
+                stopwords = {"para", "como", "este", "esta", "with", "that", "this",
+                             "from", "have", "been", "were", "they", "their", "will",
+                             "about", "there", "would", "which", "when", "what"}
+                words = re.findall(r'[a-zA-Záéíóúñ]{4,}', clean_text.lower())
+                word_counts = {}
+                for w in words:
+                    if w not in stopwords:
+                        word_counts[w] = word_counts.get(w, 0) + 1
+                top_concepts = sorted(word_counts, key=word_counts.get, reverse=True)[:8]
+
+                for concept in top_concepts:
+                    try:
+                        # Intentar man page primero (rápido, local)
+                        r = subprocess.run(["man", "-P", "cat", concept],
+                                           capture_output=True, text=True, timeout=3)
+                        if r.returncode == 0 and len(r.stdout) > 50:
+                            first_line = r.stdout.strip().split("\n")[0][:200]
+                            concepts_found.append(f"  · {concept}: {first_line}")
+                            continue
+                    except Exception:
+                        pass
+                    try:
+                        # Fallback: whatis
+                        r = subprocess.run(["whatis", concept],
+                                           capture_output=True, text=True, timeout=2)
+                        if r.returncode == 0 and r.stdout.strip():
+                            concepts_found.append(f"  · {r.stdout.strip()[:200]}")
+                            continue
+                    except Exception:
+                        pass
+                    try:
+                        # Fallback: apt-cache
+                        r = subprocess.run(["apt-cache", "show", concept],
+                                           capture_output=True, text=True, timeout=3)
+                        if r.returncode == 0 and "Description:" in r.stdout:
+                            desc = re.search(r"Description[-:]?\s*(.+?)(?:\n\S|\Z)",
+                                             r.stdout, re.DOTALL)
+                            if desc:
+                                concepts_found.append(
+                                    f"  · {concept}: {desc.group(1).strip()[:200]}")
+                                continue
+                    except Exception:
+                        pass
+
+                if concepts_found:
+                    result = "🔬 Investigué estos conceptos:\n" + "\n".join(concepts_found[:6])
+                    result += "\n\n(Investigación local: man/whatis/apt, sin internet, sin LLM)"
+                    root.after(0, lambda: _add_chat_msg(
+                        "EIDOS", "⚡", result, color="#c9d1d9"))
+                else:
+                    root.after(0, lambda: _add_system_msg(
+                        "📸 Visión OK pero no encontré conceptos para investigar", "#8b949e"))
+
+            except Exception as e:
+                root.after(0, lambda: _add_system_msg(
+                    f"📸 Percepción falló: {e}", "#f85149"))
+
+        threading.Thread(target=_run, daemon=True).start()
+
+    def do_repeat_last():
+        _add_system_msg("🔁 Repitiendo último método...", "#d4a72c")
+        def _run():
+            try:
+                r = client.repeat_last()
+                root.after(0, lambda: _add_system_msg(
+                    f"✓ status={r.get('status')} brain#{r.get('node_id')}", "#3fb950"))
+            except Exception as e:
+                root.after(0, lambda: _add_system_msg(f"❌ {e}", "#f85149"))
+        threading.Thread(target=_run, daemon=True).start()
+
+    # ── Funciones de control ───────────────────────────────────────────────────
+
+    def log(msg: str, color: str = "#8b949e"):
+        instruct_log.configure(text=msg, fg=color)
+
+    def toggle_stop():
+        try:
+            client.stop()
+            state["stop_active"] = not state["stop_active"]
+            if state["stop_active"]:
+                btn_stop.configure(text="▶ REANUDAR", bg="#1f6feb")
+                log("🛑 STOP activo", "#f85149")
+                _add_system_msg("🛑 STOP activado — EIDOS pausado", "#f85149")
+            else:
+                btn_stop.configure(text="🛑 STOP", bg="#da3633")
+                log("▶ Reanudado")
+                _add_system_msg("▶ Sistema reanudado", "#3fb950")
+        except Exception as e:
+            log(f"❌ STOP error: {e}", "#f85149")
+
+    def toggle_observe():
+        if state["observe_sid"] is None:
+            try:
+                r = client.observation_start()
+                if r.get("success"):
+                    state["observe_sid"] = r["session_id"]
+                    btn_obs.configure(text="⏹ DETENER", bg="#1f6feb", fg="#fff")
+                    log(f"👁 OBSERVA activo — sid={state['observe_sid']}", "#3fb950")
+                    _add_system_msg(f"👁 OBSERVA iniciado — te observo y aprendo", "#3fb950")
+                else:
+                    log(f"❌ {r}", "#f85149")
+            except Exception as e:
+                log(f"❌ observe start: {e}", "#f85149")
+        else:
+            try:
+                r = client.observation_stop(state["observe_sid"], "")
+                n = r.get("n_events", "?")
+                state["observe_sid"] = None
+                btn_obs.configure(text="👁 OBSERVA", bg="#21262d", fg="#c9d1d9")
+                log(f"✓ Observación cerrada · n={n}", "#3fb950")
+                _add_system_msg(f"✓ Lección guardada · {n} eventos · brain#{r.get('node_id')}", "#3fb950")
+            except Exception as e:
+                log(f"❌ observe stop: {e}", "#f85149")
+
+    def toggle_autopause():
+        state["auto_pause"] = not state["auto_pause"]
+        on = state["auto_pause"]
+        btn_autopause.configure(
+            text=f"🖱 Auto-pausa: {'ON' if on else 'OFF'}",
+            bg="#1f6feb" if on else "#21262d",
+            fg="#fff" if on else "#c9d1d9")
+        log("🖱 Auto-pausa ON — al mover el ratón, EIDOS para y observa"
+            if on else "🖱 Auto-pausa OFF",
+            "#58a6ff")
+
+    def toggle_pause():
+        if state["paused"]:
+            # Reanudar
+            _do_resume()
+            return
+        # Pausar
+        try:
+            client.stop()
+            state["stop_active"] = True
+        except Exception:
+            pass
+        try:
+            r = client.observation_start()
+            if r.get("success"):
+                state["observe_sid"] = r["session_id"]
+        except Exception:
+            pass
+        state["paused"] = True
+        state["keys_logged"] = []
+        state["clicks_logged"] = []
+        state["mouse_trail"] = []
+        btn_pause.configure(text="▶ CONTINUAR", bg="#238636", fg="#fff")
+        btn_obs.configure(text="⏹ DETENER", bg="#1f6feb", fg="#fff")
+        log("⏸ PAUSADO — EIDOS te observa. Haz lo necesario y explica en el chat qué hiciste.", "#d4a72c")
+        _add_system_msg("⏸ EIDOS PAUSADO — te observa (teclas, clicks, movimientos). Escribe en el chat QUÉ hiciste y por qué.", "#d4a72c")
+
+    def _do_resume():
+        # Guardar lo observado
+        sid = state["observe_sid"]
+        if sid:
+            # Enviar eventos de keylogger
+            for entry in state["keys_logged"]:
+                try:
+                    client.observation_event(sid, "key", entry)
+                except Exception:
+                    pass
+            for entry in state["clicks_logged"]:
+                try:
+                    client.observation_event(sid, "click", entry)
+                except Exception:
+                    pass
+            # Obtener explicación del chat
+            msg = instruct_entry.get("1.0", "end").strip()
+            try:
+                r = client.observation_stop(sid, msg)
+                n = r.get("n_events", len(state["keys_logged"]) + len(state["clicks_logged"]))
+                _add_system_msg(f"✓ Lección guardada · {n} eventos · {'con explicación' if msg else 'sin explicación'} · brain#{r.get('node_id')}", "#3fb950")
+            except Exception as e:
+                _add_system_msg(f"❌ Error al guardar: {e}", "#f85149")
+            state["observe_sid"] = None
+
+        try:
+            client.stop()
+            state["stop_active"] = False
+            btn_stop.configure(text="🛑 STOP", bg="#da3633")
+        except Exception:
+            pass
+
+        state["paused"] = False
+        btn_pause.configure(text="⏸ PAUSE", bg="#bf8700")
+        btn_obs.configure(text="👁 OBSERVA", bg="#21262d", fg="#c9d1d9")
+        log("▶ Reanudado")
+        _add_system_msg("▶ EIDOS reanudado — aprendiendo de lo observado", "#3fb950")
+
+    def toggle_target():
+        state["target"] = "root" if state["target"] == "firefox" else "firefox"
+        target_lbl.configure(text=f"vista: {state['target']}")
+        if state["target"] == "root":
+            target_lbl.configure(fg="#d2993a")
+            log("🖥 vista=root", "#d2993a")
+        else:
+            target_lbl.configure(fg="#58a6ff")
+            log("👁 vista=firefox-target")
+
+    # ── Polling de pantalla ─────────────────────────────────────────────────────
+
+    def poll_loop():
+        while state["running"]:
+            if state.get("paused") or state.get("stop_active"):
+                time.sleep(0.3)
+                continue
+            try:
+                t0 = time.time()
+                data = client.get_png(state["target"])
+                img = Image.open(io.BytesIO(data))
+                state["img_native_size"] = img.size
+                cw = max(canvas.winfo_width(), 100)
+                ch = max(canvas.winfo_height(), 100)
+                rw, rh = img.size
+                scale = min(cw / rw, ch / rh)
+                new_w = max(1, int(rw * scale))
+                new_h = max(1, int(rh * scale))
+                disp = img.resize((new_w, new_h), Image.LANCZOS)
+                tkimg = ImageTk.PhotoImage(disp)
+                state["tk_img"] = tkimg
+
+                def _paint():
+                    canvas.delete("all")
+                    cw2 = canvas.winfo_width()
+                    ch2 = canvas.winfo_height()
+                    off_x = (cw2 - new_w) // 2
+                    off_y = (ch2 - new_h) // 2
+                    canvas.create_image(off_x, off_y, image=state["tk_img"], anchor="nw")
+                    canvas._offset = (off_x, off_y)
+                    canvas._scale = scale
+                root.after(0, _paint)
+
+                state["fps_count"] += 1
+                if time.time() - state["fps_t0"] >= 2.0:
+                    fps = state["fps_count"] / (time.time() - state["fps_t0"])
+                    state["fps"] = fps
+                    state["fps_count"] = 0
+                    state["fps_t0"] = time.time()
+                    root.after(0, lambda: fps_lbl.configure(text=f"{fps:.1f} fps"))
+
+            except urllib.error.URLError:
+                root.after(0, lambda: status_bar.configure(
+                    text=f"⚠ sin conexión a {client.base}"))
+            except Exception as e:
+                root.after(0, lambda e=e: status_bar.configure(text=f"err: {e}"))
+            time.sleep(state["rate_ms"] / 1000.0)
+
+    # ── Mouse y teclado ────────────────────────────────────────────────────────
+
+    def _screen_coords(event):
+        off_x, off_y = getattr(canvas, "_offset", (0, 0))
+        scale = getattr(canvas, "_scale", 1.0)
+        if scale <= 0:
+            return 0, 0
+        rx = int((event.x - off_x) / scale)
+        ry = int((event.y - off_y) / scale)
+        rw, rh = state["img_native_size"]
+        rx = max(0, min(rw - 1, rx))
+        ry = max(0, min(rh - 1, ry))
+        return rx, ry
+
+    def on_mouse_move(e):
+        x, y = _screen_coords(e)
+        status_bar.configure(
+            text=f"x:{x} y:{y}  ·  {state['img_native_size'][0]}x{state['img_native_size'][1]}  ·  {state['target']}")
+        if state.get("paused"):
+            state["mouse_trail"].append({"x": x, "y": y, "ts": time.time()})
+        # Auto-pausa: mover ratón sobre pantalla → pausar
+        if (state.get("auto_pause") and not state["paused"]
+                and not state["no_input"] and state["observe_sid"] is None):
+            toggle_pause()
+
+    def on_click(e):
+        if state["no_input"]:
+            return
+        x, y = _screen_coords(e)
+        button = 1 if e.num == 1 else (3 if e.num == 3 else 1)
+        if state.get("paused"):
+            state["clicks_logged"].append({"x": x, "y": y, "button": button, "ts": time.time()})
+            status_bar.configure(text=f"[OBSERVANDO] click @({x},{y}) btn={button}")
+            return
+        threading.Thread(target=lambda: client.click(x, y, button), daemon=True).start()
+        status_bar.configure(text=f"click @({x},{y}) btn={button}")
+
+    def on_key(e):
+        if state["no_input"]:
+            return
+        ks = e.keysym
+        ch = e.char
+        special = {
+            "Return": "Return", "Escape": "Escape", "Tab": "Tab",
+            "BackSpace": "BackSpace", "Delete": "Delete",
+            "Up": "Up", "Down": "Down", "Left": "Left", "Right": "Right",
+            "Home": "Home", "End": "End", "Prior": "Prior", "Next": "Next",
+            "F1":"F1","F2":"F2","F3":"F3","F4":"F4","F5":"F5","F6":"F6",
+            "F7":"F7","F8":"F8","F9":"F9","F10":"F10","F11":"F11","F12":"F12",
+            "Control_L":"","Control_R":"","Shift_L":"","Shift_R":"","Alt_L":"","Alt_R":"",
+            "Caps_Lock":"","Super_L":"","Super_R":"","Meta_L":"","Meta_R":"",
+        }
+        focus = root.focus_get()
+        if isinstance(focus, (tk.Text, tk.Entry)):
+            return
+        if ks in special:
+            xk = special[ks]
+            if not xk:
+                return
+            if state.get("paused"):
+                state["keys_logged"].append({"key": xk, "ts": time.time()})
+                return
+            threading.Thread(target=lambda: client.key(xk), daemon=True).start()
+        elif ch and ch.isprintable():
+            if state.get("paused"):
+                state["keys_logged"].append({"text": ch, "ts": time.time()})
+                return
+            threading.Thread(target=lambda: client.type_text(ch), daemon=True).start()
+
+    canvas.bind("<Motion>", on_mouse_move)
+    canvas.bind("<Button-1>", on_click)
+    canvas.bind("<Button-3>", on_click)
+    root.bind("<Key>", on_key)
+
+    # ── Atajos ──────────────────────────────────────────────────────────────────
+    root.bind("<Control-q>", lambda e: root.destroy())
+    root.bind("<F5>", lambda e: log("F5 refresh manual"))
+
+    # ── Polling de estado Colony (bridge) ──────────────────────────────────────
+
+    def refresh_bridge_status():
+        if not state["running"]:
+            return
+        def _fetch():
+            try:
+                h = bridge.health()
+                if h.get("status") == "ok":
+                    root.after(0, lambda: bridge_lbl.configure(
+                        text="Colony: ✅", fg="#3fb950"))
+                else:
+                    root.after(0, lambda: bridge_lbl.configure(
+                        text="Colony: ⚠️", fg="#d2993a"))
+            except Exception:
+                root.after(0, lambda: bridge_lbl.configure(
+                    text="Colony: ❌", fg="#f85149"))
+        threading.Thread(target=_fetch, daemon=True).start()
+        root.after(10000, refresh_bridge_status)
+
+    refresh_bridge_status()
+
+    # ── Arranque del poll thread ───────────────────────────────────────────────
+
+    t = threading.Thread(target=poll_loop, daemon=True)
+    t.start()
+
+    # Mensaje de bienvenida
+    _add_system_msg("🚀 EIDOS Screen Viewer iniciado", "#58a6ff")
+    _add_system_msg(f"📡 Web Panel: {client.base}  |  Bridge Colony: {bridge.base}", "#8b949e")
+    _add_system_msg("💡 Escribe instrucciones abajo. Colony delibera con todos los personajes.", "#8b949e")
+
+    def on_close():
+        state["running"] = False
+        if state["observe_sid"]:
+            try:
+                client.observation_stop(state["observe_sid"], "[descartado]")
+            except Exception:
+                pass
+        root.destroy()
+
+    root.protocol("WM_DELETE_WINDOW", on_close)
+    return root
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Self-test (sin GUI)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _self_test(host: str, port: int) -> int:
+    client = EidosClient(host, port, timeout=5.0)
+    bridge = BridgeClient(host)
+    checks = []
+
+    # 1. live.png
+    try:
+        data = client.get_png("firefox")
+        checks.append(("live.png firefox", len(data) > 100, f"{len(data)}B"))
+    except Exception as e:
+        checks.append(("live.png firefox", False, str(e)[:80]))
+
+    # 2. Bridge health
+    try:
+        h = bridge.health()
+        checks.append(("bridge /health", h.get("status") == "ok", h.get("status", "?")))
+    except Exception as e:
+        checks.append(("bridge /health", False, str(e)[:80]))
+
+    # 3. Bridge talk
+    try:
+        r = bridge.talk("hola eidos quien eres")
+        has_text = bool(r.get("text") or r.get("response"))
+        agents = r.get("agents_used", r.get("agents_consulted", []))
+        checks.append(("bridge /talk", has_text,
+                       f"agents={agents} text_len={len(r.get('text','') or r.get('response',''))}"))
+    except Exception as e:
+        checks.append(("bridge /talk", False, str(e)[:80]))
+
+    # 4. PIL + tkinter
+    try:
+        import tkinter
+        from PIL import Image, ImageTk
+        checks.append(("tkinter+PIL", True, f"tk={tkinter.TkVersion}"))
+    except Exception as e:
+        checks.append(("tkinter+PIL", False, str(e)[:80]))
+
+    passed = sum(1 for _, ok, _ in checks if ok)
+    total = len(checks)
+    payload = {
+        "self_test": "PASS" if passed == total else "FAIL",
+        "host": f"http://{host}:{port}",
+        "passed": passed, "total": total,
+        "checks": [{"name": n, "ok": ok, "detail": d} for n, ok, d in checks],
+    }
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 0 if passed == total else 1
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Main
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def main():
+    ap = argparse.ArgumentParser(prog="eidos-viewer",
+                                 description="Viewer nativo con chat Colony para EIDOS")
+    ap.add_argument("--host", default=DEFAULT_HOST)
+    ap.add_argument("--port", type=int, default=DEFAULT_PORT)
+    ap.add_argument("--target", default=DEFAULT_TARGET, choices=("firefox", "root"))
+    ap.add_argument("--rate-ms", type=int, default=DEFAULT_RATE_MS)
+    ap.add_argument("--no-input", action="store_true",
+                    help="modo solo lectura, no envía clicks/teclas")
+    ap.add_argument("--self-test", action="store_true",
+                    help="verifica conexión HTTP sin abrir GUI")
+    args = ap.parse_args()
+
+    logging.basicConfig(level=logging.INFO,
+                        format="%(asctime)s [eidos-viewer] %(message)s")
+
+    if args.self_test:
+        sys.exit(_self_test(args.host, args.port))
+
+    try:
+        client = EidosClient(args.host, args.port)
+        try:
+            client.get_png(args.target)
+        except Exception as e:
+            print(f"⚠ no conecta con http://{args.host}:{args.port}: {e}",
+                  file=sys.stderr)
+            print("¿Está el web-panel corriendo?", file=sys.stderr)
+            sys.exit(2)
+
+        root = _build_gui(client, args.target, args.rate_ms, args.no_input)
+        root.mainloop()
+    except KeyboardInterrupt:
+        pass
+
+
+if __name__ == "__main__":
+    main()

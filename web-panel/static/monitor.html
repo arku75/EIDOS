@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EIDOS Monitor</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0a0e1a;color:#c8d6e5;padding:16px;min-height:100vh}
+h1{font-size:20px;color:#60a5fa;margin-bottom:16px}
+h1 small{font-size:12px;color:#64748b;margin-left:8px}
+h2{font-size:14px;color:#94a3b8;margin:12px 0 8px;text-transform:uppercase;letter-spacing:1px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:16px}
+.card{background:#111827;border:1px solid #1e293b;border-radius:8px;padding:14px}
+.card h3{font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.stat-row{display:flex;justify-content:space-between;padding:3px 0;font-size:13px}
+.stat-row .label{color:#94a3b8}
+.stat-row .value{color:#e2e8f0;font-weight:600}
+.value.ok{color:#34d399}
+.value.warn{color:#fbbf24}
+.value.err{color:#ef4444}
+.value.blue{color:#60a5fa}
+.value.purple{color:#a78bfa}
+.value.pink{color:#f472b6}
+.bar{height:4px;background:#1e293b;border-radius:2px;margin-top:4px;overflow:hidden}
+.bar-fill{height:100%;background:linear-gradient(90deg,#60a5fa,#a78bfa);border-radius:2px;transition:width 0.5s}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.tag{display:inline-block;padding:2px 6px;border-radius:3px;font-size:10px;margin:2px}
+.tag.green{background:rgba(52,211,153,0.15);color:#34d399}
+.tag.red{background:rgba(239,68,68,0.15);color:#ef4444}
+.tag.yellow{background:rgba(251,191,36,0.15);color:#fbbf24}
+.tag.blue{background:rgba(96,165,250,0.15);color:#60a5fa}
+#timestamp{font-size:11px;color:#475569;margin-bottom:8px}
+#status-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.status-pill{padding:4px 10px;border-radius:12px;font-size:11px;display:flex;align-items:center;gap:4px}
+.status-pill.ok{background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.3);color:#34d399}
+.status-pill.warn{background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.3);color:#fbbf24}
+.status-pill.err{background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#ef4444}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+.dot.green{background:#34d399;box-shadow:0 0 4px #34d399}
+.dot.yellow{background:#fbbf24;box-shadow:0 0 4px #fbbf24}
+.dot.red{background:#ef4444;box-shadow:0 0 4px #ef4444}
+.chart-container{height:120px;display:flex;align-items:flex-end;gap:2px;margin-top:8px}
+.chart-bar{flex:1;min-height:4px;border-radius:2px 2px 0 0;transition:height 0.3s}
+@media(max-width:600px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<h1>🧠 EIDOS <small>Real-Time Monitor</small></h1>
+<div id="timestamp">—</div>
+<div id="status-bar"></div>
+<div class="grid">
+<div class="card"><h3>🧬 Grafo Neuronal</h3><div id="graph-stats"></div></div>
+<div class="card"><h3>🧠 Brain DB</h3><div id="brain-stats"></div></div>
+<div class="card"><h3>📊 ChromaDB</h3><div id="chroma-stats"></div></div>
+<div class="card"><h3>⚙️ Daemons</h3><div id="daemon-stats"></div></div>
+<div class="card"><h3>🔧 Servicios</h3><div id="service-stats"></div></div>
+<div class="card"><h3>📚 Categorías Top</h3><div id="category-chart"></div></div>
+<div class="card"><h3>🔍 Gaps de Conocimiento</h3><div id="gaps-stats"></div></div>
+<div class="card"><h3>🤖 Auto-Learn</h3><div id="autolearn-stats"></div></div>
+<div class="card"><h3>📝 Self-Test</h3><div id="selftest-stats"></div></div>
+<div class="card"><h3>🔄 Auto-Evolución</h3><div id="evolve-stats"></div></div>
+</div>
+
+<script>
+const API='http://127.0.0.1:8003';
+let prevData={};
+
+async function fetchJ(url){try{const r=await fetch(url);return await r.json()}catch{return null}}
+
+function createRow(label,value,cls=''){const d=document.createElement('div');d.className='stat-row';d.innerHTML=`<span class="label">${label}</span><span class="value ${cls}">${value}</span>`;return d}
+
+function setCard(id,items){const el=document.getElementById(id);el.innerHTML='';items.forEach(i=>{if(typeof i==='string'){el.innerHTML+=i}else if(i.tag){el.appendChild(i)}else{el.appendChild(createRow(i[0],i[1],i[2]||''))}})}
+
+function fmtNum(n){if(n===null||n===undefined)return'—';return Number(n).toLocaleString()}
+
+function fmtTime(ts){if(!ts||ts===0)return'—';const d=new Date(ts*1000);const now=new Date();const diff=Math.floor((now-d)/60000);if(diff<1)return'hace segundos';if(diff<60)return`hace ${diff}m`;return d.toLocaleTimeString()}
+
+function updatePill(container,label,status,title){const el=document.createElement('div');el.className=`status-pill ${status}`;const dot=document.createElement('span');dot.className=`dot ${status==='ok'?'green':status==='warn'?'yellow':'red'}`;el.appendChild(dot);el.appendChild(document.createTextNode(label));if(title)el.title=title;container.appendChild(el)}
+
+async function refresh(){
+const now=new Date();document.getElementById('timestamp').textContent=`🕐 ${now.toLocaleTimeString()} · ${now.toLocaleDateString()}`;
+
+const graph=await fetchJ(`${API}/graph/stats`);
+const brain=await fetchJ(`${API}/brain`);
+const chroma=await fetchJ(`${API}/chroma_stats`);
+const heal=await fetchJ(`${API}/heal/status`);
+const daemon=await fetchJ(`${API}/evolve/daemon/status`);
+const gaps=await fetchJ(`${API}/self_study/gaps`);
+const autolearn=await fetchJ(`${API}/auto_learn/stats`);
+const selftest=await fetchJ(`${API}/self_test`);
+
+const statusBar=document.getElementById('status-bar');statusBar.innerHTML='';
+if(selftest){updatePill(statusBar,'Self-Test',selftest.status==='ok'?'ok':'warn',`${selftest.passed}/${selftest.total}`)}
+if(graph)updatePill(statusBar,'Graph',graph.ready?'ok':'warn',`${fmtNum(graph.graph_nodes)} nodes`)
+if(chroma)updatePill(statusBar,'ChromaDB',chroma.ready?'ok':'warn',`${fmtNum(chroma.count)} vec`)
+if(daemon)updatePill(statusBar,'Daemon',daemon.running?'ok':'warn','')
+
+setCard('graph-stats',[
+['Neuronas',fmtNum(graph?.graph_nodes),'blue'],
+['Sinapsis',fmtNum(graph?.graph_edges),'purple'],
+['Inf. Total',fmtNum(graph?.inferred_total),'pink'],
+['Last Evolve',fmtTime(graph?.last_evolve),''],
+['Estado',graph?.ready?'✅ Listo':'⚠️ Construyendo',graph?.ready?'ok':'warn'],
+].map(r=>r))
+
+setCard('brain-stats',[
+['Total Nodos',fmtNum(brain?.total),'blue'],
+['Categorías',brain?.by_category?.length||0,''],
+].map(r=>r))
+
+setCard('chroma-stats',[
+['Vectores',fmtNum(chroma?.count),'purple'],
+['Listo',chroma?.ready?'✅ Sí':'⚠️ No',chroma?.ready?'ok':'warn'],
+].map(r=>r))
+
+setCard('daemon-stats',[
+['Evolve Running',daemon?.running?'✅ Sí':'⛔ No',daemon?.running?'ok':'err'],
+['Ciclos',fmtNum(daemon?.cycle_count),''],
+['Inferencias',fmtNum(daemon?.stats?.inferences_total),'blue'],
+['Reinicios',fmtNum(daemon?.stats?.services_restarted),''],
+['Last Evolve',fmtTime(daemon?.last_evolve),''],
+].map(r=>r))
+
+setCard('service-stats',[]);
+if(heal?.services){heal.services.forEach(s=>{
+const el=document.createElement('div');el.className='stat-row';
+const alive=s.alive||s.status==='ok';
+el.innerHTML=`<span class="label">${s.label||s.service}</span><span class="value ${alive?'ok':'err'}">${alive?'✅':'❌'} ${s.status}</span>`;
+document.getElementById('service-stats').appendChild(el)
+})}
+
+setCard('gaps-stats',[]);
+if(gaps?.gaps?.length>0){gaps.gaps.forEach(g=>{
+const t=document.createElement('span');t.className='tag yellow';t.textContent=g;
+document.getElementById('gaps-stats').appendChild(t)
+})}else{document.getElementById('gaps-stats').innerHTML='<div class="stat-row"><span style="color:#34d399">✅ Sin gaps detectados</span></div>'}
+
+setCard('autolearn-stats',[
+['Temas',fmtNum(autolearn?.topics_learned),''],
+['Nodos inyectados',fmtNum(autolearn?.nodes_injected),'blue'],
+['Páginas crawleadas',fmtNum(autolearn?.pages_crawled),''],
+['Last Learn',fmtTime(autolearn?.last_learn),''],
+].map(r=>r))
+
+if(selftest){setCard('selftest-stats',[
+['Passed',`${selftest.passed}/${selftest.total}`,'ok'],
+['Estado',selftest.status,selftest.status==='ok'?'ok':'warn'],
+]);if(selftest.results){selftest.results.slice(0,8).forEach(r=>{
+const cls=r.startsWith('✅')?'ok':r.startsWith('⚠️')?'warn':'err';
+const el=document.createElement('div');el.className='stat-row';el.innerHTML=`<span class="value ${cls}" style="font-size:11px">${r}</span>`;
+document.getElementById('selftest-stats').appendChild(el)
+})}}
+
+if(daemon){setCard('evolve-stats',[
+['Error count',fmtNum(daemon?.stats?.errors?.length),daemon?.stats?.errors?.length>0?'err':''],
+].map(r=>r));if(daemon?.stats?.errors?.length>0){daemon.stats.errors.slice(0,3).forEach(e=>{
+const el=document.createElement('div');el.className='stat-row';el.innerHTML=`<span style="color:#ef4444;font-size:10px">${e}</span>`;
+document.getElementById('evolve-stats').appendChild(el)
+})}}
+
+const cats=brain?.by_category||[];
+if(cats.length>0){const top=cats.slice(0,10);const maxCount=top[0]?.count||1;
+const chart=document.getElementById('category-chart');chart.innerHTML='';
+const container=document.createElement('div');container.className='chart-container';
+top.forEach(c=>{const h=Math.max(4,(c.count/maxCount)*100);const bar=document.createElement('div');bar.className='chart-bar';bar.style.background='#60a5fa';bar.style.height=h+'px';bar.title=`${c.category||'?'}: ${c.count}`;container.appendChild(bar)});
+chart.appendChild(container);
+top.forEach(c=>{const row=document.createElement('div');row.className='stat-row';row.innerHTML=`<span class="label" style="font-size:10px">${c.category||'sin_cat'}</span><span class="value" style="font-size:10px">${fmtNum(c.count)}</span>`;chart.appendChild(row)})}
+
+prevData={graph,brain,chroma,daemon,gaps,autolearn,selftest,heal};
+}
+
+refresh();
+setInterval(refresh,5000);
+</script>
+</body>
+</html>

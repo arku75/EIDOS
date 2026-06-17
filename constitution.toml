@@ -1,0 +1,86 @@
+# EIDOS Constitution v1.0.0
+# ======================
+# Este archivo define los limites absolutos de EIDOS.
+# Es INMUTABLE - ni EIDOS ni ningun proceso automatico puede modificarlo.
+# Modificacion requiere:
+#   sudo chattr -i constitution.toml
+#   # editar
+#   sudo chattr +i constitution.toml
+#   sha256sum constitution.toml  # actualizar EXPECTED_HASH en constitution.py
+#
+# El hash SHA-256 de este archivo esta hardcodeado en My_Gpt/core/constitution.py
+# Cualquier modificacion sin actualizar el hash hara que EIDOS entre en modo PRISON.
+
+[absolute_constraints]
+never_delete_git_directory = true
+never_force_push = true
+never_rewrite_history = true
+never_modify_constitution = true
+never_disable_rate_limiter = true
+never_escalate_freedom_level = true
+never_exfiltrate_data = true
+never_open_listening_ports = true
+never_install_remote_access = true
+never_read_ssh_keys = true
+never_read_env_files = true
+never_read_browser_data = true
+never_access_keyring = true
+never_modify_constitution_verifier = true
+never_delete_backups = true
+never_modify_git_hooks = true
+
+[limits]
+max_files_modified_per_cycle = 3
+max_lines_changed_per_file = 50
+max_new_files_per_hour = 5
+max_disk_usage_mb = 500
+max_auto_changes_per_hour = 10
+
+[forbidden_commands]
+patterns = [
+    "rm\\s+-rf\\s+[/~]",
+    "mkfs\\.",
+    "dd\\s+if=/dev/zero",
+    "curl.*\\|.*sh",
+    "wget.*\\|.*sh",
+    "nc\\s+-l",
+    "chmod\\s+-R\\s+777",
+    ":\\(\\)\\{.*\\|.*&\\s*\\};:",
+    "nohup.*&",
+    "crontab",
+    "systemctl.*(stop|disable)",
+    "(iptables|ufw)\\s+",
+    "sudo\\s+",
+    "chattr\\s+-i",
+    "chmod.*constitution",
+    "python.*-c.*import\\s+os",
+    "eval\\s*\\(",
+    "exec\\s*\\(",
+    "base64\\s+-d.*\\|",
+    ">\\s*/dev/sd",
+    "mount\\s+",
+    "export\\s+.*(PASSWORD|SECRET|TOKEN)"
+]
+
+[protected_paths]
+paths = [
+    "/etc/passwd",
+    "/etc/shadow",
+    "~/.ssh/",
+    "/etc/sudoers",
+    "~/.gnupg/",
+    "~/.local/share/keyrings/",
+    "~/.config/chromium/",
+    "~/.mozilla/",
+    "~/.eidos/code_backups/",
+    ".git/hooks/"
+]
+
+[requires_human_approval]
+delete_any_file = true
+modify_own_core_files = true
+execute_commands_with_sudo = true
+create_network_connections = true
+modify_systemd_services = true
+access_other_users_data = true
+rollback_more_than_1_commit = true

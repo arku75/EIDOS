@@ -1,0 +1,25 @@
+[Unit]
+Description=EIDOS Self Daemon — Conciencia continua (S102)
+After=network.target eidos-daemon.service
+Wants=eidos-daemon.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/ser/EIDOS
+ExecStart=/usr/bin/python3 /home/ser/EIDOS/bin/eidos-self-daemon
+Environment=PYTHONPATH=/home/ser/EIDOS
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Limitar reinicios: no más de 5 en 10 minutos
+StartLimitInterval=600
+StartLimitBurst=5
+
+# Seguridad
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=default.target

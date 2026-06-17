@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+"""
+EIDOS CLI - Wrapper Global
+Integración completa: Gateway + Colony + Ollama
+"""
+
+import sys
+import subprocess
+import asyncio
+import argparse
+
+EIDOS_ROOT = "/home/ser/EIDOS"
+sys.path.insert(0, EIDOS_ROOT)
+
+
+def check_ollama():
+    """Verificar que Ollama está corriendo"""
+    try:
+        result = subprocess.run(
+            ["curl", "-s", "http://localhost:11434/api/tags"],
+            capture_output=True, timeout=5
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
+def start_ollama():
+    """Iniciar Ollama si no está corriendo"""
+    if not check_ollama():
+        print("🔄 Iniciando Ollama...")
+        subprocess.Popen(
+            ["ollama", "serve"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        import time
+        time.sleep(3)
+        if check_ollama():
+            print("✅ Ollama iniciado")
+        else:
+            print("⚠️ No se pudo iniciar Ollama automáticamente")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="EIDOS CLI")
+    parser.add_argument(
+        "command", nargs="?", default="chat",
+        help="Comando: chat, gateway, config, status, tools"
+    )
+    parser.add_argument(
+        "--model", default="qwen2.5-coder:1.5b",
+        help="Modelo Ollama a usar"
+    )
+    parser.add_argument(
+        "--platforms", default="local",
+        help="Plataformas: local,telegram,discord,slack"
+    )
+
+    args = parser.parse_args()
+    start_ollama()
+
+    if args.command == "chat":
+        from core.colony_interactive import interactive_chat
+        interactive_chat(model=args.model)
+
+    elif args.command == "gateway":
+        from main import EidosIntegratedSystem
+        asyncio.run(EidosIntegratedSystem().start())
+
+    elif args.command == "config":
+        from cli.config_cmd import config_cli
+        config_cli()
+
+    elif args.command == "status":
+        print("🤖 EIDOS Status:")
+        print(f"   Ollama: {'✅' if check_ollama() else '❌'}")
+        print(f"   Modelo: {args.model}")
+        print("   Gateway: Listo")
+
+    elif args.command == "tools":
+        print("🔧 Herramientas disponibles:")
+        print("   - Terminal control (bash)")
+        print("   - File operations")
+        print("   - Colony swarm agents")
+        print("   - Multi-platform messaging")
+
+    else:
+        print(f"Comando desconocido: {args.command}")
+        print("Usa: eidos [chat|gateway|config|status|tools]")
+
+
+if __name__ == "__main__":
+    main()

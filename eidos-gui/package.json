@@ -1,0 +1,114 @@
+{
+    "name": "eidos-agent",
+    "displayName": "EIDOS — Agente Soberano de SER",
+    "description": "EIDOS como agente de IA dentro de Antigravity IDE. Usa @eidos en el chat para invocarle. Aprende con cada conversación.",
+    "version": "1.0.0",
+    "publisher": "ser-eidos",
+    "engines": {
+        "vscode": "^1.85.0"
+    },
+    "categories": [
+        "AI",
+        "Chat",
+        "Other"
+    ],
+    "activationEvents": [
+        "onStartupFinished"
+    ],
+    "main": "./extension.js",
+    "contributes": {
+        "chatParticipants": [
+            {
+                "id": "eidos.agent",
+                "name": "eidos",
+                "fullName": "EIDOS — Agente Soberano",
+                "description": "Tu agente local con Ollama, Kali tools, visión y memoria persistente",
+                "isSticky": true,
+                "commands": [
+                    {
+                        "name": "kali",
+                        "description": "Ejecuta o busca herramientas de Kali Linux"
+                    },
+                    {
+                        "name": "bugcheck",
+                        "description": "Analiza el archivo activo con BugBot"
+                    },
+                    {
+                        "name": "dag",
+                        "description": "Ejecuta una tarea compleja en paralelo con DAGPlanner"
+                    },
+                    {
+                        "name": "vision",
+                        "description": "Analiza la pantalla o imagen activa"
+                    },
+                    {
+                        "name": "status",
+                        "description": "Estado de EIDOS: RAM, modelos, modos activos"
+                    }
+                ]
+            }
+        ],
+        "configuration": {
+            "title": "EIDOS Agent",
+            "properties": {
+                "eidos.proxyUrl": {
+                    "type": "string",
+                    "default": "http://localhost:5000",
+                    "description": "URL del EIDOS proxy (eidos_ide_proxy.py)"
+                },
+                "eidos.model": {
+                    "type": "string",
+                    "default": "hermes3:8b-llama3.1-q4_K_M",
+                    "description": "Modelo Ollama por defecto"
+                },
+                "eidos.soulPath": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Ruta a SOUL.md (vacío = auto-detectar)"
+                }
+            }
+        },
+        "commands": [
+            {
+                "command": "eidos.startProxy",
+                "title": "EIDOS: Iniciar Proxy",
+                "icon": "$(robot)"
+            },
+            {
+                "command": "eidos.stopProxy",
+                "title": "EIDOS: Detener Proxy"
+            },
+            {
+                "command": "eidos.showStatus",
+                "title": "EIDOS: Ver Estado del Sistema"
+            },
+            {
+                "command": "eidos.analyzeFile",
+                "title": "EIDOS: Analizar Archivo con BugBot",
+                "icon": "$(bug)"
+            }
+        ],
+        "menus": {
+            "editor/context": [
+                {
+                    "command": "eidos.analyzeFile",
+                    "when": "editorHasSelection || resourceExtname == '.py'",
+                    "group": "eidos"
+                }
+            ]
+        },
+        "statusBarItems": [
+            {
+                "id": "eidos.status",
+                "alignment": "left",
+                "priority": 100
+            }
+        ]
+    },
+    "dependencies": {
+        "node-fetch": "^3.3.2"
+    },
+    "scripts": {
+        "package": "npx @vscode/vsce package --no-dependencies"
+    }
+}

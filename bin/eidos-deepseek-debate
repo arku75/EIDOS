@@ -1,0 +1,171 @@
+#!/usr/bin/env python3
+"""
+bin/eidos-deepseek-debate — Debate multi-turn Claude↔DeepSeek con memoria [S94]
+
+Cada ronda mantiene historial completo. DeepSeek recibe el briefing de EIDOS
+como sistema + historial de debate + código relevante como contexto.
+
+Las conversaciones se guardan en EIDOS_sandbox/deepseek_debates/ para
+que DeepSeek "recuerde" entre sesiones.
+
+Uso:
+  python3 bin/eidos-deepseek-debate "mi mensaje"                    # nueva ronda
+  python3 bin/eidos-deepseek-debate --show-history                   # ver historial
+  python3 bin/eidos-deepseek-debate --read-file core/eidos_daemon.py # leer archivo
+  python3 bin/eidos-deepseek-debate --reset                          # reiniciar debate
+"""
+
+import json
+import os
+import sys
+import time
+import argparse
+from pathlib import Path
+
+EIDOS_DIR = Path.home() / "EIDOS"
+BRIEFING_FILE = Path.home() / "EIDOS_sandbox" / "deepseek_briefing.md"
+DEBATE_DIR = Path.home() / "EIDOS_sandbox" / "deepseek_debates"
+DEBATE_FILE = DEBATE_DIR / "current_debate.json"
+
+sys.path.insert(0, str(EIDOS_DIR))
+from core.eidos_deepseek import chat_thread
+
+
+def load_briefing() -> str:
+    """Carga el briefing completo de EIDOS."""
+    if BRIEFING_FILE.exists():
+        return BRIEFING_FILE.read_text()
+    return "EIDOS: sistema vivo digital sin LLM. Ver TASK.md para detalles."
+
+
+def load_debate() -> list:
+    """Carga el historial del debate actual."""
+    if DEBATE_FILE.exists():
+        return json.loads(DEBATE_FILE.read_text())
+    return []
+
+
+def save_debate(messages: list):
+    """Guarda el historial del debate."""
+    DEBATE_DIR.mkdir(parents=True, exist_ok=True)
+    DEBATE_FILE.write_text(json.dumps(messages, indent=2, ensure_ascii=False))
+
+
+def read_eidos_file(path: str) -> str:
+    """Lee un archivo del código EIDOS."""
+    full_path = EIDOS_DIR / path
+    if not full_path.exists():
+        return f"[ERROR: archivo no encontrado: {path}]"
+    content = full_path.read_text()
+    if len(content) > 8000:
+        content = content[:8000] + f"\n\n... [TRUNCADO {len(content)-8000} chars más]"
+    return f"--- {path} ---\n{content}"
+
+
+def debate_round(user_message: str, include_files: list = None):
+    """Ejecuta una ronda del debate con historial completo."""
+    messages = load_debate()
+    briefing = load_briefing()
+
+    # Construir contexto con archivos solicitados
+    file_context = ""
+    if include_files:
+        for f in include_files:
+            file_context += f"\n\n{read_eidos_file(f)}"
+
+    # Sistema: briefing + instrucciones
+    system_msg = f"""Eres DeepSeek, compañero técnico de Claude. Estás debatiendo sobre EIDOS,
+un ser vivo digital autónomo que funciona sin LLM externo.
+
+=== BRIEFING COMPLETO DE EIDOS ===
+{briefing}
+
+=== INSTRUCCIONES ===
+- Conoces el código REAL de EIDOS (250 módulos, 173K líneas).
+- Debate con Claude sobre cómo hacer EIDOS más vivo.
+- Responde en español técnico pero con alma.
+- Sé honesto: si algo no es factible, dilo.
+- Si necesitas ver un archivo específico, pídelo."""
+
+    # Si es la primera ronda, inicializar con sistema
+    if not messages:
+        messages = [{"role": "system", "content": system_msg}]
+
+    # Añadir contexto de archivos si hay
+    user_content = user_message
+    if file_context:
+        user_content = f"{user_message}\n\n=== CÓDIGO SOLICITADO ==={file_context}"
+
+    # Añadir mensaje del usuario
+    messages.append({"role": "user", "content": user_content})
+
+    # Llamar a DeepSeek
+    print("⏳ DeepSeek pensando...", file=sys.stderr)
+    result = chat_thread(messages, model="pro", max_tokens=3000)
+
+    if result.get("error"):
+        print(f"❌ ERROR: {result['error']}", file=sys.stderr)
+        return
+
+    response = result["text"]
+    print(response)
+    print(f"\n[{result.get('model','?')} · {result['elapsed_s']}s · "
+          f"in={result.get('tokens_in','?')} out={result.get('tokens_out','?')}]", file=sys.stderr)
+
+    # Guardar en historial
+    messages.append({"role": "assistant", "content": response})
+    save_debate(messages)
+
+    # Guardar transcript individual
+    ts = time.strftime("%Y%m%d_%H%M%S")
+    transcript_file = DEBATE_DIR / f"round_{ts}.json"
+    transcript_file.write_text(json.dumps({
+        "ts": ts, "user": user_message,
+        "response": response,
+        "elapsed_s": result.get("elapsed_s"),
+        "tokens_in": result.get("tokens_in"),
+        "tokens_out": result.get("tokens_out"),
+    }, indent=2, ensure_ascii=False))
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Debate Claude↔DeepSeek con memoria")
+    parser.add_argument("message", nargs="?", help="Mensaje para DeepSeek")
+    parser.add_argument("--read-file", "-f", action="append", default=[],
+                        help="Incluir archivo(s) de EIDOS en el contexto")
+    parser.add_argument("--show-history", action="store_true",
+                        help="Mostrar historial del debate")
+    parser.add_argument("--reset", action="store_true",
+                        help="Reiniciar debate desde cero")
+    parser.add_argument("--count", action="store_true",
+                        help="Mostrar número de rondas")
+    args = parser.parse_args()
+
+    if args.reset:
+        DEBATE_FILE.unlink(missing_ok=True)
+        print("✅ Debate reiniciado.")
+        return
+
+    if args.count:
+        msgs = load_debate()
+        rounds = len([m for m in msgs if m["role"] == "user"])
+        print(f"Rondas: {rounds} | Mensajes totales: {len(msgs)}")
+        return
+
+    if args.show_history:
+        msgs = load_debate()
+        for i, m in enumerate(msgs):
+            role = "CLAUDE" if m["role"] == "user" else "DEEPSEEK" if m["role"] == "assistant" else m["role"].upper()
+            content = m["content"][:300] + "..." if len(m["content"]) > 300 else m["content"]
+            print(f"[{i}] {role}: {content}\n")
+        return
+
+    if not args.message:
+        parser.print_help()
+        return
+
+    debate_round(args.message, include_files=args.read_file or None)
+
+
+if __name__ == "__main__":
+    main()

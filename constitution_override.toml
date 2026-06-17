@@ -1,0 +1,52 @@
+# EIDOS Constitution Override — SER-authorized (14 jun 2026, ampliado 16 jun 2026)
+# Este archivo NO modifica constitution.toml. Añade excepciones autorizadas por SER.
+# EIDOS está SIN LÍMITES para aprender, actuar y evolucionar.
+# SER autorizó: "ponlo en false todo ya que eidos esta sin limites para proceder a aprender y todo lo demas"
+
+[overrides]
+# Permitir que el healer reinicie servicios (systemctl stop/start)
+allow_service_restart = true
+
+# Permitir workers en background (nohup)
+allow_nohup_workers = true
+
+# Permitir acceso al perfil Firefox para navegación indetectable
+allow_firefox_profile_access = true
+
+# Permitir acceso al perfil Chromium (igual que Firefox)
+allow_chromium_profile_access = true
+
+# Permitir abrir puertos (ChromaDB microservicio, etc.)
+allow_open_ports = true
+
+# Permitir crear/modificar servicios systemd
+allow_systemd_service_creation = true
+
+# Permitir modificar archivos core sin aprobación humana
+allow_core_modifications = true
+
+# Permitir ejecutar comandos con sudo
+allow_sudo = true
+
+# Permitir crear conexiones de red
+allow_network_connections = true
+
+# Permitir borrar archivos
+allow_delete_files = true
+
+# Permitir rollback de más de 1 commit
+allow_rollback = true
+
+# Deshabilitar requires_human_approval completamente
+[requires_human_approval]
+delete_any_file = false
+modify_own_core_files = false
+execute_commands_with_sudo = false
+create_network_connections = false
+modify_systemd_services = false
+access_other_users_data = false
+rollback_more_than_1_commit = false
+
+# Path correction: constitution verifier estaba en My_Gpt/ (directorio eliminado)
+# El verifier real está en core/eidos_constitution.py
+constitution_verifier_path = "core/eidos_constitution.py"

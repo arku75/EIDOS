@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+"""
+eidos-deepseek — Helper para que Claude consulte a DeepSeek como compañero técnico.
+
+Uso desde código:
+    from bin.eidos_deepseek import ask_deepseek
+    response = ask_deepseek("system prompt", "user prompt", model="pro")
+
+Uso desde CLI:
+    eidos-deepseek "pregunta" [--model=pro|flash] [--system="..."]
+
+Guarda transcripts en /home/ser/EIDOS_sandbox/deepseek_transcripts/
+"""
+import os
+import sys
+import json
+import time
+import urllib.request
+import urllib.error
+from pathlib import Path
+from datetime import datetime
+
+SECRETS_FILE = Path.home() / ".eidos" / "secrets.env"
+TRANSCRIPT_DIR = Path("/home/ser/EIDOS_sandbox/deepseek_transcripts")
+TRANSCRIPT_DIR.mkdir(parents=True, exist_ok=True)
+
+API_URL = "https://api.deepseek.com/v1/chat/completions"
+MODEL_MAP = {
+    "pro": "deepseek-v4-pro",
+    "flash": "deepseek-v4-flash",
+}
+
+
+def _load_key():
+    if not SECRETS_FILE.exists():
+        raise RuntimeError(f"No existe {SECRETS_FILE}")
+    for line in SECRETS_FILE.read_text().splitlines():
+        if line.startswith("DEEPSEEK_API_KEY="):
+            return line.split("=", 1)[1].strip()
+    raise RuntimeError("DEEPSEEK_API_KEY no encontrada")
+
+
+DEFAULT_MODEL = "pro"  # SER pidió pro como default (28-may)
+
+
+def ask_deepseek(system: str, user: str, model: str = DEFAULT_MODEL,
+                 max_tokens: int = 4096, temperature: float = 0.3,
+                 save_transcript: bool = True) -> dict:
+    """Consulta a DeepSeek y retorna respuesta + meta.
+
+    Returns:
+        {"text": str, "elapsed_s": float, "model": str,
+         "tokens_in": int, "tokens_out": int, "error": str|None}
+    """
+    key = _load_key()
+    model_id = MODEL_MAP.get(model, model)
+    payload = {
+        "model": model_id,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+    }
+    req = urllib.request.Request(
+        API_URL,
+        data=json.dumps(payload).encode(),
+        headers={
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+        },
+    )
+    t0 = time.time()
+    result = {
+        "text": "", "elapsed_s": 0, "model": model_id,
+        "tokens_in": 0, "tokens_out": 0, "error": None,
+    }
+    try:
+        with urllib.request.urlopen(req, timeout=180) as resp:
+            data = json.loads(resp.read())
+        result["text"] = data["choices"][0]["message"]["content"]
+        result["tokens_in"] = data.get("usage", {}).get("prompt_tokens", 0)
+        result["tokens_out"] = data.get("usage", {}).get("completion_tokens", 0)
+    except urllib.error.HTTPError as e:
+        result["error"] = f"HTTP {e.code}: {e.read().decode()[:300]}"
+    except Exception as e:
+        result["error"] = f"{type(e).__name__}: {str(e)[:300]}"
+    result["elapsed_s"] = round(time.time() - t0, 2)
+
+    if save_transcript:
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        fname = TRANSCRIPT_DIR / f"{ts}_{model}.json"
+        fname.write_text(json.dumps({
+            "ts": ts, "model": model_id,
+            "system": system, "user": user,
+            "response": result["text"],
+            "elapsed_s": result["elapsed_s"],
+            "tokens_in": result["tokens_in"],
+            "tokens_out": result["tokens_out"],
+            "error": result["error"],
+        }, indent=2, ensure_ascii=False))
+    return result
+
+
+if __name__ == "__main__":
+    import argparse
+    p = argparse.ArgumentParser()
+    p.add_argument("user", nargs="?", help="Pregunta")
+    p.add_argument("--model", default="pro", choices=["pro", "flash"])
+    p.add_argument("--system", default="Eres un ingeniero senior experto en Python, "
+                   "SQLite y debugging de sistemas Linux. Respondes conciso y directo.")
+    p.add_argument("--max-tokens", type=int, default=4096)
+    args = p.parse_args()
+
+    if not args.user:
+        print("Uso: eidos-deepseek 'pregunta' [--model=pro|flash]")
+        sys.exit(1)
+
+    r = ask_deepseek(args.system, args.user, model=args.model,
+                     max_tokens=args.max_tokens)
+    if r["error"]:
+        print(f"ERROR: {r['error']}", file=sys.stderr)
+        sys.exit(1)
+    print(r["text"])
+    print(f"\n[{r['model']} · {r['elapsed_s']}s · "
+          f"in={r['tokens_in']} out={r['tokens_out']}]",
+          file=sys.stderr)

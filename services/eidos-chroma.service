@@ -1,0 +1,20 @@
+[Unit]
+Description=EIDOS ChromaDB Vector Search (S83 microservice, chroma 1.4.x estable)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/home/ser/.local/bin/chroma run --path /home/ser/.eidos/chroma --port 8766 --host 127.0.0.1
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+Environment=PYTHONUNBUFFERED=1
+
+# S83 nota: chroma 1.4.4 CLI es ESTABLE (sin SEGV).
+# chromadb Python client 1.5.9 NO es compatible en API → usamos HTTP raw.
+# Motor primario de búsqueda: FastText (eidos_fasttext.py), sin Rust, sin SEGV.
+
+[Install]
+WantedBy=default.target

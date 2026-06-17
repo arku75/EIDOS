@@ -1,0 +1,7 @@
+#!/bin/bash
+# FRENO DE EMERGENCIA: EIDOS deja de tocar ratón/teclado al instante.
+cd "$HOME/EIDOS" && python3 -m core.eidos_input_safety freeze
+# Además, soltar cualquier botón pegado y parar ciclos autónomos
+DISPLAY=:0 xdotool mouseup 1 2>/dev/null; DISPLAY=:0 xdotool mouseup 2 2>/dev/null; DISPLAY=:0 xdotool mouseup 3 2>/dev/null
+systemctl --user stop eidos-vivo.service eidos-self.service 2>/dev/null
+echo "🛑 EIDOS congelado. Tu ratón y teclado son solo tuyos."
