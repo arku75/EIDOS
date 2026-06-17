@@ -72,29 +72,33 @@
 ## Table of Contents
 
 1. [What is EIDOS?](#what-is-eidos)
-2. [The Neural Graph](#the-neural-graph)
-3. [Lend any AI the powers of EIDOS](#-lend-any-ai-the-powers-of-eidos)
-4. [Documentation](#documentation)
-5. [The 6 Dimensions of EIDOS](#the-6-dimensions-of-eidos)
-4. [Architecture](#architecture)
-5. [Project Structure](#project-structure)
-6. [Core Capabilities](#core-capabilities)
-7. [Colony: The 12 Characters](#colony-the-12-characters)
-8. [Character Lifecycle: Birth, Learning, Reproduction](#character-lifecycle-birth-learning-reproduction)
-9. [The Body (BOM)](#the-body-bom)
-10. [API Reference](#api-reference)
-11. [Requirements](#requirements)
-12. [Installation](#installation)
-13. [Configuration](#configuration)
-14. [CLI Commands](#cli-commands)
-15. [Constitution & Governance](#constitution--governance)
-16. [Databases](#databases)
-17. [Guardians](#guardians)
-18. [Technical Lessons](#technical-lessons)
-19. [Current Status](#current-status)
-20. [Roadmap](#roadmap)
-21. [FAQ](#faq)
-22. [Credits & Contact](#credits--contact)
+2. [⚡ Try it in 1 minute](#-try-it-in-1-minute-no-install)
+3. [🧠 The Neural Graph](#-the-neural-graph)
+4. [🌉 Lend any AI the powers of EIDOS](#-lend-any-ai-the-powers-of-eidos)
+5. [Documentation](#documentation)
+6. [⚠️ Safety & Security](#%EF%B8%8F-safety--security-please-read)
+7. [The 6 Dimensions of EIDOS](#the-6-dimensions-of-eidos)
+8. [Architecture](#architecture)
+9. [Project Structure](#project-structure)
+10. [Core Capabilities](#core-capabilities)
+11. [Colony: The 12 Characters](#colony-the-12-characters)
+12. [Character Lifecycle](#character-lifecycle-birth-learning-reproduction)
+13. [The Body (BOM)](#the-body-bom)
+14. [API Reference](#api-reference)
+15. [Requirements](#requirements)
+16. [Installation](#installation)
+17. [Configuration](#configuration)
+18. [CLI Commands](#cli-commands)
+19. [Constitution & Governance](#constitution--governance)
+20. [Databases](#databases)
+21. [Guardians](#guardians)
+22. [VSEIDOS — VS Code Extension](#vseidos--vs-code-extension)
+23. [The Graph — History & Evolution](#the-graph--history--evolution)
+24. [Technical Lessons](#technical-lessons)
+25. [Current Status](#current-status)
+26. [Roadmap](#roadmap)
+27. [FAQ](#faq)
+28. [Credits & Contact](#credits--contact)
 
 ---
 
@@ -915,6 +919,55 @@ EIDOS has six autonomous guardian systems that protect it from failure:
 | **Phoenix** | Failure recovery. Restarts crashed services and restores system state after failures. |
 | **Mirror** | Security sandbox. Isolates untrusted operations in a controlled environment. |
 | **Watchdog** | Service supervision. Ensures all 18 services stay running and healthy. |
+
+> Full detail: [docs/GUARDIANS.md](docs/GUARDIANS.md)
+
+---
+
+## VSEIDOS — VS Code Extension
+
+VSEIDOS is EIDOS's own **VS Code extension** — a customized VS Code build that
+lets EIDOS operate the editor as a development tool. It lives in `VSEIDOS/` and
+is driven by a dedicated API server (`core/vscode_api_server.py`).
+
+| Component | Description |
+|:----------|:------------|
+| **VSEIDOS API Server** | REST server for Colony ↔ VS Code communication. Colony characters can queue commands, ask questions about code, and receive execution results — all through VSEIDOS. |
+| **Extension Intelligence** | `core/extension_intelligence.py` auto-discovers and manages VS Code extensions optimal for EIDOS's work. Syncs between VSEIDOS and standard VS Code. |
+| **Polling loop** | VSEIDOS polls Colony every 2 seconds for new commands. When a character asks "what does this file do?", VSEIDOS opens it, analyzes it, and reports back. |
+| **Knowledge integration** | Files analyzed through VSEIDOS are persisted as knowledge nodes (`source: vseidos`), growing the graph with code understanding. |
+
+```bash
+# Control VSEIDOS from the CLI
+eidos vseidos-control                # manage the VSEIDOS panel
+eidos vscode                         # VSCode/IDE bridge
+```
+
+---
+
+## The Graph — History & Evolution
+
+EIDOS's knowledge graph didn't start at 39,000 nodes. It grew from a seed,
+through curation and unification. These are the **real milestones**:
+
+| Date | Nodes | Event |
+|:-----|:------|:------|
+| **May 24** | 0 | First commit. Empty graph. |
+| **May 29** | — | **Graphify Bridge** (`core/graphify_bridge.py`): first structural code analysis. Graph begins to map EIDOS's own codebase. |
+| **Jun 1** | ~34K | First curation pass. Heavy Exploit-DB/ATT&CK noise removed. |
+| **Jun 2** | ~34.5K | **Quality Gate** (`core/eidos_quality_gate.py`): all new nodes are scored before admission. |
+| **Jun 10** | **33,172** | Aggressive curation. −1,466 duplicates/noise. 251/251 smoke PASS. |
+| **Jun 13** | 33,172 | "Knows it knows": graph lookup before studying. |
+| **Jun 16** | **38,625** | **Unification**: 1,615 nodes migrated from `knowledge_graph.db` → `evolution_brain.db`. Single source of truth. **168,818 edges**. |
+| **Jun 17** | **38,701** | Current. +76 nodes from autonomous learning. |
+
+**Historical graph snapshots** (preserved in `NO TOCAR/`):
+- `EIDOS_COMPLETO/graphify-out/graph.html` — **17 MB, 20,737 nodes, 33,184 edges**, 531 communities. The full code dependency graph rendered with vis-network (sidebar, search, filters).
+- `GRAPH_TREE_AI_FACEBOOK.html` — 2.4 MB, the graph rendered as a tree hierarchy.
+
+Today's live graph at [arku75.github.io/EIDOS/](https://arku75.github.io/EIDOS/)
+shows the **3,000 most-connected** knowledge concepts from the current
+38,701-node graph — a window into EIDOS's brain.
 
 ---
 
