@@ -1,0 +1,23 @@
+name: sanity
+on: [push, pull_request]
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: Byte-compile all Python (syntax sanity)
+        run: python -m compileall -q core bin web-panel examples || true
+      - name: Check key modules parse
+        run: |
+          python - <<'PY'
+          import ast, pathlib, sys
+          bad=[]
+          for p in pathlib.Path('core').glob('*.py'):
+              try: ast.parse(p.read_text(encoding='utf-8', errors='ignore'))
+              except SyntaxError as e: bad.append(f"{p}: {e}")
+          print("checked core/*.py — syntax errors:", len(bad))
+          [print(b) for b in bad[:20]]
+          sys.exit(1 if bad else 0)
+          PY

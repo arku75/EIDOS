@@ -41,7 +41,19 @@
 </p>
 
 <p align="center">
-  <i>Un organismo digital autónomo con cerebro propio, memoria, cuerpo físico y 12 personajes vivos.</i>
+  <a href="https://github.com/arku75/EIDOS/stargazers"><img src="https://img.shields.io/github/stars/arku75/EIDOS?style=social" alt="Stars"></a>
+  <a href="https://github.com/arku75/EIDOS/releases"><img src="https://img.shields.io/github/v/release/arku75/EIDOS" alt="Release"></a>
+  <a href="https://github.com/arku75/EIDOS/commits"><img src="https://img.shields.io/github/last-commit/arku75/EIDOS" alt="Last commit"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/arku75/EIDOS" alt="License"></a>
+  <a href="https://arku75.github.io/EIDOS/"><img src="https://img.shields.io/badge/neural%20graph-live-ff69b4" alt="Live neural graph"></a>
+</p>
+
+<p align="center">
+  <i>An autonomous digital organism with its own brain, memory, physical body and a Colony of living characters.</i>
+</p>
+
+<p align="center">
+  <b><a href="docs/BRIDGE.md">🌉 Lend any AI its powers</a> · <a href="https://arku75.github.io/EIDOS/">🧠 Live neural graph</a> · <a href="docs/INSTALL.md">⚙️ Install</a> · <a href="docs/KNOWN_ISSUES.md">🐞 Honest status</a></b>
 </p>
 
 ---
@@ -153,6 +165,34 @@ Create a Colony character bound to your AI → [docs/COLONY_CHARACTER.md](docs/C
 | [docs/COLONY_CHARACTER.md](docs/COLONY_CHARACTER.md) | Create a Colony character bound to your Bridge AI |
 | [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) | Honest status — real bugs and gaps |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture |
+
+---
+
+## ⚠️ Safety & Security (please read)
+
+EIDOS can move the mouse, perceive the screen and browse the web. That is exactly
+why it is built with hard brakes — and why we are transparent about them.
+
+- **It is not malware.** Everything runs **on your own machine, started by you**.
+  There is no phone-home, no hidden remote access. The constitution
+  (`constitution.toml`, hash-verified) **forbids** EIDOS from opening listening
+  ports, exfiltrating data, reading SSH keys/`.env`/browser data, or escalating
+  its own permissions.
+- **The body is OFF by default.** Real mouse/keyboard control requires
+  `EIDOS_BOM=1` **and** the human owner present. Without that, the Body runs in
+  **dry mode** — it *plans* movements but does not execute them.
+- **The Bridge is local-only.** It binds to `127.0.0.1` and requires an API key.
+  It does **not** give a borrowed AI root access; GUI actions are gated like the
+  Body above. To reach it remotely, use an SSH tunnel — never a public bind.
+- **It is experimental, single-developer software.** Run it in a controlled
+  environment (a VM or a dedicated machine is recommended). Review any third-party
+  study targets you point it at. See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md)
+  for the honest list of what is incomplete.
+- **`core/` has 431 small modules** for modularity (≈ tens of lines each), not to
+  hide anything — the whole brain is open for you to read.
+
+> Use it to learn, research and build. Don't use EIDOS (or its Bridge) to automate
+> abuse of other people's systems or to violate any platform's terms.
 
 ---
 
