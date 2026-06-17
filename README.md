@@ -115,22 +115,40 @@ EIDOS has been running and learning since **May 24, 2026**. Over 145 documented 
 
 ---
 
-## 🧠 3D Neural Graph
+## ⚡ Try it in 1 minute (no install)
+
+```bash
+# Explore the LIVE knowledge graph — just your browser:
+open https://arku75.github.io/EIDOS/neural-graph.html
+```
+**🔍 Search concepts · 🖱 Click nodes to see connections · 📋 Filter by group**
+— 3,000 real concepts from EIDOS's brain, navigable with sidebar, search, and
+neighbor explorer. Served via GitHub Pages.
+
+<p align="center">
+  <a href="https://arku75.github.io/EIDOS/neural-graph.html"><b>▶ Open the Neural Graph now</b></a>
+</p>
+
+> To start the real system on Linux, see [docs/INSTALL.md](docs/INSTALL.md) (5 minutes).
+
+---
+
+## 🧠 The Neural Graph
 
 EIDOS thinks with a knowledge graph of ~39,000 nodes and ~169,000 edges. Below is
 the **real data** — the 3,000 most connected concepts from the live graph,
-rendered as an interactive 3D force network:
+rendered as an interactive force-directed network:
 
 <p align="center">
   <a href="https://arku75.github.io/EIDOS/neural-graph.html">
-    <img src="docs/screenshots/neural_graph.png" alt="EIDOS 3D Neural Graph" width="800">
+    <img src="docs/screenshots/neural_graph.png" alt="EIDOS Neural Graph" width="800">
   </a>
 </p>
 
-**▶ Explore it live in full 3D:**
+**▶ Explore the live interactive graph:**
 [**the EIDOS Neural Graph**](https://arku75.github.io/EIDOS/neural-graph.html)
-— drag to rotate, scroll to zoom, hover for concept labels. Powered by
-Three.js + 3d-force-graph. No install, no server — just your browser.
+— drag to pan, scroll to zoom, search concepts with the sidebar. Built with
+vis-network. No install, no server — just your browser.
 
 > The live operational dashboards (main panel, system monitor, Colony view) run on
 > `127.0.0.1:8080` inside a running instance — see
@@ -171,6 +189,7 @@ Create a Colony character bound to your AI → [docs/COLONY_CHARACTER.md](docs/C
 | [docs/COLONY_CHARACTER.md](docs/COLONY_CHARACTER.md) | Create a Colony character bound to your Bridge AI |
 | [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) | Honest status — real bugs and gaps |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture |
+| [docs/GLOSSARY.md](docs/GLOSSARY.md) | Key terms explained: BOM, Bridge, Colony, brain-lite, guardian… |
 
 ---
 
