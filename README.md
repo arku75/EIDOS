@@ -115,16 +115,22 @@ EIDOS has been running and learning since **May 24, 2026**. Over 145 documented 
 
 ---
 
-## The Neural Graph
+## 🧠 3D Neural Graph
 
-EIDOS thinks with a knowledge graph of ~39,000 nodes. Below is a view of its
-structure — each node is a concept it has learned, with its connection count:
+EIDOS thinks with a knowledge graph of ~39,000 nodes and ~169,000 edges. Below is
+the **real data** — the 3,000 most connected concepts from the live graph,
+rendered as an interactive 3D force network:
 
-![EIDOS knowledge graph](docs/screenshots/neural_graph.png)
+<p align="center">
+  <a href="https://arku75.github.io/EIDOS/neural-graph.html">
+    <img src="docs/screenshots/neural_graph.png" alt="EIDOS 3D Neural Graph" width="800">
+  </a>
+</p>
 
-**▶ Explore it live and interactive:**
+**▶ Explore it live in full 3D:**
 [**the EIDOS Neural Graph**](https://arku75.github.io/EIDOS/neural-graph.html)
-— drag, zoom, expand. Served via GitHub Pages, no install needed.
+— drag to rotate, scroll to zoom, hover for concept labels. Powered by
+Three.js + 3d-force-graph. No install, no server — just your browser.
 
 > The live operational dashboards (main panel, system monitor, Colony view) run on
 > `127.0.0.1:8080` inside a running instance — see
