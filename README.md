@@ -268,7 +268,7 @@ A 4-layer memory architecture ensures nothing is ever truly forgotten:
 
 EIDOS has a **self-model**. It records its own states (~9,000 self_states), meta-thoughts (~26,000), and internal events (~25,000). It knows what it knows (via `motor_memory` and graph lookups) and what it doesn't (knowledge gaps trigger autonomous research). It can reflect on its own thinking. It has an identity, not just a function.
 
-**Key modules**: `self.py`, `self_model.py`, `eidos_study.py`, `autonomous_research_loop.py`
+**Key modules**: `eidos_self_core.py` (identity), `eidos_metacognition.py` (meta-thoughts), `eidos_self_awareness.py`, `eidos_study.py`, `autonomous_research_loop.py`
 
 ### 6. Constitutional Dimension (The Governance)
 
