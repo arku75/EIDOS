@@ -237,7 +237,7 @@ EIDOS exists across six interconnected dimensions. Each one is a living system, 
 
 The **neural knowledge graph** is the core of EIDOS' intelligence. With ~39,000 nodes and ~169,000 edges in SQLite, plus ~6,200 vector embeddings in ChromaDB, this is where EIDOS "thinks." The graph grows continuously through autonomous research, study sessions, and interaction with the world. `brain-lite` is the deterministic central loop that decides what to do — LLMs only advise.
 
-**Key modules**: `brain_lite.py`, `eidos_learn.py` (LLM cascade), `eidos_deep_comprehension.py`, `eidos_deep_research.py`, `eidos_skills.py` (generalization), `eidos_rl.py` (Q-learning), `knowledge_graph.py`
+**Key modules**: `eidos_brain_lite.py` (decides), `eidos_learn.py` (LLM cascade), `eidos_deep_comprehension.py`, `eidos_deep_research.py`, `eidos_skills.py` (generalization), `eidos_rl.py` (Q-learning), `knowledge_graph.py`
 
 ### 2. Physical Dimension (The Body)
 
@@ -320,7 +320,7 @@ Perception (screen, text, context)
 ```
 EIDOS/
 ├── core/                          # 393 Python modules — the brain
-│   ├── brain_lite.py              # Deterministic central loop (DECIDE)
+│   ├── eidos_brain_lite.py         # Deterministic central loop (DECIDE)
 │   ├── colony_community.py        # Colony middleware (12 characters)
 │   ├── character_neuron.py        # Hebbian synapses per character
 │   ├── character_lifecycle.py     # Birth, learning, reproduction
