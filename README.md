@@ -190,6 +190,9 @@ Create a Colony character bound to your AI → [docs/COLONY_CHARACTER.md](docs/C
 | [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) | Honest status — real bugs and gaps |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture |
 | [docs/GLOSSARY.md](docs/GLOSSARY.md) | Key terms explained: BOM, Bridge, Colony, brain-lite, guardian… |
+| [docs/CLONE.md](docs/CLONE.md) | **How to clone EIDOS** (Ed25519, Hub, Portal, allowlists) |
+| [docs/SESSION.md](docs/SESSION.md) | **How EIDOS uses your cookies** (Chromium session inheritance) |
+| [docs/REGISTER.md](docs/REGISTER.md) | **Autonomous registration** on platforms (visible/interactive) |
 
 ---
 

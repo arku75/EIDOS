@@ -3,37 +3,73 @@
 Two ways to interact: the **CLI** (`eidos …`) and the **Bridge HTTP API** (port
 8003). For lending EIDOS's powers to another AI, see [BRIDGE.md](BRIDGE.md).
 
-## CLI
+## CLI — Full Command Reference
+
+EIDOS exposes 22 commands via `eidos <command> [options]`. Run `eidos --help` for
+the full built-in help.
+
+### Lifecycle
 
 ```bash
-# Lifecycle
-eidos start                          # launch services
-eidos stop                           # stop services
-eidos status                         # full system status
+eidos start                          # launch all 12 systemd services
+eidos stop                           # stop all services cleanly
+eidos status                         # full system status (services, graph, Colony, RAM)
+eidos awaken                         # wake EIDOS from sleep / cold start
+```
 
-# Talk
-eidos talk "What is Kubernetes?"     # query via Bridge
-eidos ask  "Explain Docker layers"   # query with Colony discussion
+### Interaction
 
-# Study queue (autonomous learning)
-eidos study add "Learn about systemd"
-eidos study list
-eidos study report
+```bash
+eidos chat                           # interactive Colony chat (default)
+eidos god                            # God Mode CLI (full control, interactive)
+eidos talk "What is Kubernetes?"     # one-shot query via Bridge API
+eidos ask "Explain Docker layers"    # query with Colony character discussion
+```
 
-# Free / autonomous mode (works the queue alone)
-EIDOS_MASTER_MODE=1 eidos libre
+### Learning & Teaching
 
-# Teaching EIDOS (master–student protocol)
-python3 -m core.master_protocol pending          # what EIDOS wants to know
-python3 -m core.master_protocol answer <id> "…"  # teach it (stored at confidence 0.95)
+```bash
+eidos study add "Learn systemd"      # add topic to autonomous study queue
+eidos study report                   # view the study report (~/.eidos/study_report.md)
+eidos teach --qid <id> --text "..." # teach EIDOS (master-student, conf 0.95)
+python3 -m core.master_protocol pending  # list questions EIDOS wants answered
+```
 
-# Verification
-eidos smoke                          # integration tests
-eidos health                         # health check
-eidos graph-stats                    # neural graph statistics
+### Autonomous modes
 
-# Native viewer (tkinter: vision + chat + research)
-PYTHONPATH=~/EIDOS python3 bin/eidos-viewer
+```bash
+EIDOS_MASTER_MODE=1 eidos libre      # free autonomous mode (works study queue)
+eidos pipeline [--dry-run]           # run the multi-step pipeline
+eidos improve                        # run smoke test (read-only diagnostics)
+```
+
+### Web & Browser
+
+```bash
+eidos browse                         # open Chromium with SER's session and navigate
+eidos set-browser-default            # choose default browser (firefox/chromium)
+eidos estudio-app                    # launch the dedicated study app
+```
+
+### Development & operations
+
+```bash
+eidos setup                          # system health checklist (OK/FAIL)
+eidos test                           # quick module test
+eidos sync                           # sync state between components
+eidos bridge [--socket]              # unix socket bridge for Go dispatcher
+eidos vscode                         # VSCode/IDE bridge
+eidos gateway [--port]               # unified API gateway (port 8003)
+eidos api [--port]                   # FastAPI server
+```
+
+### Advanced
+
+```bash
+eidos reproduce                      # replay a recorded session
+eidos neuron                         # manage graph neurons
+eidos wake-word                      # configure wake-word for voice
+eidos vseidos-control                # control the VSEIDOS panel
 ```
 
 ## Bridge API (port 8003)
