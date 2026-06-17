@@ -130,6 +130,26 @@ Use the variable names your local setup requires. Common examples:
 3. Do not push the exposed secret back to GitHub.
 4. If needed, create a new secret and update local configuration.
 
+## Before publishing or sharing code publicly
+
+1. Revoke any token/key that may have been exposed.
+2. Delete state files or databases (`.eidos/`, `*.db`, `*.sqlite`).
+3. Audit Git history for secrets (use `git-filter-repo` if needed).
+4. Never upload models or personal data; use Releases or Git LFS if necessary.
+
+## Secret management
+
+- Keep credentials in environment variables or secrets services (GitHub Secrets
+  for CI).
+- Always provide `.env.example` without real values.
+- The only supported secrets file is `~/.eidos/secrets.env` (`chmod 600`).
+
+## Security contact
+
+Report vulnerabilities to SER via Telegram: [https://t.me/ARKUu_12_8](https://t.me/ARKUu_12_8)
+
+---
+
 ## Summary
 
 This project should be public-ready with placeholders only.

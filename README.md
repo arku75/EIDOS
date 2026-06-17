@@ -184,15 +184,16 @@ Create a Colony character bound to your AI → [docs/COLONY_CHARACTER.md](docs/C
 | Guide | What it covers |
 |:------|:---------------|
 | [docs/INSTALL.md](docs/INSTALL.md) | Requirements, install, secrets, Ollama, troubleshooting |
-| [docs/USAGE.md](docs/USAGE.md) | CLI commands, Bridge API, search, dashboards |
-| [docs/BRIDGE.md](docs/BRIDGE.md) | **Lend any AI EIDOS's powers** (the symbiosis) |
+| [docs/USAGE.md](docs/USAGE.md) | **Full CLI reference** (22 commands) + Bridge API + search |
+| [docs/BRIDGE.md](docs/BRIDGE.md) | **Lend any AI EIDOS's powers** — the symbiosis |
 | [docs/COLONY_CHARACTER.md](docs/COLONY_CHARACTER.md) | Create a Colony character bound to your Bridge AI |
-| [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) | Honest status — real bugs and gaps |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture |
-| [docs/GLOSSARY.md](docs/GLOSSARY.md) | Key terms explained: BOM, Bridge, Colony, brain-lite, guardian… |
 | [docs/CLONE.md](docs/CLONE.md) | **How to clone EIDOS** (Ed25519, Hub, Portal, allowlists) |
-| [docs/SESSION.md](docs/SESSION.md) | **How EIDOS uses your cookies** (Chromium session inheritance) |
+| [docs/SESSION.md](docs/SESSION.md) | **How EIDOS uses your browser cookies** (Chromium session) |
 | [docs/REGISTER.md](docs/REGISTER.md) | **Autonomous registration** on platforms (visible/interactive) |
+| [docs/GUARDIANS.md](docs/GUARDIANS.md) | The 6 autonomous systems that keep EIDOS alive |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Component map, data flow, memory layers, DBs, extension points |
+| [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) | Honest status — real bugs and gaps |
+| [docs/GLOSSARY.md](docs/GLOSSARY.md) | Key terms: BOM, Bridge, Colony, brain-lite, Hebbian synapses… |
 
 ---
 
