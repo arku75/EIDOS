@@ -1,3 +1,5 @@
+> ⚖️ **EIDOS © 2026 SER · Licencia [ESSL v1.0](../LICENSE) — propietaria, source-available.** Prohibida la replicación, el uso comercial y construir un producto competidor. Todo cambio o propuesta debe documentarse en `THIRD_PARTY_CHANGES.md` y comunicarse a SER. EIDOS **no** es open source.
+
 # Clones — How EIDOS replicates to other machines
 
 > A **clone** is a copy of EIDOS running on another PC. It has its own

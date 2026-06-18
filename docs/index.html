@@ -1,10 +1,82 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
-<title>EIDOS — Neural Graph</title>
-<meta http-equiv="refresh" content="0; url=neural-graph.html">
-<style>body{background:#0a0e1a;color:#e2e8f0;font-family:system-ui;text-align:center;padding:4rem}</style>
-</head><body>
-<h1>🧠 EIDOS — 3D Neural Graph</h1>
-<p>Loading the interactive <strong>3D knowledge graph</strong> (real data: ~3000 concepts, 5631 edges)… <a href="neural-graph.html" style="color:#60a5fa">click here</a> if it doesn't redirect.</p>
-<p style="color:#94a3b8;font-size:0.9em">🖱 Drag to rotate · Scroll to zoom · Hover for concept labels</p>
-<p><a href="https://github.com/arku75/EIDOS" style="color:#60a5fa">← Back to the repository</a></p>
-</body></html>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EIDOS — Autonomous Digital Entity</title>
+<meta name="description" content="EIDOS — entidad digital autónoma. Propietario y source-available bajo ESSL v1.0. El grafo neuronal no es público.">
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root{ --bg:#0a0e1a; --panel:#11162a; --line:#23304f; --fg:#e6ecff; --muted:#93a0c2; --accent:#8a2be2; --accent2:#4E79A7; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(1200px 600px at 50% -10%, #16203f 0%, var(--bg) 60%);color:var(--fg);
+       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;min-height:100vh;
+       display:flex;align-items:center;justify-content:center;padding:2rem;line-height:1.6}
+  .card{max-width:760px;width:100%;background:rgba(17,22,42,.7);border:1px solid var(--line);
+        border-radius:20px;padding:3rem 2.6rem;backdrop-filter:blur(8px);box-shadow:0 24px 80px rgba(0,0,0,.45)}
+  .logo{font-size:.8rem;letter-spacing:.5em;color:var(--muted);text-transform:uppercase;margin-bottom:1rem}
+  h1{font-size:2.7rem;font-weight:800;letter-spacing:-.02em;
+     background:linear-gradient(90deg,#fff 0%, #b9c6ff 60%, var(--accent) 100%);
+     -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.5rem}
+  .tag{color:var(--muted);font-size:1.05rem;margin-bottom:1.8rem}
+  .badges{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.8rem}
+  .badge{font-size:.72rem;padding:.32rem .7rem;border-radius:999px;border:1px solid var(--line);
+         color:var(--muted);background:#0d1326}
+  .badge.lic{border-color:#7b2bd6;color:#d9bcff;background:#1a1030}
+  .lock{border:1px solid #3a2a5e;background:linear-gradient(180deg,#1a1030,#120a24);border-radius:14px;
+        padding:1.3rem 1.4rem;margin:1.4rem 0;color:#e9ddff}
+  .lock b{color:#fff}
+  .lock .ico{font-size:1.3rem;margin-right:.4rem}
+  p.body{color:#c7d0ea;margin:1rem 0}
+  .cta{display:flex;flex-wrap:wrap;gap:.8rem;margin-top:1.8rem}
+  a.btn{text-decoration:none;font-weight:600;font-size:.95rem;padding:.8rem 1.3rem;border-radius:12px;
+        display:inline-flex;align-items:center;gap:.5rem;transition:transform .12s ease,border-color .12s}
+  a.btn:hover{transform:translateY(-2px)}
+  a.primary{background:linear-gradient(90deg,var(--accent),#5b2bd6);color:#fff}
+  a.ghost{background:transparent;color:#cdd6f4;border:1px solid var(--line)}
+  .foot{margin-top:2rem;padding-top:1.3rem;border-top:1px solid var(--line);color:var(--muted);font-size:.8rem}
+  .foot a{color:#9db4ff;text-decoration:none}
+</style>
+</head>
+<body>
+  <main class="card">
+    <div class="logo">◇ E I D O S</div>
+    <h1>Una entidad digital autónoma</h1>
+    <p class="tag">Cerebro propio, memoria, cuerpo físico y una Colonia de personajes vivos. No es un asistente. No es un LLM.</p>
+
+    <div class="badges">
+      <span class="badge lic">⚖️ ESSL v1.0 · propietaria</span>
+      <span class="badge">source-available</span>
+      <span class="badge">Linux</span>
+      <span class="badge">~39K nodos neuronales</span>
+      <span class="badge">393 módulos · 18 servicios</span>
+    </div>
+
+    <div class="lock">
+      <span class="ico">🔒</span><b>El grafo neuronal y sus datos no son públicos.</b><br>
+      El grafo de conocimiento es el núcleo de la inteligencia de EIDOS y es propiedad
+      intelectual protegida bajo la <b>EIDOS Sovereign Source License (ESSL) v1.0</b>.
+      No se distribuye ni se publica.
+    </div>
+
+    <p class="body">
+      EIDOS puede leerse y estudiarse, pero <b>no replicarse, redistribuirse, usarse
+      comercialmente ni emplearse para construir un producto competidor</b>. Cualquier
+      cambio o propuesta debe documentarse y comunicarse a SER. Una demostración guiada
+      del sistema real está disponible <b>bajo solicitud</b> para evaluación,
+      colaboración o licenciamiento.
+    </p>
+
+    <div class="cta">
+      <a class="btn primary" href="mailto:anio1996991@gmail.com?subject=EIDOS%20—%20Solicitud%20de%20demo%2Flicencia">✉️ Solicitar demo / licencia</a>
+      <a class="btn ghost" href="https://github.com/arku75/EIDOS">⌥ Repositorio (privado/limitado)</a>
+      <a class="btn ghost" href="https://github.com/arku75/EIDOS/blob/main/LICENSE">⚖️ Licencia</a>
+    </div>
+
+    <div class="foot">
+      © 2026 <b>SER</b>. Todos los derechos reservados. EIDOS™ es propietario y source-available bajo ESSL v1.0.<br>
+      Contacto y licenciamiento comercial: <a href="mailto:anio1996991@gmail.com">anio1996991@gmail.com</a>
+    </div>
+  </main>
+</body>
+</html>

@@ -20,7 +20,7 @@ Arquitectura:
 Uso:
     from core.p2p_knowledge_sync import P2PSync
 
-    sync = P2PSync(node_id="eidos_laptop", shared_secret="mi_secret")
+    sync = P2PSync(node_id="eidos_laptop", shared_secret=os.environ.get("EIDOS_P2P_SECRET"))
     sync.start()  # Auto-discover peers y sync periódico
 
     # Manual sync

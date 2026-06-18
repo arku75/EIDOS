@@ -1,3 +1,5 @@
+> ⚖️ **EIDOS © 2026 SER · Licencia [ESSL v1.0](../LICENSE) — propietaria, source-available.** Prohibida la replicación, el uso comercial y construir un producto competidor. Todo cambio o propuesta debe documentarse en `THIRD_PARTY_CHANGES.md` y comunicarse a SER. EIDOS **no** es open source.
+
 # Guardians — The 6 autonomous systems that keep EIDOS alive
 
 > Guardians are **not** optional daemons. They are the autonomic nervous system

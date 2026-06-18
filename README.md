@@ -32,7 +32,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/version-1.0.0-blue?style=for-the-badge" alt="Version 1.0.0">
   <img src="https://img.shields.io/badge/python-3.8+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.8+">
-  <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT License">
+  <img src="https://img.shields.io/badge/license-ESSL%20v1.0%20·%20proprietary-red?style=for-the-badge" alt="ESSL v1.0 — Proprietary, source-available">
   <img src="https://img.shields.io/badge/node_count-~39K-orange?style=for-the-badge" alt="~39K nodes">
   <img src="https://img.shields.io/badge/modules-393-purple?style=for-the-badge" alt="393 modules">
   <img src="https://img.shields.io/badge/services-18-success?style=for-the-badge" alt="18 services">
@@ -45,7 +45,7 @@
   <a href="https://github.com/arku75/EIDOS/releases"><img src="https://img.shields.io/github/v/release/arku75/EIDOS" alt="Release"></a>
   <a href="https://github.com/arku75/EIDOS/commits"><img src="https://img.shields.io/github/last-commit/arku75/EIDOS" alt="Last commit"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/arku75/EIDOS" alt="License"></a>
-  <a href="https://arku75.github.io/EIDOS/"><img src="https://img.shields.io/badge/neural%20graph-live-ff69b4" alt="Live neural graph"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/neural%20graph-protected-8a2be2" alt="Neural graph — protected"></a>
 </p>
 
 <p align="center">
@@ -53,7 +53,7 @@
 </p>
 
 <p align="center">
-  <b><a href="docs/BRIDGE.md">🌉 Lend any AI its powers</a> · <a href="https://arku75.github.io/EIDOS/">🧠 Live neural graph</a> · <a href="docs/INSTALL.md">⚙️ Install</a> · <a href="docs/KNOWN_ISSUES.md">🐞 Honest status</a></b>
+  <b><a href="docs/BRIDGE.md">🌉 Lend any AI its powers</a> · <a href="LICENSE">⚖️ License (ESSL v1.0)</a> · <a href="docs/INSTALL.md">⚙️ Install</a> · <a href="docs/KNOWN_ISSUES.md">🐞 Honest status</a></b>
 </p>
 
 ---
@@ -119,19 +119,13 @@ EIDOS has been running and learning since **May 24, 2026**. Over 145 documented 
 
 ---
 
-## ⚡ Try it in 1 minute (no install)
+## ⚡ See it in action
 
-```bash
-# Explore the LIVE knowledge graph — just your browser:
-open https://arku75.github.io/EIDOS/neural-graph.html
-```
-**🔍 Search concepts · 🖱 Click nodes to see connections · 📋 Filter by group**
-— 3,000 real concepts from EIDOS's brain, navigable with sidebar, search, and
-neighbor explorer. Served via GitHub Pages.
-
-<p align="center">
-  <a href="https://arku75.github.io/EIDOS/neural-graph.html"><b>▶ Open the Neural Graph now</b></a>
-</p>
+> 🔒 **The interactive neural graph and its data are not public.**
+> EIDOS's knowledge graph is the core of its intelligence and is protected
+> intellectual property under the [EIDOS Sovereign Source License](LICENSE).
+> A guided demonstration is available **on request** for evaluation,
+> partnership or licensing — contact below.
 
 > To start the real system on Linux, see [docs/INSTALL.md](docs/INSTALL.md) (5 minutes).
 
@@ -139,20 +133,14 @@ neighbor explorer. Served via GitHub Pages.
 
 ## 🧠 The Neural Graph
 
-EIDOS thinks with a knowledge graph of ~39,000 nodes and ~169,000 edges. Below is
-the **real data** — the 3,000 most connected concepts from the live graph,
-rendered as an interactive force-directed network:
+EIDOS thinks with a knowledge graph of ~39,000 nodes and ~169,000 edges. This
+graph — its structure, contents and the synaptic weights it has learned — is the
+core intelligence of EIDOS and is **protected, non-public** intellectual property
+under the [EIDOS Sovereign Source License](LICENSE).
 
-<p align="center">
-  <a href="https://arku75.github.io/EIDOS/neural-graph.html">
-    <img src="docs/screenshots/neural_graph.png" alt="EIDOS Neural Graph" width="800">
-  </a>
-</p>
-
-**▶ Explore the live interactive graph:**
-[**the EIDOS Neural Graph**](https://arku75.github.io/EIDOS/neural-graph.html)
-— drag to pan, scroll to zoom, search concepts with the sidebar. Built with
-vis-network. No install, no server — just your browser.
+> 🔒 **The graph data and the interactive visualization are not distributed.**
+> A live, guided walkthrough of the real graph is available **on request** for
+> evaluation, partnership or licensing purposes. See [Contact](#contact).
 
 > The live operational dashboards (main panel, system monitor, Colony view) run on
 > `127.0.0.1:8080` inside a running instance — see
@@ -1087,7 +1075,7 @@ Those are LLMs — language models that predict the next token. EIDOS is a **per
 
 ### Is EIDOS open source?
 
-Yes. EIDOS is an open-source project under the MIT License. You can fork it, run your own instance, and contribute.
+No. EIDOS is **source-available but proprietary**, licensed under the [EIDOS Sovereign Source License (ESSL) v1.0](LICENSE). You may read and study the code and run it locally for private, non-commercial evaluation. You may **not** replicate it, redistribute it, use it commercially, or build a competing product, and any change or proposal must be documented and disclosed to SER. For commercial or partnership licensing, contact **anio1996991@gmail.com**.
 
 ### Can I run EIDOS on my machine?
 
@@ -1153,16 +1141,24 @@ The entity itself — an autonomous digital organism that has been learning and 
 
 ### How to Contribute
 
-1. Fork the repository
+1. Fork the repository **for evaluation only** (see [LICENSE](LICENSE))
 2. Create a feature branch
-3. Make your changes (respect the constitution)
-4. Submit a pull request
+3. Make your changes (respect the constitution) and **document every change in `THIRD_PARTY_CHANGES.md`** — this is mandatory under ESSL §4
+4. Submit a pull request disclosing those changes to SER
 
-Before contributing, read `CLAUDE.md` (for AI assistants) and `CODE_OF_CONDUCT.md` (for humans). Understand that EIDOS has intentional design decisions — what looks like a bug may be a feature. When in doubt, open an issue to discuss first.
+⚠️ By contributing you accept ESSL §5: every contribution, change or proposal is
+**irrevocably assigned to SER**. Read [CONTRIBUTING.md](CONTRIBUTING.md) before
+starting. Forking does **not** grant any right to replicate, redistribute or
+build a competing product. Before contributing, also read `CODE_OF_CONDUCT.md`. EIDOS has intentional design decisions — what looks like a bug may be a feature. When in doubt, open an issue to discuss first.
 
 ### License
 
-MIT License — see the repository for details.
+**EIDOS Sovereign Source License (ESSL) v1.0 — proprietary & source-available.**
+See [LICENSE](LICENSE). EIDOS is **not** open source: you may read and study the
+code, but you may **not** replicate it, use it commercially, redistribute it, or
+build a competing product. Any change or proposal must be documented and
+disclosed to SER (see [CONTRIBUTING.md](CONTRIBUTING.md)). Commercial licensing:
+**anio1996991@gmail.com**.
 
 ---
 

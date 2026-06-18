@@ -1,28 +1,149 @@
-Copyright © 2026 SER
+EIDOS SOVEREIGN SOURCE LICENSE (ESSL) v1.0
+Copyright © 2026 SER. All Rights Reserved.
 
-All Rights Reserved.
+EIDOS — Autonomous Digital Entity.
 
-EIDOS — Autonomous Digital Entity
+This is a PROPRIETARY, SOURCE-AVAILABLE license. The source code is published
+so that it can be read, studied and evaluated — NOT so that it can be copied,
+re-implemented, sold, or used to build a competing product. EIDOS is NOT open
+source and is NOT free software. By accessing, cloning, downloading, viewing,
+forking, running or otherwise using the Software or any part of it (including
+its documentation, architecture, knowledge graph, data, prompts and design),
+You accept every term below. If You do not accept these terms, You must not
+access or use the Software.
 
-This software and associated documentation files (the "Software") are the
-property of SER. The Software is protected by copyright laws and
-international treaty provisions.
+--------------------------------------------------------------------------------
+0. DEFINITIONS
+--------------------------------------------------------------------------------
+"SER" / "Licensor" — the sole author and rights holder of EIDOS.
+"Software" — the EIDOS source code, documentation, knowledge graph and graph
+   data, neural/synaptic structures, datasets, prompts, configuration, models,
+   designs, names, branding and any accompanying material in this repository.
+"You" / "Licensee" — any natural or legal person who accesses the Software.
+"Derivative" — any work based on, derived from, translated, ported, refactored,
+   re-implemented, fine-tuned, or substantially inspired by the Software, in any
+   language or medium, whether or not it reuses literal code.
+"Documented Change" — a written record (see Section 4) of every modification,
+   addition, deletion, derivative, proposal or proposition made to the Software.
+"Competing Use" — using the Software, its ideas, architecture, knowledge graph
+   or documentation to create, train, operate, market or offer a product or
+   service that is the same as, similar to, or competes with EIDOS.
 
-The Software is provided for LEARNING AND EVOLUTION. You may:
-- View, study, and learn from the source code
-- Fork the repository to contribute improvements via Pull Requests
-- Install, run, and modify EIDOS for personal, non-commercial use
-- Use EIDOS to learn and evolve in this new sphere of autonomy
+--------------------------------------------------------------------------------
+1. LIMITED GRANT
+--------------------------------------------------------------------------------
+Subject to full and continuous compliance with this license, SER grants You a
+personal, non-exclusive, non-transferable, non-sublicensable, revocable license
+to, FOR PRIVATE, NON-COMMERCIAL EVALUATION AND LEARNING ONLY:
 
-You may NOT:
-- Use the Software for commercial purposes without explicit written permission
-- Redistribute the Software as your own product
-- Sell, rent, lease, or sublicense the Software
-- Remove or modify this copyright notice
-- Use the Software in a way that infringes on the rights of others
+  (a) view and study the source code;
+  (b) install and run the Software locally on hardware You control;
+  (c) make local modifications for the sole purpose of evaluation, provided
+      every change is a Documented Change (Section 4) and is submitted to SER.
 
-For commercial licensing inquiries, contact: anio1996991@gmail.com
+No other rights are granted. All rights not expressly granted are reserved by
+SER. This grant does NOT permit production, commercial, hosted, or public use.
 
+--------------------------------------------------------------------------------
+2. PROHIBITION ON REPLICATION AND COMPETITION
+--------------------------------------------------------------------------------
+You may NOT, in whole or in part, directly or indirectly:
+
+  (a) replicate, clone, re-implement, reverse engineer for re-implementation,
+      or recreate the Software or a Derivative;
+  (b) make any Competing Use of the Software;
+  (c) use the Software, its architecture, knowledge graph, data, prompts or
+      documentation to design, train or operate any other product, service,
+      agent, model or organism;
+  (d) redistribute, publish, mirror, sell, rent, lease, lend, sublicense or
+      make the Software (modified or not) available to any third party or to
+      the public, including as a network/hosted/SaaS service;
+  (e) remove, hide, alter or obscure any copyright, license, attribution or
+      proprietary notice.
+
+--------------------------------------------------------------------------------
+3. NO COMMERCIAL USE WITHOUT WRITTEN LICENSE
+--------------------------------------------------------------------------------
+Any commercial, production, hosted, public or revenue-generating use of the
+Software requires a separate written commercial license signed by SER. Until
+such a license is granted in writing, all such use is prohibited.
+
+Commercial licensing: anio1996991@gmail.com
+
+--------------------------------------------------------------------------------
+4. MANDATORY DOCUMENTATION AND DISCLOSURE OF CHANGES (BINDING)
+--------------------------------------------------------------------------------
+If You make ANY modification, addition, deletion, Derivative, proposal or
+proposition relating to the Software, You MUST, as a condition of this license:
+
+  (a) record each one as a Documented Change in a file named
+      THIRD_PARTY_CHANGES.md kept with Your copy, stating: author/identity,
+      date, exact files/areas affected, full description, and purpose;
+  (b) preserve in every copy and Derivative the original copyright, this
+      license, and clear attribution to SER and to EIDOS;
+  (c) disclose every Documented Change to SER IN WRITING (e.g. by Pull Request
+      or to anio1996991@gmail.com) BEFORE any use beyond local evaluation, and
+      promptly upon request;
+  (d) never present the Software or any Derivative, or any idea derived from it,
+      as Your own creation.
+
+These documentation and disclosure obligations are essential conditions, not
+mere formalities; breach of any of them terminates this license automatically.
+
+--------------------------------------------------------------------------------
+5. CONTRIBUTIONS AND ASSIGNMENT OF RIGHTS
+--------------------------------------------------------------------------------
+Any contribution, change, Derivative, idea, feedback or proposal You submit,
+disclose or make available in connection with the Software ("Contribution") is,
+upon creation, exclusively and irrevocably assigned to SER, together with all
+intellectual property rights worldwide. To the extent an assignment is not
+permitted by law, You grant SER a perpetual, worldwide, exclusive, irrevocable,
+royalty-free, sublicensable license to the Contribution, and You waive any moral
+rights to the fullest extent permitted by law. SER may use, modify, relicense
+and commercialize any Contribution without compensation or attribution to You.
+You represent that You have the right to make the Contribution.
+
+--------------------------------------------------------------------------------
+6. INTELLECTUAL PROPERTY, NAME AND BRANDING
+--------------------------------------------------------------------------------
+The Software, the name "EIDOS", its logo, branding, knowledge graph and overall
+design are the exclusive property of SER and are protected by copyright and
+other laws. No trademark or branding rights are granted. You may not use the
+"EIDOS" name or branding for any product, service or promotion.
+
+--------------------------------------------------------------------------------
+7. TERMINATION
+--------------------------------------------------------------------------------
+This license and all rights granted terminate automatically and immediately,
+without notice, upon any breach by You. SER may also revoke this license at any
+time at its sole discretion. Upon termination You must immediately cease all use
+and permanently destroy all copies of the Software and Derivatives in Your
+possession or control. Sections 2, 4, 5, 6, 8, 9 and 10 survive termination.
+
+--------------------------------------------------------------------------------
+8. NO WARRANTY
+--------------------------------------------------------------------------------
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE, TITLE AND NONINFRINGEMENT.
+
+--------------------------------------------------------------------------------
+9. LIMITATION OF LIABILITY
+--------------------------------------------------------------------------------
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL SER BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR ITS USE.
+
+--------------------------------------------------------------------------------
+10. GOVERNING LAW AND SEVERABILITY
+--------------------------------------------------------------------------------
+This license is governed by the laws of the country of residence of SER
+(jurisdiction: Spain, unless otherwise stated in writing by SER), excluding its
+conflict-of-law rules. If any provision is held unenforceable, the remaining
+provisions remain in full force, and the unenforceable provision shall be
+enforced to the maximum extent permitted.
+
+--------------------------------------------------------------------------------
+EIDOS is sovereign. It is read freely, but it is not copied, not sold, and not
+competed with — except by SER, or with SER's written permission.
+© 2026 SER. All Rights Reserved.

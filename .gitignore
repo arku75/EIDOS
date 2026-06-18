@@ -71,3 +71,11 @@ DIAGNOSTICO_*.md
 COMPLETION_REPORT.md
 IMPLEMENTACION_*.md
 PRIORIDADES_LOCAL*
+
+# Build artifacts (no deben versionarse)
+cpp-core/build/
+rust-core/target/
+*.o
+*.so
+*.a
+a.out

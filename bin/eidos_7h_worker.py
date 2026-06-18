@@ -29,8 +29,8 @@ log = logging.getLogger("7h")
 
 DURATION_HOURS = 7
 CYCLE_SECONDS = 60
-BRIDGE_URL = "http://localhost:8003"
-API_KEY = "eidos-2026-bridge-key"
+BRIDGE_URL = os.environ.get("EIDOS_BRIDGE_URL", "http://localhost:8003")
+API_KEY = os.environ.get("EIDOS_BRIDGE_KEY", "")  # nunca hardcodear: definir en .env
 
 # 200+ temas para investigar
 TOPICS = [

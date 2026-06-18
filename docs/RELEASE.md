@@ -1,3 +1,5 @@
+> ⚖️ **EIDOS © 2026 SER · Licencia [ESSL v1.0](../LICENSE) — propietaria, source-available.** Prohibida la replicación, el uso comercial y construir un producto competidor. Todo cambio o propuesta debe documentarse en `THIRD_PARTY_CHANGES.md` y comunicarse a SER. EIDOS **no** es open source.
+
 # Preparar una release pública (sanitizada)
 
 Este documento explica cómo generar una copia del repositorio lista para publicar en GitHub sin exponer secretos ni datos personales.
