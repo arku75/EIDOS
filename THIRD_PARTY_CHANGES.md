@@ -11,7 +11,7 @@ terminates the license automatically.
 
 | Date | Author / Identity | Files / Area affected | Description | Purpose |
 |------|-------------------|-----------------------|-------------|---------|
-| _(no third-party changes recorded yet)_ | | | | |
+| 2026-10-04 | OpenAI ChatGPT, authorized by SER | `requirements.txt`, `.github/workflows/ci.yml`, `.gitignore`, `SECURITY.md`, `README.md` | Security hardening: update vulnerable dependency pins conservatively, stop CI from masking byte-compile failures, expand credential ignore rules, clarify secret-rotation policy, and sanitize README claims/obsolete runtime metrics. | Reduce public-repository security risk and improve technical accuracy without changing EIDOS runtime logic. |
 
 ---
 © 2026 SER. All Rights Reserved. EIDOS is proprietary & source-available (ESSL v1.0).
