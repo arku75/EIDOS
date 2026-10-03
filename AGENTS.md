@@ -2,8 +2,7 @@
 
 # 🤖 AI Agents Guidelines
 
-> ⚠️ **ANTES DE HACER NADA: lee `EIDOS.md`.** Es el archivo canónico con TODO:
-> jerarquía, personajes, puertos, reglas, lecciones y auditoría. Está en la raíz del repo.
+> ⚠️ Antes de actuar, usa como fuentes de verdad el árbol actual del repositorio, `README.md`, `docs/KNOWN_ISSUES.md`, `SECURITY.md` y los tests. No asumas que un archivo histórico describe el runtime actual.
 
 <!-- n8n-as-code-start -->
 <!-- n8nac-version: 2.1.2 -->
@@ -81,27 +80,21 @@ Never write `n8nac-config.json`, `~/.n8n-manager`, or n8n-manager secret files b
 - **Logs:** `~/.eidos/logs/`
 - **Config:** `~/.eidos/dispatcher.json`
 
-## Known Missing Directories (present in sandbox, absent in current)
+## Repository restoration status
+
+The old “~184 files missing” block was a **historical restoration snapshot** and is no longer a valid description of the public tree. Current repository contents must be checked from the checkout itself (or CI), not inferred from that May snapshot.
+
+Use:
+
+```bash
+python3 - <<'PY'
+from pathlib import Path
+required = ["api","browser","cli","config","context","daemon","examples","plugins","terminal","tests","ui","utils","webhook"]
+root = Path.cwd()
+for name in required:
+    print(("OK  " if (root/name).exists() else "MISS"), name)
+PY
 ```
-api/          (2 files)    — API server
-browser/      (2 files)    — Browser controller
-cli/          (3 files)    — CLI commands
-config/       (3 files)    — Config loader/env
-context/      (3 files)    — Context management
-daemon/       (3 files)    — Systemd services
-examples/     (1 file)     — Examples
-external/     (96 files)   — Octoclaw agent framework
-mentor/       (3 files)    — Mentor module
-plugins/      (3 files)    — Plugin system
-prompts/      (1 file)     — Prompt templates
-terminal/     (2 files)    — Terminal backends
-tests/        (54 files)   — Test suite
-ui/           (2 files)    — UI skin engine
-utils/        (3 files)    — Security/validators
-webhook/      (2 files)    — Webhook server
-My_Gpt/       (1 file)     — Learning daemon
-```
-**Total: ~184 files missing** — `main.py` has broken imports due to this.
 
 ## Service Port Map ✅
 | Service | Port | Status | File |
@@ -305,7 +298,7 @@ El Knowledge Reasoner opera como una red neuronal semántica:
 - **colony_community.py**: el _select_responders debe tener a General siempre presente. NO modificar keywords de otros personajes.
 - **bridge_to_eidos.py /talk**: responde `agents_used` y `text` (no `agents_consulted` ni `response`). Siempre chequear con curl antes de hacer clients.
 - **eidos-viewer**: NO usar screen_trainer.py para el instruct del viewer. Conectar a Colony via bridge /talk.
-- **X-API-Key del bridge**: `eidos-2026-bridge-key` — obligatorio en toda llamada a /talk, /reason, etc.
+- **X-API-Key del Bridge**: nunca debe escribirse en documentación ni código. Cárgala desde `EIDOS_BRIDGE_KEY`/secrets locales. Si alguna clave real estuvo publicada, revócala y rótala.
 - **Anti-recursión**: el viewer se auto-excluye de captura vía EXCLUDED_HINTS. Título ventana = "EIDOS — Screen Viewer".
 - **PYTHONPATH**: los servicios de EIDOS necesitan `PYTHONPATH=/home/ser/EIDOS` para arrancar correctamente.
 
