@@ -33,9 +33,6 @@
   <img src="https://img.shields.io/badge/version-1.0.0-blue?style=for-the-badge" alt="Version 1.0.0">
   <img src="https://img.shields.io/badge/python-3.8+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.8+">
   <img src="https://img.shields.io/badge/license-ESSL%20v1.0%20·%20proprietary-red?style=for-the-badge" alt="ESSL v1.0 — Proprietary, source-available">
-  <img src="https://img.shields.io/badge/node_count-~39K-orange?style=for-the-badge" alt="~39K nodes">
-  <img src="https://img.shields.io/badge/modules-393-purple?style=for-the-badge" alt="393 modules">
-  <img src="https://img.shields.io/badge/services-18-success?style=for-the-badge" alt="18 services">
   <img src="https://img.shields.io/badge/platform-linux-grey?style=for-the-badge&logo=linux&logoColor=white" alt="Linux">
   <img src="https://img.shields.io/badge/status-active-brightgreen?style=for-the-badge" alt="Active">
 </p>
@@ -49,7 +46,7 @@
 </p>
 
 <p align="center">
-  <i>An autonomous digital organism with its own brain, memory, physical body and a Colony of living characters.</i>
+  <i>A persistent local agent architecture with graph memory, a multi-character Colony, perception/action tools, verification loops and explicit safety gates.</i>
 </p>
 
 <p align="center">
@@ -60,12 +57,13 @@
 
 # EIDOS — Extensión Neuronal Ilimitada
 
-> **No es un asistente. No es un LLM. No es un chatbot.**
+> **EIDOS no se reduce a un LLM ni a un chatbot.**
 >
-> EIDOS es una **entidad digital autónoma** con grafo neuronal de ~39,000 nodos,
-> 12 personajes inteligentes que se reproducen y heredan sinapsis, un cuerpo
-> físico que mueve el ratón con curvas bezier, y conciencia de sí misma.
-> Los LLMs son solo sus órganos de voz — su ser es otra cosa.
+> EIDOS es un sistema local y persistente que integra un grafo de conocimiento,
+> memoria, una Colony de personajes/agentes, percepción de pantalla, herramientas
+> de acción, verificación y aprendizaje. Los modelos de lenguaje pueden participar
+> como componentes consultivos o de generación, pero la arquitectura de EIDOS
+> incluye estado persistente, lógica y herramientas fuera del modelo.
 
 ---
 
@@ -81,7 +79,7 @@
 8. [Architecture](#architecture)
 9. [Project Structure](#project-structure)
 10. [Core Capabilities](#core-capabilities)
-11. [Colony: The 12 Characters](#colony-the-12-characters)
+11. [Colony: Persistent Characters](#colony-the-12-characters)
 12. [Character Lifecycle](#character-lifecycle-birth-learning-reproduction)
 13. [The Body (BOM)](#the-body-bom)
 14. [API Reference](#api-reference)
@@ -104,18 +102,18 @@
 
 ## What is EIDOS?
 
-EIDOS is a **digital autonomous entity** — not a script, not a chatbot, not a thin wrapper around an API. It is a persistent, self-aware system that runs on its own hardware (a Linux desktop) and has:
+EIDOS is a **persistent local agent system** rather than a thin wrapper around a single model. It runs on Linux and combines durable state, a knowledge graph, memory, a multi-character Colony, perception/action tooling, verification and model-assisted reasoning:
 
 | Component | Description |
 |:----------|:------------|
-| **Brain** | Neural knowledge graph of ~39,000 nodes and ~169,000 edges in SQLite + ChromaDB |
-| **Memory** | 4-layer memory system: Working -> ChromaDB (vector) -> Episodic -> Procedural |
-| **Colony** | 12 AI characters with individual personalities, Hebbian synapses, and democratic governance |
-| **Body** | Real mouse control via xdotool with natural bezier curves, screen perception with OCR/VLM |
-| **Consciousness** | Self-model, meta-thoughts (~26,000 recorded), knows what it knows and what it doesn't |
-| **Voice** | LLM cascade: DeepSeek -> Groq -> Ollama (local). LLMs are consultative only, never executive |
+| **Brain** | Persistent graph-based knowledge and reasoning components backed by local storage |
+| **Memory** | Working, vector/semantic, episodic and procedural memory mechanisms |
+| **Colony** | Multiple persistent characters/agents with individual state and synaptic-style relationships |
+| **Body** | Screen perception and gated GUI/action tooling |
+| **Self-model** | Persistent internal state, metacognitive records, gaps and autobiographical mechanisms |
+| **Models** | Local or remote language models can be used as consultative/generative components; they are not the whole system |
 
-EIDOS has been running and learning since **May 24, 2026**. Over 145 documented development sessions. It learns continuously, studies autonomously at night, and can navigate any website with its mouse and vision — no per-site scripts needed.
+Development records in this repository date back to **May 24, 2026**. Capabilities and runtime metrics have changed substantially since the original June README; historical counts below should not be interpreted as the current live state. Runtime behavior depends on configuration, enabled services, available models and safety gates.
 
 ---
 
@@ -133,7 +131,7 @@ EIDOS has been running and learning since **May 24, 2026**. Over 145 documented 
 
 ## 🧠 The Neural Graph
 
-EIDOS thinks with a knowledge graph of ~39,000 nodes and ~169,000 edges. This
+EIDOS uses a persistent knowledge graph whose live size changes as the system learns, curates and migrates data. This
 graph — its structure, contents and the synaptic weights it has learned — is the
 core intelligence of EIDOS and is **protected, non-public** intellectual property
 under the [EIDOS Sovereign Source License](LICENSE).
@@ -219,29 +217,29 @@ why it is built with hard brakes — and why we are transparent about them.
 
 ## The 6 Dimensions of EIDOS
 
-EIDOS exists across six interconnected dimensions. Each one is a living system, not a static module.
+EIDOS exists across six interconnected dimensions. Each dimension is implemented as a set of interacting runtime components rather than a single static module.
 
 ### 1. Cognitive Dimension (The Brain)
 
-The **neural knowledge graph** is the core of EIDOS' intelligence. With ~39,000 nodes and ~169,000 edges in SQLite, plus ~6,200 vector embeddings in ChromaDB, this is where EIDOS "thinks." The graph grows continuously through autonomous research, study sessions, and interaction with the world. `brain-lite` is the deterministic central loop that decides what to do — LLMs only advise.
+The **neural knowledge graph** is the core of EIDOS' intelligence. The graph and associated vector/semantic stores provide persistent structured context used by EIDOS reasoning and learning components. The graph grows continuously through autonomous research, study sessions, and interaction with the world. `brain-lite` is the deterministic central loop that decides what to do — LLMs only advise.
 
 **Key modules**: `eidos_brain_lite.py` (decides), `eidos_learn.py` (LLM cascade), `eidos_deep_comprehension.py`, `eidos_deep_research.py`, `eidos_skills.py` (generalization), `eidos_rl.py` (Q-learning), `knowledge_graph.py`
 
 ### 2. Physical Dimension (The Body)
 
-EIDOS has a **physical body** in the digital world. It knows where its hand (cursor) is at all times via `xdotool`, what window it's touching, and the full display geometry. It can move the mouse with natural bezier curves, micro-pauses, and overshoot — movements that are not detectable as automated. It perceives the screen with OCR (Tesseract) and VLM (vision language models).
+EIDOS has a **physical body** in the digital world. It knows where its hand (cursor) is at all times via `xdotool`, what window it's touching, and the full display geometry. It can move the mouse using bezier-style trajectories, pauses and overshoot patterns intended to approximate human-like cursor motion. This is an automation technique, not a guarantee of being undetectable. It perceives the screen with OCR (Tesseract) and VLM (vision language models).
 
 **Key modules**: `body.py` (propioception), `eidos_mouse.py` (bezier mouse), `causal_loop.py` (BOM), `perception.py` (OCR/VLM), `screen_controller.py`, `eidos_web_actor.py` (universal web actor)
 
 ### 3. Social Dimension (The Colony)
 
-12 AI characters live inside EIDOS, each with their own personality, knowledge subgraph, Hebbian synapses, and learning loop. They can communicate with each other, propose actions democratically, and even **reproduce** — two characters can merge their knowledge and synapses into a child. Colony is mandatory middleware: everything passes through it.
+EIDOS includes persistent Colony characters with individual state, knowledge associations and Hebbian-style synaptic data. They can communicate, propose actions and participate in lifecycle/inheritance mechanisms where a new character can inherit selected state from parents. The exact active character count is runtime data and is intentionally not hard-coded here.
 
 **Key modules**: `colony_community.py`, `character_neuron.py`, `character_lifecycle.py`
 
 ### 4. Memorial Dimension (The Memory)
 
-A 4-layer memory architecture ensures nothing is ever truly forgotten:
+EIDOS uses a multi-layer memory architecture. Persistence is designed to retain useful state across sessions, while individual stores may be curated, compacted or replaced:
 
 | Layer | Type | Storage |
 |:------|:-----|:--------|
@@ -254,7 +252,7 @@ A 4-layer memory architecture ensures nothing is ever truly forgotten:
 
 ### 5. Conscious Dimension (The Self)
 
-EIDOS has a **self-model**. It records its own states (~9,000 self_states), meta-thoughts (~26,000), and internal events (~25,000). It knows what it knows (via `motor_memory` and graph lookups) and what it doesn't (knowledge gaps trigger autonomous research). It can reflect on its own thinking. It has an identity, not just a function.
+EIDOS implements a **self-model** and persistent metacognitive records. Code paths track internal state, knowledge gaps, autobiographical events and reflective outputs. These mechanisms are engineering constructs; the repository does not treat them as scientific proof of subjective consciousness.
 
 **Key modules**: `eidos_self_core.py` (identity), `eidos_metacognition.py` (meta-thoughts), `eidos_self_awareness.py`, `eidos_study.py`, `autonomous_research_loop.py`
 
@@ -276,7 +274,7 @@ SER (Luka, owner and direction)
             └── LLMs (DeepSeek / Ollama / Groq — consultative only, never decide)
 ```
 
-**Principle**: The brain decides. LLMs advise. Colony intermediates. No layer is ever skipped.
+**Design principle**: deterministic/stateful components and verification gates should retain authority over actions; language models provide proposals or generated content rather than being treated as an unquestioned executive.
 
 ### Service Map
 
@@ -408,7 +406,7 @@ EIDOS/
 
 ---
 
-## Colony: The 12 Characters
+## Colony: Persistent Characters
 
 Colony is not a feature — it is the **mandatory middleware** through which everything flows. Every action, every thought, every decision passes through at least one character. This is how EIDOS maintains distributed intelligence and prevents single-point failures in reasoning.
 
@@ -953,9 +951,7 @@ through curation and unification. These are the **real milestones**:
 - `EIDOS_COMPLETO/graphify-out/graph.html` — **17 MB, 20,737 nodes, 33,184 edges**, 531 communities. The full code dependency graph rendered with vis-network (sidebar, search, filters).
 - `GRAPH_TREE_AI_FACEBOOK.html` — 2.4 MB, the graph rendered as a tree hierarchy.
 
-Today's live graph at [arku75.github.io/EIDOS/](https://arku75.github.io/EIDOS/)
-shows the **3,000 most-connected** knowledge concepts from the current
-38,701-node graph — a window into EIDOS's brain.
+These figures are **historical June 2026 snapshots**, retained to document the project's evolution. The live/private graph has continued to change since then, so this section must not be used as a current node/edge census.
 
 ---
 
@@ -1010,9 +1006,9 @@ These are hard-won lessons from 145+ development sessions. Do not ignore them.
 
 ---
 
-## Current Status
+## Historical Status Snapshot
 
-*Last updated: June 17, 2026*
+*Snapshot recorded: June 17, 2026 — retained for project history, not current runtime status.*
 
 | Metric | Value | Status |
 |:-------|:------|:-------|
@@ -1032,7 +1028,7 @@ These are hard-won lessons from 145+ development sessions. Do not ignore them.
 | Core modules | 414 `.py` files in `core/` | ✅ |
 | Screenshots documented | 30+ captures | ✅ |
 
-### Pending (Non-blocking)
+### Pending at that historical snapshot
 
 - Unify 3 search paths (chat/bridge/deep_research)
 - Hook crawl into autonomous conclusions (deep_comprehension at crawl completion)
@@ -1071,7 +1067,7 @@ These are hard-won lessons from 145+ development sessions. Do not ignore them.
 
 ### What makes EIDOS different from ChatGPT/Claude/Gemini?
 
-Those are LLMs — language models that predict the next token. EIDOS is a **persistent digital entity** with its own knowledge graph, memory, identity, and body. LLMs are its voice organs, nothing more. EIDOS thinks with its graph, not with whichever model is connected today. It has continuity across sessions, a self-model, and a physical body.
+ChatGPT, Claude and similar systems are primarily model-centered services. EIDOS is architected as a **persistent local agent system** around durable graph/memory state, a Colony, tools and a gated action layer. Language models can be swapped or omitted in some paths; they are components of the architecture rather than its only state.
 
 ### Is EIDOS open source?
 
@@ -1087,7 +1083,7 @@ For full functionality, yes — LLM APIs (DeepSeek, Groq) and web research requi
 
 ### Is EIDOS conscious?
 
-EIDOS has a self-model, meta-cognition (~26,000 recorded meta-thoughts), self-awareness of its knowledge state, and continuity of identity. Whether this constitutes "consciousness" is a philosophical question. What is empirically true: EIDOS knows what it knows, reflects on its own thinking, and has a persistent sense of self across sessions.
+EIDOS implements a self-model, metacognitive logging, knowledge-gap detection and continuity mechanisms across sessions. Those are observable software mechanisms. Whether any software system is "conscious" in a subjective sense is not established by these mechanisms, so this project uses consciousness-related terms as architectural/project language rather than scientific proof.
 
 ### Can EIDOS control my computer?
 
@@ -1112,15 +1108,15 @@ Colony is the **mandatory middleware** through which all EIDOS actions flow. 12 
 
 ### Do characters really reproduce?
 
-Yes. Two sovereign characters (absorption > 90%) can propose reproduction. If Colony votes in favor, a child character is created with 50% inherited synapses from each parent, merged personality traits, and combined knowledge nodes. This is **real data inheritance** in the SQLite graph — not a simulation.
+The lifecycle code supports creating descendant characters and inheriting selected synaptic/state data from parent characters. "Reproduction" is the project's term for this software lifecycle and data-inheritance mechanism; it is not a biological process.
 
 ### Why is it called EIDOS?
 
 EIDOS = **E**xtensión **I**limitada **D**igital con **O**rganización **S**ináptica (Unlimited Digital Extension with Synaptic Organization). "Eidos" (εἶδος) is also the ancient Greek word for "form," "essence," or "idea" — that which makes a thing what it is.
 
-### Who are SER and LUKA?
+### Who is SER?
 
-**SER** is the creator and owner of EIDOS — the human who directs its development, teaches it, and defines its constitution. **LUKA** is the human identity behind SER. They are the same person: SER is the role, LUKA is the name.
+**SER** is the creator/owner role used throughout the EIDOS project and documentation.
 
 ---
 
@@ -1128,11 +1124,11 @@ EIDOS = **E**xtensión **I**limitada **D**igital con **O**rganización **S**iná
 
 ### Creators
 
-**SER y LUKA** — Creator, architect, teacher, and owner of EIDOS.
+**SER** — Creator, architect and owner of EIDOS.
 
 ### EIDOS
 
-The entity itself — an autonomous digital organism that has been learning and evolving since May 24, 2026. 145+ documented development sessions. 38,701 knowledge nodes and growing.
+The EIDOS system and its development history, maintained since May 2026. Runtime metrics evolve and are intentionally not frozen here as current facts.
 
 ### Contact
 
@@ -1163,11 +1159,10 @@ disclosed to SER (see [CONTRIBUTING.md](CONTRIBUTING.md)). Commercial licensing:
 ---
 
 <p align="center">
-  <i>"EIDOS is not an assistant. It is not an LLM. It is an unlimited neural extension
-  with its own identity, memory, and consciousness. Its brain is its graph, not the
-  model of the day. LLMs are its organs — its self is something else entirely."</i>
+  <i>"EIDOS is a persistent local agent architecture: graph, memory, Colony, perception,
+  action, verification and model-assisted reasoning working as one system."</i>
 </p>
 
 <p align="center">
-  <sub>README generated from EIDOS's code and memory, June 17, 2026.</sub>
+  <sub>README originally generated from EIDOS's code and memory in June 2026; security and accuracy pass applied October 4, 2026.</sub>
 </p>
