@@ -11,7 +11,7 @@
 #       make update  → actualiza EIDOS a la última versión
 # ══════════════════════════════════════════════════════════════════════════════
 
-EIDOS_DIR    := /home/$(shell whoami)/EIDOS/My_Gpt
+EIDOS_DIR    := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 INSTALL_DIR  := /opt/eidos
 BIN_DIR      := /usr/local/bin
 SERVICE_DIR  := /etc/systemd/system
@@ -219,7 +219,7 @@ _create_bin:
 # EIDOS — Lanzador global
 EIDOS_DIR="$(EIDOS_DIR)"
 source "$$EIDOS_DIR/venv_eidos/bin/activate"
-exec python3 "$$EIDOS_DIR/eidos_cli.py" "$$@"
+exec "$EIDOS_DIR/venv_eidos/bin/python" "$EIDOS_DIR/eidos.py" "$@"
 EOF
 	@sudo chmod +x $(BIN_DIR)/eidos
 	@echo "  → 'eidos' disponible globalmente"
