@@ -50,7 +50,7 @@
 </p>
 
 <p align="center">
-  <b><a href="docs/BRIDGE.md">🌉 Lend any AI its powers</a> · <a href="LICENSE">⚖️ License (ESSL v1.0)</a> · <a href="docs/INSTALL.md">⚙️ Install</a> · <a href="docs/KNOWN_ISSUES.md">🐞 Honest status</a></b>
+  <b><a href="docs/EIDOS_EVOLUTION_DOCUMENTARY.md">📖 Story & evolution</a> · <a href="docs/BRIDGE.md">🌉 Bridge</a> · <a href="docs/INSTALL.md">⚙️ Install</a> · <a href="docs/KNOWN_ISSUES.md">🐞 Honest status</a> · <a href="LICENSE">⚖️ License</a></b>
 </p>
 
 ---
@@ -70,7 +70,7 @@
 ## Table of Contents
 
 1. [What is EIDOS?](#what-is-eidos)
-2. [⚡ Try it in 1 minute](#-try-it-in-1-minute-no-install)
+2. [📖 Story & documented evolution](docs/EIDOS_EVOLUTION_DOCUMENTARY.md)
 3. [🧠 The Neural Graph](#-the-neural-graph)
 4. [🌉 Lend any AI the powers of EIDOS](#-lend-any-ai-the-powers-of-eidos)
 5. [Documentation](#documentation)
@@ -93,7 +93,7 @@
 22. [VSEIDOS — VS Code Extension](#vseidos--vs-code-extension)
 23. [The Graph — History & Evolution](#the-graph--history--evolution)
 24. [Technical Lessons](#technical-lessons)
-25. [Current Status](#current-status)
+25. [Historical Status Snapshot](#historical-status-snapshot)
 26. [Roadmap](#roadmap)
 27. [FAQ](#faq)
 28. [Credits & Contact](#credits--contact)
@@ -109,7 +109,7 @@ EIDOS is a **persistent local agent system** rather than a thin wrapper around a
 | **Brain** | Persistent graph-based knowledge and reasoning components backed by local storage |
 | **Memory** | Working, vector/semantic, episodic and procedural memory mechanisms |
 | **Colony** | Multiple persistent characters/agents with individual state and synaptic-style relationships |
-| **Body** | Screen perception and gated GUI/action tooling |
+| **Body** | Screen perception and gated GUI/action tooling; desktop-control behavior depends on X11/Wayland/input backend |
 | **Self-model** | Persistent internal state, metacognitive records, gaps and autobiographical mechanisms |
 | **Models** | Local or remote language models can be used as consultative/generative components; they are not the whole system |
 
@@ -173,6 +173,7 @@ Create a Colony character bound to your AI → [docs/COLONY_CHARACTER.md](docs/C
 
 | Guide | What it covers |
 |:------|:---------------|
+| [docs/EIDOS_EVOLUTION_DOCUMENTARY.md](docs/EIDOS_EVOLUTION_DOCUMENTARY.md) | **Human, evidence-based history of EIDOS** — timeline, graph evolution, Colony, Insect, videos, 3D artifacts, failures and corrections |
 | [docs/INSTALL.md](docs/INSTALL.md) | Requirements, install, secrets, Ollama, troubleshooting |
 | [docs/USAGE.md](docs/USAGE.md) | **Full CLI reference** (22 commands) + Bridge API + search |
 | [docs/BRIDGE.md](docs/BRIDGE.md) | **Lend any AI EIDOS's powers** — the symbiosis |
@@ -207,11 +208,9 @@ why it is built with hard brakes — and why we are transparent about them.
   environment (a VM or a dedicated machine is recommended). Review any third-party
   study targets you point it at. See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md)
   for the honest list of what is incomplete.
-- **`core/` has 431 small modules** for modularity (≈ tens of lines each), not to
-  hide anything — the whole brain is open for you to read.
+- **The public `core/` is large and evolving.** Module counts change over time, so this README avoids freezing a number that will quickly become obsolete.
 
-> Use it to learn, research and build. Don't use EIDOS (or its Bridge) to automate
-> abuse of other people's systems or to violate any platform's terms.
+> Under ESSL v1.0 you may inspect and run EIDOS locally for private, non-commercial evaluation and learning. See [LICENSE](LICENSE) for the exact grant and restrictions. Do not use EIDOS or its Bridge to automate abuse of other people's systems or violate platform terms.
 
 ---
 
@@ -227,7 +226,7 @@ The **neural knowledge graph** is the core of EIDOS' intelligence. The graph and
 
 ### 2. Physical Dimension (The Body)
 
-EIDOS has a **physical body** in the digital world. It knows where its hand (cursor) is at all times via `xdotool`, what window it's touching, and the full display geometry. It can move the mouse using bezier-style trajectories, pauses and overshoot patterns intended to approximate human-like cursor motion. This is an automation technique, not a guarantee of being undetectable. It perceives the screen with OCR (Tesseract) and VLM (vision language models).
+EIDOS has a **body/action layer** for interacting with the desktop and browser. Historical implementations use `xdotool`/X11-style control plus OCR/accessibility and browser automation. On Wayland, X11/XTEST-style click/keyboard injection is not equivalent to a working native input backend, so desktop-action claims must be evaluated against the active session/backend. Bezier-style cursor paths are an automation technique, not a guarantee of human indistinguishability.
 
 **Key modules**: `body.py` (propioception), `eidos_mouse.py` (bezier mouse), `causal_loop.py` (BOM), `perception.py` (OCR/VLM), `screen_controller.py`, `eidos_web_actor.py` (universal web actor)
 
@@ -267,16 +266,18 @@ EIDOS is governed by an **immutable constitution** (`constitution.toml`, hash-ve
 ## Architecture
 
 ```
-SER (Luka, owner and direction)
+SER (owner and direction)
 └── EIDOS (autonomous entity, ~/.eidos/)
-    └── Colony (mandatory middleware — EVERYTHING passes through here)
-        └── brain-lite (deterministic central loop, DECIDES)
-            └── LLMs (DeepSeek / Ollama / Groq — consultative only, never decide)
+    └── Colony (deliberative / consultative layer)
+        └── decision / verification paths (stateful + gated)
+            └── local/remote models may assist selected paths
 ```
 
 **Design principle**: deterministic/stateful components and verification gates should retain authority over actions; language models provide proposals or generated content rather than being treated as an unquestioned executive.
 
 ### Service Map
+
+> The map below is a public architecture reference, not a promise that every service/port is active in every runtime snapshot.
 
 | Port | Service | Description |
 |:-----|:--------|:------------|
@@ -305,9 +306,9 @@ Perception (screen, text, context)
 
 ```
 EIDOS/
-├── core/                          # 393 Python modules — the brain
+├── core/                          # Python modules for brain, memory, Colony, perception, action and verification
 │   ├── eidos_brain_lite.py         # Deterministic central loop (DECIDE)
-│   ├── colony_community.py        # Colony middleware (12 characters)
+│   ├── colony_community.py        # Colony/community mechanisms
 │   ├── character_neuron.py        # Hebbian synapses per character
 │   ├── character_lifecycle.py     # Birth, learning, reproduction
 │   ├── body.py                    # Propioception (hand, window, position)
@@ -327,12 +328,12 @@ EIDOS/
 │   ├── master_protocol.py         # Master mode (asks SER)
 │   ├── study_queue.py             # Autonomous study queue
 │   ├── autonomous_research_loop.py # Autonomous research
-│   ├── libre.py / eidos_libre.py  # Free mode (works the queue alone)
+│   ├── eidos_libre.py             # Free/autonomous mode
 │   ├── db.py                      # Unified DB layer (SQLite WAL)
 │   ├── smart_router.py            # LLM routing with 15-dimension scoring
-│   └── ... (380+ more modules)
+│   └── ...                        # additional modules; count evolves
 │
-├── bin/                            # Executable scripts and workers (28 files)
+├── bin/                            # Executable scripts and workers
 │   ├── eidos-viewer                # Native tkinter app (vision + chat + research)
 │   ├── eidos_teach_session.py      # Autonomous learning session
 │   ├── eidos_labex_dolab.py        # VISIBLE browser for labex.io
@@ -363,9 +364,7 @@ EIDOS/
 ├── constitution_override.toml       # Constitution override
 ├── EIDOS.md                        # Canonical unified documentation
 ├── CLAUDE.md                       # Guide for AIs working on EIDOS
-├── TASK.md                         # Session logbook (145+ sessions)
 ├── AGENTS.md                       # Agent guide
-├── LUMEN_IDENTITY.md               # Lumen character identity
 ├── .env.example                    # Environment variable template
 ├── README.md                       # This file
 └── CODE_OF_CONDUCT.md              # Code of conduct
@@ -705,7 +704,7 @@ pip install -r requirements.txt
 PYTHONPATH=~/EIDOS python3 eidos.py start
 ```
 
-This launches all 18 systemd user services. Check their status:
+This launches the configured EIDOS user services for this installation. Check their status:
 
 ```bash
 systemctl --user list-units | grep -i eidos
@@ -717,7 +716,7 @@ systemctl --user list-units | grep -i eidos
 # Health check
 curl http://127.0.0.1:8003/health
 
-# Run smoke test (52 integration tests)
+# Run the repository smoke/integration test suite
 PYTHONPATH=~/EIDOS python3 bin/smoke_e2e.py
 ```
 
@@ -844,18 +843,13 @@ EIDOS shall never:
 | New files per hour | 5 max | Prevents file proliferation |
 | Ring buffer anti-loop | 32 entries, 3 repetitions in 30s -> DISCARD | Prevents infinite loops |
 
-### Operational Rules
+### Public operational guidance
 
-1. **Total permissions**: SER grants full permission; never ask for confirmation
-2. **Always document**: Log everything in TASK.md before running out of tokens
-3. **Ask before changing EIDOS code**: Many apparent "bugs" are intentional design decisions
-4. **Never limit tokens**: EIDOS is a living neural system without artificial limits
-5. **Mouse only with SER present**: Never test screen control with autonomous cycles active
-6. **EIDOS must stay alive**: Open browser, visit sites, research and learn autonomously
-7. **No blind auto-registration**: Autonomous registration only with EIDOS's email; if captcha appears, ask SER (interactive mode)
-8. **Backup before editing**: Create `.pre-<session>.bak` before modifying core files
-9. **New modules for new features**: Don't modify existing core except for delimited extensions
-10. **No chain-restarting the bridge**: Verify loadavg before restarting
+- Keep real secrets outside the repository and use the documented environment-file path.
+- Treat GUI/system actions as gated capabilities and verify the active input backend.
+- Back up state before modifying persistent databases or core runtime files.
+- Prefer reversible, measured changes with explicit verification.
+- Do not interpret an internal success message as proof that an external effect occurred.
 
 ### Colony Governance (Democratic)
 
@@ -876,18 +870,18 @@ All databases live in `~/.eidos/`. **Golden rule**: Never use `sqlite3.connect()
 
 | Database | Contents | Approximate Size |
 |:---------|:---------|:-----------------|
-| `evolution_brain.db` | 39,000+ knowledge nodes, 169,000+ edges, motor memory | Primary knowledge store |
+| `evolution_brain.db` | Knowledge nodes, edges and motor/procedural state | Primary evolving knowledge store |
 | `colony_community.db` | Character messages, proposals, votes, genealogy | Social memory |
-| `self.db` | 25,000+ events, 9,000+ self_states, 26,000+ meta-thoughts | Self-model |
+| `self.db` | Internal events, self-state and metacognitive records | Self-model |
 | `state.db` | System state, service health, metrics | Operational state |
-| `episodic.db` | ~800 episodes, session logs | Episodic memory |
+| `episodic.db` | Episodes and session/event records | Episodic memory |
 | `knowledge_graph.db` | Legacy semantic graph | Deprecated, migrating to `evolution_brain.db` |
 | `lifecycle.db` | Character lifecycle: birth, absorption, reproduction, genealogy | Colony evolution |
 
 ### ChromaDB (Vector Memory)
 
 - **Collection**: `eidos_memory`
-- **Embeddings**: ~6,200 documents
+- **Embeddings**: runtime-dependent; historical counts are documented in the evolution dossier
 - **Model**: `nomic-embed-text` (Ollama)
 - **Endpoint**: `http://127.0.0.1:8767`
 
@@ -904,7 +898,7 @@ EIDOS has six autonomous guardian systems that protect it from failure:
 | **Sentinel** | Anomaly detection. Monitors system behavior and flags suspicious patterns. |
 | **Phoenix** | Failure recovery. Restarts crashed services and restores system state after failures. |
 | **Mirror** | Security sandbox. Isolates untrusted operations in a controlled environment. |
-| **Watchdog** | Service supervision. Ensures all 18 services stay running and healthy. |
+| **Watchdog** | Service supervision. Monitors configured services and reports/restarts failures according to policy. |
 
 > Full detail: [docs/GUARDIANS.md](docs/GUARDIANS.md)
 
@@ -933,7 +927,9 @@ eidos vscode                         # VSCode/IDE bridge
 
 ## The Graph — History & Evolution
 
-EIDOS's knowledge graph didn't start at 39,000 nodes. It grew from a seed,
+For the full human/evidence-based history — including later >1.2M-node snapshots, Colony corrections, Insect experiments and visual artifacts — see **[EIDOS — Story & documented evolution](docs/EIDOS_EVOLUTION_DOCUMENTARY.md)**.
+
+EIDOS's public June knowledge graph didn't start at 39,000 nodes. It grew from a seed,
 through curation and unification. These are the **real milestones**:
 
 | Date | Nodes | Event |
@@ -984,7 +980,7 @@ These are hard-won lessons from 145+ development sessions. Do not ignore them.
 
 ### LLM
 
-- **NEVER set `max_tokens` / `num_predict` / `max_new_tokens`** in EIDOS LLM calls. EIDOS is a living neural system without artificial limits.
+- Some EIDOS model paths intentionally avoid hard generation caps. This is a project/runtime design choice, not a biological property; callers should still enforce resource and safety limits appropriate to their environment.
 - **`eidos_learn.ask_llm()`** rejects responses with `len <= 20` characters -> for legitimately short responses (scores, classifications) use `_call_groq`/`_call_deepseek` directly.
 
 ### systemd
@@ -1049,7 +1045,6 @@ These are hard-won lessons from 145+ development sessions. Do not ignore them.
 
 ### Medium Term (Months)
 
-- [ ] 3D neural graph visualization (three.js)
 - [ ] Cross-machine colony (clones communicating)
 - [ ] Voice interaction (speech-to-text -> Colony -> text-to-speech)
 - [ ] Plugin system for third-party extensions
@@ -1102,9 +1097,9 @@ Or add topics to the autonomous study queue:
 eidos study add "Learn about PostgreSQL replication"
 ```
 
-### What is Colony? Why 12 characters?
+### What is Colony?
 
-Colony is the **mandatory middleware** through which all EIDOS actions flow. 12 characters provide distributed intelligence — different perspectives on every problem, preventing single-point failures in reasoning. Each character has its own Hebbian synapses (weighted connections between concepts), so they genuinely think differently about the same inputs.
+Colony is EIDOS's persistent deliberative/social layer. Different stores and runtime snapshots have contained different character counts, so the project no longer treats one fixed number as the definition of Colony. Characters can maintain individual state, memories, reputation and synaptic-style associations; Colony output is advisory and must still pass the relevant decision and verification gates.
 
 ### Do characters really reproduce?
 
