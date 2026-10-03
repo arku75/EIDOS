@@ -16,8 +16,8 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "eidos-gateway=eidos.cli.gateway_cmd:gateway_cli",
-            "eidos-config=eidos.cli.config_cmd:config_cli",
+            "eidos-gateway=cli.gateway_cmd:gateway_cli",
+            "eidos-config=cli.config_cmd:config_cli",
         ],
     },
     python_requires=">=3.8",
