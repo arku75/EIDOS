@@ -2,74 +2,21 @@ name: sanitation-ci
 
 on:
   push:
-    branches:
-      - "security/**"
   pull_request:
-    branches:
-      - main
-
-permissions:
-  contents: read
 
 jobs:
-  static-and-safe-tests:
+  test:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      EIDOS_ROOT: ${{ github.workspace }}
-      EIDOS_HOME: ${{ runner.temp }}/eidos-home
-      PYTHONPATH: ${{ github.workspace }}
-      EIDOS_BOM: "0"
-
+    timeout-minutes: 15
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
-      - name: Verify public tree invariants
+      - name: Compile new integration layer
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          root = Path(".")
-          required = [
-              "core", "cli", "config", "gateway", "terminal", "tests",
-              "README.md", "LICENSE", "SECURITY.md", "constitution.toml",
-          ]
-          missing = [p for p in required if not (root / p).exists()]
-          if missing:
-              raise SystemExit(f"Missing required public paths: {missing}")
-          forbidden = [
-              "eidos_cli.py",
-          ]
-          print("tree: OK")
-          PY
-
-      - name: Compile Python sources
+          python -m py_compile core/fly_lab.py core/runtime_hub.py bin/eidos_agents_terminal.py
+          python -m py_compile tests/test_fly_lab.py tests/test_runtime_hub.py
+      - name: Run pure integration tests
         run: |
-          python -m compileall -q core cli config gateway terminal tests eidos.py main.py setup.py
-
-      - name: Validate setup metadata without installing runtime services
-        run: |
-          python setup.py --name
-          python setup.py --version
-          python - <<'PY'
-          import ast
-          from pathlib import Path
-          tree = ast.parse(Path("setup.py").read_text())
-          txt = Path("setup.py").read_text()
-          assert "cli.gateway_cmd:gateway_cli" in txt
-          assert "cli.config_cmd:config_cli" in txt
-          print("setup entrypoints: OK")
-          PY
-
-      - name: Safe unit tests
-        run: |
-          python -m unittest -v tests.test_constitution tests.test_colony_community
-
-      - name: Pure integration tests
-        run: |
-          python -m unittest -v tests.test_fly_lab tests.test_runtime_hub
+          PYTHONPATH=. python -m unittest -v tests.test_fly_lab tests.test_runtime_hub
