@@ -45,20 +45,65 @@ jobs:
       - name: Install virtual desktop tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y xvfb xdotool x11-apps
+          sudo apt-get install -y xvfb xdotool x11-apps xterm
       - name: Verify virtual mouse/keyboard primitives
         run: |
           Xvfb :99 -screen 0 1280x720x24 >/tmp/xvfb.log 2>&1 &
           export DISPLAY=:99
           sleep 1
-          xmessage -title EIDOS_DESKTOP_SMOKE -buttons OK:0 "EIDOS virtual desktop" >/tmp/xmessage.log 2>&1 &
+
+          xdotool mousemove 320 240
+          POS="$(xdotool getmouselocation --shell)"
+          echo "$POS"
+          grep -q '^X=320      - name: Verify local browser world
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 --directory tests/fixtures/browser >/tmp/eidos-http.log 2>&1 &
+          HPID=$!
+          sleep 1
+          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$BROWSER"
+          "$BROWSER" --headless --no-sandbox --disable-gpu --dump-dom http://127.0.0.1:8765/index.html > /tmp/eidos-dom.html
+          grep -q EIDOS_BROWSER_OK /tmp/eidos-dom.html
+          "$BROWSER" --headless --no-sandbox --disable-gpu --screenshot=/tmp/eidos-browser.png http://127.0.0.1:8765/index.html
+          test -s /tmp/eidos-browser.png
+          kill "$HPID" || true
+ <<<"$POS"
+          grep -q '^Y=240      - name: Verify local browser world
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 --directory tests/fixtures/browser >/tmp/eidos-http.log 2>&1 &
+          HPID=$!
+          sleep 1
+          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$BROWSER"
+          "$BROWSER" --headless --no-sandbox --disable-gpu --dump-dom http://127.0.0.1:8765/index.html > /tmp/eidos-dom.html
+          grep -q EIDOS_BROWSER_OK /tmp/eidos-dom.html
+          "$BROWSER" --headless --no-sandbox --disable-gpu --screenshot=/tmp/eidos-browser.png http://127.0.0.1:8765/index.html
+          test -s /tmp/eidos-browser.png
+          kill "$HPID" || true
+ <<<"$POS"
+
+          xterm -T EIDOS_TERMINAL_SMOKE -e bash -lc 'read line; printf "%s" "$line" > /tmp/eidos-typed.txt' >/tmp/xterm.log 2>&1 &
           XPID=$!
           sleep 1
-          WIN="$(xdotool search --name EIDOS_DESKTOP_SMOKE | head -n1)"
+          WIN="$(xdotool search --name EIDOS_TERMINAL_SMOKE | head -n1)"
           test -n "$WIN"
-          xdotool windowfocus "$WIN"
+          xdotool windowfocus --sync "$WIN"
+          xdotool type --delay 20 'EIDOS_KEYBOARD_OK'
           xdotool key Return
           wait "$XPID"
+          grep -q '^EIDOS_KEYBOARD_OK      - name: Verify local browser world
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 --directory tests/fixtures/browser >/tmp/eidos-http.log 2>&1 &
+          HPID=$!
+          sleep 1
+          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$BROWSER"
+          "$BROWSER" --headless --no-sandbox --disable-gpu --dump-dom http://127.0.0.1:8765/index.html > /tmp/eidos-dom.html
+          grep -q EIDOS_BROWSER_OK /tmp/eidos-dom.html
+          "$BROWSER" --headless --no-sandbox --disable-gpu --screenshot=/tmp/eidos-browser.png http://127.0.0.1:8765/index.html
+          test -s /tmp/eidos-browser.png
+          kill "$HPID" || true
+ /tmp/eidos-typed.txt
       - name: Verify local browser world
         run: |
           python -m http.server 8765 --bind 127.0.0.1 --directory tests/fixtures/browser >/tmp/eidos-http.log 2>&1 &
