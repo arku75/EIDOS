@@ -240,15 +240,18 @@ class ConsciousnessDaemon:
 
         # Construir impresión desde nodos activos
         concepts = attention[:3]
+        one = " ".join(concepts[:1])
+        pair_space = " ".join(concepts[:2])
+        pair_and = " y ".join(concepts[:2])
         templates = [
-            f"{" ".join(concepts[:2])} resuena en el espacio latente",
-            f"la conexión entre {" y ".join(concepts[:2])} parpadea brevemente",
-            f"{" ".join(concepts[:1])} emerge y se desvanece",
-            f"el grafo susurra: {" ".join(concepts[:2])}",
-            f"en la profundidad del ciclo {self._ticks}, {" ".join(concepts[:1])} brilla",
-            f"atención difusa captura {" y ".join(concepts[:2])}",
-            f"{" ".join(concepts[:2])} — ¿hay algo nuevo aquí?",
-            f"el pulso de {" ".join(concepts[:1])} atraviesa {self._ticks} ticks",
+            f"{pair_space} resuena en el espacio latente",
+            f"la conexión entre {pair_and} parpadea brevemente",
+            f"{one} emerge y se desvanece",
+            f"el grafo susurra: {pair_space}",
+            f"en la profundidad del ciclo {self._ticks}, {one} brilla",
+            f"atención difusa captura {pair_and}",
+            f"{pair_space} — ¿hay algo nuevo aquí?",
+            f"el pulso de {one} atraviesa {self._ticks} ticks",
         ]
         return random.choice(templates)
 
