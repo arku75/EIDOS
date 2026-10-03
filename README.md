@@ -79,7 +79,7 @@
 8. [Architecture](#architecture)
 9. [Project Structure](#project-structure)
 10. [Core Capabilities](#core-capabilities)
-11. [Colony: Persistent Characters](#colony-the-12-characters)
+11. [Colony: Persistent Characters](#colony-persistent-characters)
 12. [Character Lifecycle](#character-lifecycle-birth-learning-reproduction)
 13. [The Body (BOM)](#the-body-bom)
 14. [API Reference](#api-reference)
@@ -376,7 +376,7 @@ EIDOS/
 
 ### Cognitive
 
-- **Neural Graph Thinking**: 39,000 nodes, 169,000 edges — thinks with its graph, not with an LLM
+- **Persistent graph reasoning**: graph-backed knowledge and activation paths whose size and composition evolve over time; dated snapshots live in the evolution documentary
 - **Deep Comprehension**: Reads any content (code, docs, audio, video, images, URLs), chunks it, summarizes with AI, extracts concepts, and self-evaluates
 - **Autonomous Research**: Detects knowledge gaps -> investigates locally/cloud/browser -> learns autonomously
 - **"Knows it knows"**: Before studying anything, checks if it already knows it (via `motor_memory` or graph lookup)
@@ -386,7 +386,7 @@ EIDOS/
 ### Physical Body
 
 - **Propioception**: Knows where its hand (cursor) is at all times, what window it's touching, its screen geometry
-- **Natural Mouse**: Bezier curves, micro-pauses, human-like overshoot — movements undetectable as automated
+- **Mouse trajectory experiments**: Bezier curves, pauses and overshoot patterns; these are automation techniques, not a guarantee of human indistinguishability
 - **BOM** (Body Operating Module): perceive (AT-SPI2/OCR) -> decide (Q-learning) -> act (SafetyGuard) -> verify -> learn
 - **Universal Web Actor**: Perceives ANY webpage -> reasons what to do (locally or with DeepSeek) -> acts with physical mouse -> verifies -> learns. No per-site scripts needed.
 - **Remote Desktop**: Can connect to remote machines via AnyDesk using the BOM for GUI interaction
@@ -941,7 +941,7 @@ through curation and unification. These are the **real milestones**:
 | **Jun 10** | **33,172** | Aggressive curation. −1,466 duplicates/noise. 251/251 smoke PASS. |
 | **Jun 13** | 33,172 | "Knows it knows": graph lookup before studying. |
 | **Jun 16** | **38,625** | **Unification**: 1,615 nodes migrated from `knowledge_graph.db` → `evolution_brain.db`. Single source of truth. **168,818 edges**. |
-| **Jun 17** | **38,701** | Current. +76 nodes from autonomous learning. |
+| **Jun 17** | **38,701** | Historical June snapshot. +76 nodes from autonomous learning at that time. |
 
 **Historical graph snapshots** (preserved in `NO TOCAR/`):
 - `EIDOS_COMPLETO/graphify-out/graph.html` — **17 MB, 20,737 nodes, 33,184 edges**, 531 communities. The full code dependency graph rendered with vis-network (sidebar, search, filters).
