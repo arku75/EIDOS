@@ -47,6 +47,16 @@ HISTORICAL_MARKERS = (
     ".bak", ".pre-", ".pre_", ".old", ".orig", ".snapshot",
     ".removed", ".dead", ".parcial", ".quarantine", ".archivado",
 )
+GENERATED_COMPONENTS = {
+    "target", "node_modules", "__pycache__", ".pytest_cache", ".mypy_cache",
+    ".ruff_cache", ".cache", ".nyc_output", ".next", ".parcel-cache",
+    "dist", "build",
+}
+HISTORY_COMPONENTS = {
+    "_archived", "_archive", "_legacy", "_RESCATADO_DEL_ZIP",
+    "_DEAD_CODE_20260530", "_DEAD_DBS_20260530", "release_tmp",
+}
+STATE_PREFIXES = ("VSEIDOS/data/",)
 
 
 def _clean_tree_name(raw: str) -> tuple[str, bool]:
@@ -91,11 +101,18 @@ def parse_tree_snapshot(path: Path) -> list[dict]:
 def classify(path: str) -> str:
     top = path.split("/", 1)[0]
     lower = path.lower()
-    if top in BACKUP_TOPS or any(marker in lower for marker in HISTORICAL_MARKERS):
+    parts = set(path.split("/"))
+    if (
+        top in BACKUP_TOPS
+        or parts & HISTORY_COMPONENTS
+        or any(marker in lower for marker in HISTORICAL_MARKERS)
+    ):
         return "backup_history"
-    if top in GENERATED_TOPS or "/__pycache__/" in f"/{path}/":
+    if top in GENERATED_TOPS or parts & GENERATED_COMPONENTS:
         return "generated_env_vcs_cache"
-    if top in THIRD_PARTY_TOPS:
+    if any(path.startswith(prefix) for prefix in STATE_PREFIXES):
+        return "state_data_reports"
+    if top in THIRD_PARTY_TOPS or "vendor" in parts:
         return "third_party_vendor"
     if top in STATE_TOPS:
         return "state_data_reports"

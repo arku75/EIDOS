@@ -50,6 +50,20 @@ class TreeCompareTests(unittest.TestCase):
             "generated_env_vcs_cache",
         )
 
+    def test_nested_generated_history_and_state_are_not_project_code(self) -> None:
+        cases = {
+            "rust-core/target/debug/eidos": "generated_env_vcs_cache",
+            "safe-executor/target/release/eidos-safe": "generated_env_vcs_cache",
+            "vscode-extension/node_modules/pkg/index.js": "generated_env_vcs_cache",
+            "core/_archived/old_runtime.py": "backup_history",
+            "web-panel/static/_archive/index.html": "backup_history",
+            "VSEIDOS/data/Cache/blob": "state_data_reports",
+            "core/live_runtime.py": "project_candidate",
+        }
+        for path, expected in cases.items():
+            with self.subTest(path=path):
+                self.assertEqual(tree_compare.classify(path), expected)
+
     def test_compare_keeps_history_out_of_missing_code(self) -> None:
         entries = [
             {"path": "core/a.py", "is_dir": False},
