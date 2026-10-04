@@ -151,6 +151,8 @@ class EIDOSRuntimeHub:
         proposal: Dict[str, Any],
         before: Dict[str, Any],
         after: Dict[str, Any],
+        *,
+        evidence_source: str,
     ) -> dict:
         """Close the evidence loop without executing the proposed action.
 
@@ -163,6 +165,11 @@ class EIDOSRuntimeHub:
         action = dict(proposal.get("action") or {})
         if not action:
             raise ValueError("proposal has no action")
+        actor = str(proposal.get("source", "unknown"))
+        observer = str(evidence_source or "").strip()
+        if not observer:
+            raise ValueError("evidence_source is required")
+        evidence_independent = observer != actor
 
         before_scene = _scene_from_snapshot(before)
         after_scene = _scene_from_snapshot(after)
@@ -173,9 +180,10 @@ class EIDOSRuntimeHub:
             action,
             proposal.get("expected_outcome", ""),
         )
+        credited_verified = bool(verification.verified and evidence_independent)
         self.world_model.record_outcome(
             prediction,
-            verification.verified,
+            credited_verified,
             after_scene,
         )
 
@@ -185,13 +193,13 @@ class EIDOSRuntimeHub:
             verification_payload["recovery_suggested"] = verification.recovery_suggested.value
 
         colony_reputation = None
-        source = str(proposal.get("source", "unknown"))
-        if source.startswith("colony_"):
+        source = actor
+        if source.startswith("colony_") and evidence_independent:
             try:
                 from core.colony_community import get_colony_community
                 colony_reputation = get_colony_community().record_verified_outcome(
                     source,
-                    verification.verified,
+                    credited_verified,
                     verification.confidence,
                     reason=verification.reason,
                     proposal_id=str(proposal.get("proposal_id") or ""),
@@ -208,13 +216,21 @@ class EIDOSRuntimeHub:
                     "error": f"{type(exc).__name__}: {exc}",
                 }
 
+        if verification.verified and not evidence_independent:
+            status = "untrusted_evidence"
+        else:
+            status = "verified" if credited_verified else "failed"
+
         payload = {
             "proposal_id": proposal.get("proposal_id"),
             "action": action,
             "source": source,
-            "status": "verified" if verification.verified else "failed",
+            "evidence_source": observer,
+            "evidence_independent": evidence_independent,
+            "status": status,
             "prediction": asdict(prediction),
             "verification": verification_payload,
+            "credited_verified": credited_verified,
             "before": dict(before),
             "after": dict(after),
             "outcome_recorded": True,
