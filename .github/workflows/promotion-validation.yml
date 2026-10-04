@@ -71,7 +71,7 @@ jobs:
               "platform": platform.platform(),
               "smoke_log_bytes": len(data),
               "smoke_log_sha256": hashlib.sha256(data).hexdigest(),
-              "scope": "clean public package + dependency-light behavioral contracts",
+              "scope": "clean public package + behavioral contracts including persistent Colony reuse and Fly negative controls",
               "not_verified_here": [
                   "Dell RTX A5000/CUDA",
                   "KDE Wayland physical input",
