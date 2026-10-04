@@ -49,7 +49,7 @@ def main():
     parser = argparse.ArgumentParser(description="EIDOS CLI")
     parser.add_argument(
         "command", nargs="?", default="chat",
-        help="Comando: chat, gateway, config, status, tools"
+        help="Comando: cli, chat, libre, gateway, config, status, tools, capabilities"
     )
     parser.add_argument(
         "--model", default="qwen2.5-coder:1.5b",
@@ -61,11 +61,31 @@ def main():
     )
 
     args = parser.parse_args()
-    start_ollama()
 
-    if args.command == "chat":
+    # Introspection and the shared terminal must work without forcing a model daemon.
+    model_commands = {"chat", "libre", "gateway"}
+    if args.command in model_commands:
+        start_ollama()
+
+    if args.command == "cli":
+        from bin.eidos_agents_terminal import SharedAgentsTerminal
+        SharedAgentsTerminal().cmdloop()
+
+    elif args.command == "chat":
         from core.colony_interactive import interactive_chat
         interactive_chat(model=args.model)
+
+    elif args.command == "libre":
+        from core.eidos_libre import EidosLibre
+        libre = EidosLibre()
+        libre.start()
+        print("EIDOS Libre activo. Ctrl+C para detener.")
+        try:
+            while libre.is_running():
+                import time
+                time.sleep(1)
+        except KeyboardInterrupt:
+            libre.stop()
 
     elif args.command == "gateway":
         from main import EidosIntegratedSystem
@@ -81,16 +101,14 @@ def main():
         print(f"   Modelo: {args.model}")
         print("   Gateway: Listo")
 
-    elif args.command == "tools":
-        print("🔧 Herramientas disponibles:")
-        print("   - Terminal control (bash)")
-        print("   - File operations")
-        print("   - Colony swarm agents")
-        print("   - Multi-platform messaging")
+    elif args.command in {"tools", "capabilities"}:
+        import json
+        from core.runtime_hub import get_runtime_hub
+        print(json.dumps(get_runtime_hub().capability_catalog(), indent=2, default=str))
 
     else:
         print(f"Comando desconocido: {args.command}")
-        print("Usa: eidos [chat|gateway|config|status|tools]")
+        print("Usa: eidos [cli|chat|libre|gateway|config|status|tools|capabilities]")
 
 
 if __name__ == "__main__":
