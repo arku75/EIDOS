@@ -201,6 +201,7 @@ class TestRuntimeHub(unittest.TestCase):
                 before,
                 after,
                 evidence_source="runtime-observer",
+                action_executed=True,
             )
 
         self.assertTrue(result["colony_reputation"]["success"])
@@ -230,6 +231,7 @@ class TestRuntimeHub(unittest.TestCase):
                 before,
                 after,
                 evidence_source="colony_coder",
+                action_executed=True,
             )
 
         self.assertEqual(result["status"], "untrusted_evidence")
