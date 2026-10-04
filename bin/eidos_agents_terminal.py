@@ -116,6 +116,26 @@ class SharedAgentsTerminal(cmd.Cmd):
             default=str,
         ))
 
+    def do_executed(self, arg: str) -> None:
+        """executed PROPOSAL_ID EXECUTOR EXECUTION_ID -- record executor provenance."""
+        parts = shlex.split(arg)
+        if len(parts) != 3:
+            print("usage: executed PROPOSAL_ID EXECUTOR EXECUTION_ID")
+            return
+        proposal_id, executor, execution_id = parts
+        proposal = self.hub.action_proposal(proposal_id)
+        if not proposal:
+            print(f"proposal not found: {proposal_id}")
+            return
+        try:
+            result = self.hub.record_action_execution(
+                proposal, executor=executor, execution_id=execution_id
+            )
+        except Exception as exc:
+            print(f"execution evidence error: {exc}")
+            return
+        print(json.dumps(result, indent=2, default=str))
+
     def do_observe(self, arg: str) -> None:
         """observe OBSERVER 'JSON' -- register a world snapshot with provenance."""
         parts = shlex.split(arg)
