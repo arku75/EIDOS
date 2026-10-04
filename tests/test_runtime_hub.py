@@ -128,7 +128,12 @@ class TestRuntimeHub(unittest.TestCase):
             "core.colony_community.get_colony_community",
             return_value=fake,
         ):
-            result = self.hub.verify_action_effect(proposal, before, after)
+            result = self.hub.verify_action_effect(
+                proposal,
+                before,
+                after,
+                evidence_source="runtime-observer",
+            )
 
         self.assertTrue(result["colony_reputation"]["success"])
         self.assertEqual(result["colony_reputation"]["agent_id"], "colony_coder")
