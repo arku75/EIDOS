@@ -66,3 +66,17 @@ Block 4 acceptance contract:
 - The shared terminal exposes proposal, execution provenance, observation, verification and outcome as separate channels.
 - These causal invariants are permanent fanout and self-edit regression gates.
 - Ubuntu/Xvfb CI can verify deterministic causal semantics and virtual X11/browser effects. Physical Dell/Wayland/HID behavior remains hardware-in-the-loop and is not claimed verified by CI.
+
+
+## Graph / Memory / reuse / Antibiblioteca consolidation
+
+Block 5 acceptance contract:
+
+- Storage alone is not learning: an experience must alter a later decision.
+- Positive Q-learning is persisted on every learning event and survives a fresh-process restart.
+- Persisted Q-values can transfer to an unseen state through the existing semantic-node similarity path; exact hash memorization is not the only reuse path.
+- Verified negative experience is retained in the persistent Antibiblioteca and can demote a failed strategy on a later decision after restart.
+- Unverified/self-reported failure remains inspectable evidence but cannot change strategy ranking.
+- The real BOM consults Antibiblioteca during action selection and records negative memory only after a real dispatched action fails post-action effect verification; dry-run cannot mint failure evidence.
+- Positive causal skill nodes remain in the authoritative evolution brain graph; legacy knowledge_graph.db remains non-authoritative.
+- Learning-retention, Antibiblioteca causality, RL restart persistence and causal-loop integration are permanent fanout/self-edit regression contracts.
