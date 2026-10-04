@@ -19,18 +19,19 @@ import subprocess, os, shutil, json, time, logging
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from core.db import get_conn
+from core.paths import EIDOS_HOME, REPO_ROOT, SANDBOX_ROOT as DEFAULT_SANDBOX_ROOT
 
 log = logging.getLogger("clone_manager")
 
-EIDOS_ROOT   = Path("/home/ser/EIDOS")
-SANDBOX_ROOT = Path("/home/ser/NO TOCAR/S@NDBOX_EIDOS")
+EIDOS_ROOT   = REPO_ROOT
+SANDBOX_ROOT = DEFAULT_SANDBOX_ROOT
 CLONE_DIR    = SANDBOX_ROOT / "eidos_clon"
 CLONE_VENV   = SANDBOX_ROOT / "venv"
 CLONE_DATA   = CLONE_DIR / ".eidos_data"
 WORKSPACE    = SANDBOX_ROOT / "workspace"
 EXPERIMENTS  = SANDBOX_ROOT / "experiments"
 REPORTS      = SANDBOX_ROOT / "reports"
-BRAIN_DB     = Path.home() / ".eidos" / "evolution_brain.db"
+BRAIN_DB     = EIDOS_HOME / "evolution_brain.db"
 
 
 def _brain_save(concept: str, definition: str, category: str = "clone", confidence: float = 0.85):

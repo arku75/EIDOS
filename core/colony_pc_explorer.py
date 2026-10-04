@@ -29,6 +29,8 @@ import logging
 import subprocess
 import threading
 from pathlib import Path
+
+from core.paths import REPO_ROOT
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Callable
 from core.db import get_conn
@@ -36,7 +38,7 @@ from core.db import get_conn
 log = logging.getLogger("eidos.pc_explorer")
 
 HOME       = Path.home()
-EIDOS_DIR  = Path("/home/ser/EIDOS")
+EIDOS_DIR  = REPO_ROOT
 BRAIN_DB   = HOME / ".eidos" / "evolution_brain.db"
 HISTORY    = HOME / ".zsh_history"
 MAX_CHARS  = 1500   # máximo de texto por exploración

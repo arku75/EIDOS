@@ -23,6 +23,8 @@ import re
 from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Optional, Tuple
 
+from core.paths import EIDOS_HOME, REPO_ROOT
+
 # Dependencias externas (ChromaDB)
 try:
     import chromadb
@@ -39,7 +41,7 @@ class Config:
     FAST_MODEL = "lfm2.5-thinking:1.2b"          # Planner
     TOOL_MODEL = "deepseek-r1:14b"  # Executor (tool calling - via Kernel)
     VISION_MODEL = "moondream2"           # Visión
-    CHROMA_DIR = "/home/ser/EIDOS/memoria_fenix"
+    CHROMA_DIR = str(EIDOS_HOME / "memoria_fenix")
     LOG_LEVEL = logging.INFO
     MAX_PLAN_SUBTASKS = 6
     MAX_ORCHESTRATOR_ITERATIONS = 20
@@ -365,7 +367,7 @@ class MasterOrchestrator:
             nombre_archivo = registry.create_skill(
                 skill_name=name_slug,
                 description=missing_capability,
-                save_dir="/home/ser/EIDOS/skills/plugins"
+                save_dir=str(REPO_ROOT / "skills" / "plugins")
             )
             self.logger.info(f"🧬 Fénix ha sintetizado un nuevo skill: {nombre_archivo}")
         except Exception as e:

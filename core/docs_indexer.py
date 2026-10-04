@@ -2,9 +2,9 @@
 core/docs_indexer.py — Indexa docs locales como knowledge_nodes
 
 Fuentes:
-- /home/ser/EIDOS/openclaw/**/*.md  (OpenClaw docs, AGENTS.md, etc)
-- /home/ser/EIDOS/openclaw_master_skills/**/*.md  (skills marketplace)
-- /home/ser/MIS PROGRAMAS/hermes/**/*.md  (Hermes docs si está)
+- ~/EIDOS/openclaw/**/*.md  (OpenClaw docs, AGENTS.md, etc)
+- ~/EIDOS/openclaw_master_skills/**/*.md  (skills marketplace)
+- ~/MIS PROGRAMAS/hermes/**/*.md  (Hermes docs si está)
 - man pages de comandos comunes
 
 EIDOS aprende cómo usar OpenClaw, Hermes y herramientas del sistema.
@@ -23,19 +23,21 @@ import hashlib
 import logging
 import subprocess
 from pathlib import Path
+
+from core.paths import REPO_ROOT
 from typing import Dict, Any, List, Tuple
 from core.db import get_conn
 
 log = logging.getLogger("eidos.docs_indexer")
 
-EIDOS_ROOT = Path("/home/ser/EIDOS")
+EIDOS_ROOT = REPO_ROOT
 BRAIN_DB   = Path.home() / ".eidos" / "evolution_brain.db"
 
 # Fuentes de docs a indexar
 DOC_SOURCES = [
     ("openclaw",      EIDOS_ROOT / "openclaw"),
     ("openclaw_skills", EIDOS_ROOT / "openclaw_master_skills"),
-    ("hermes",        Path("/home/ser/MIS PROGRAMAS/hermes/hermes-agent-main")),
+    ("hermes",        Path.home() / "MIS PROGRAMAS" / "hermes" / "hermes-agent-main"),
     ("vseidos",       EIDOS_ROOT / "VSEIDOS"),
     ("sessions",      Path.home() / ".eidos" / "sessions"),  # Sesiones Claude→Colony
 ]
