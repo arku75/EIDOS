@@ -496,6 +496,12 @@ def cmd_pipeline(args):
         print(f"{Colors.RED}❌ Error: {e}{Colors.END}")
 
 
+def cmd_cli(args):
+    """Unified shared EIDOS agents terminal."""
+    from bin.eidos_agents_terminal import SharedAgentsTerminal
+    SharedAgentsTerminal().cmdloop()
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="EIDOS CASCADE - Sistema Unificado",
@@ -531,13 +537,13 @@ Comandos adicionales:
     parser.add_argument(
         "mode",
         nargs="?",
-        default="god",
-        choices=["god", "awaken", "chat", "gateway", "api", "vscode",
+        default="cli",
+        choices=["cli", "god", "awaken", "chat", "gateway", "api", "vscode",
                  "bridge", "status", "stop", "test", "teach", "study", "pipeline",
                  "improve", "setup",
                  "sync", "estudio-app", "browse", "set-browser-default",
                  "reproduce", "neuron", "wake-word", "vseidos-control"],
-        help="Modo de operación (default: god)"
+        help="Modo de operación (default: cli)"
     )
     parser.add_argument("--model", default="qwen2.5-coder:1.5b", help="Modelo Ollama")
     parser.add_argument("--port", type=int, help="Puerto para API/Gateway")
@@ -561,6 +567,7 @@ Comandos adicionales:
     
     # Dispatch
     commands = {
+        "cli": cmd_cli,
         "god": cmd_god,
         "awaken": cmd_awaken,
         "chat": cmd_chat,
