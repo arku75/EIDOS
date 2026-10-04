@@ -22,6 +22,9 @@ class FakeHub:
         self.observations = {}
         self.calls = []
 
+    def capability_catalog(self):
+        return {"tools": {"state": "EXISTS", "items": ["read_file"]}, "world_effect_verification": {"state": "WIRED"}}
+
     def propose_action(self, action, source="shared-terminal", expected_outcome=""):
         self.calls.append(("propose", action, source, expected_outcome))
         result = {
@@ -75,6 +78,12 @@ class TestSharedAgentsTerminal(unittest.TestCase):
         with contextlib.redirect_stdout(output):
             method(arg)
         return output.getvalue()
+
+    def test_capabilities_uses_runtime_hub_catalog(self):
+        out = self.capture(self.term.do_capabilities, "")
+        self.assertIn('"state": "EXISTS"', out)
+        self.assertIn("read_file", out)
+        self.assertIn('"state": "WIRED"', out)
 
     def test_propose_envelope_preserves_actor_and_expected_effect(self):
         raw = json.dumps({
