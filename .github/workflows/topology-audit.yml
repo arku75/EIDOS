@@ -1,0 +1,28 @@
+name: topology-audit
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: topology-audit-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build first-party topology inventory
+        run: python scripts/audit_first_party_topology.py reports/first-party-topology.json
+      - name: Upload evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: first-party-topology-${{ github.sha }}
+          path: reports/first-party-topology.json
+          retention-days: 7
+          if-no-files-found: error
