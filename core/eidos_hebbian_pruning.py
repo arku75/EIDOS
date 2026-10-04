@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sqlite3
 import time
 from pathlib import Path
@@ -24,8 +25,9 @@ from core.db import get_conn
 
 log = logging.getLogger("eidos.pruning")
 
-BRAIN_DB = Path.home() / ".eidos" / "evolution_brain.db"
-PRUNE_STATE_FILE = Path.home() / ".eidos" / "prune_state.json"
+EIDOS_HOME = Path(os.environ.get("EIDOS_HOME", str(Path.home() / ".eidos"))).expanduser()
+BRAIN_DB = EIDOS_HOME / "evolution_brain.db"
+PRUNE_STATE_FILE = EIDOS_HOME / "prune_state.json"
 
 # Umbrales de poda
 PRUNE_THRESHOLD_WEAK = 0.05     # aristas con weight < 0.05 → podar
@@ -127,6 +129,7 @@ class HebbianPruner:
             "nodes_pruned": 0,
             "edges_degraded": 0,
             "nodes_orphaned": 0,
+            "nodes_pruned": 0,
             "timestamp": time.time(),
         }
 
@@ -224,6 +227,7 @@ class HebbianPruner:
                             (nid, now, concept[:200], ec))
                     conn.commit()
                     self._total_pruned_nodes += len(orphan_nodes)
+                    result["nodes_pruned"] = len(orphan_nodes)
 
         except Exception as e:
             log.error("Prune error: %s", e)
