@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import random
 import sqlite3
 import time
@@ -23,8 +24,9 @@ from core.db import get_conn
 
 log = logging.getLogger("eidos.rl")
 
-BRAIN_DB = Path.home() / ".eidos" / "evolution_brain.db"
-RL_STATE_FILE = Path.home() / ".eidos" / "rl_state.json"
+EIDOS_HOME = Path(os.environ.get("EIDOS_HOME", str(Path.home() / ".eidos"))).expanduser()
+BRAIN_DB = EIDOS_HOME / "evolution_brain.db"
+RL_STATE_FILE = EIDOS_HOME / "rl_state.json"
 
 ALPHA = 0.1
 GAMMA = 0.9
