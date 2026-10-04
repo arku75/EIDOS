@@ -17,7 +17,7 @@ Workflow:
 1. EIDOS descarga/recibe archivo
 2. Extrae conocimiento (según formato)
 3. Guarda conocimiento en KB
-4. BORRA archivo original (cleanup automático)
+4. CONSERVA la fuente por defecto para procedencia y reproducción
 """
 from __future__ import annotations
 
@@ -60,7 +60,7 @@ class LearningSystem:
     """
     Sistema de aprendizaje multi-formato.
 
-    Puede aprender de cualquier cosa y limpia automáticamente.
+    Puede aprender de múltiples fuentes y conserva los originales por defecto.
     """
 
     def __init__(self):
@@ -262,14 +262,14 @@ Capabilities:
 
                         self._save_knowledge(learned)
 
-                        # Marcar como aprendido y borrar
+                        # Registrar aprendizaje sin destruir la evidencia fuente.
                         self.cleanup.mark_as_learned(
                             vsix_path,
                             knowledge=knowledge[:500],
-                            can_delete=True
+                            can_delete=False
                         )
 
-                        print(f"[LEARNING] ✅ VSIX aprendido y borrado")
+                        print(f"[LEARNING] ✅ VSIX aprendido; fuente conservada")
                         return learned
 
         except Exception as e:
@@ -335,14 +335,14 @@ Archivos importantes encontrados:
 
                 self._save_knowledge(learned)
 
-                # Marcar como aprendido y borrar
+                # Registrar aprendizaje sin destruir la evidencia fuente.
                 self.cleanup.mark_as_learned(
                     zip_path,
                     knowledge=knowledge[:500],
-                    can_delete=True
+                    can_delete=False
                 )
 
-                print(f"[LEARNING] ✅ ZIP aprendido y borrado")
+                print(f"[LEARNING] ✅ ZIP aprendido; fuente conservada")
                 return learned
 
         except Exception as e:
@@ -384,10 +384,10 @@ Archivos importantes encontrados:
 
                 self._save_knowledge(learned)
 
-                # Marcar y borrar
-                self.cleanup.mark_as_learned(pdf_path, text[:500], can_delete=True)
+                # Registrar aprendizaje sin destruir la evidencia fuente.
+                self.cleanup.mark_as_learned(pdf_path, text[:500], can_delete=False)
 
-                print(f"[LEARNING] ✅ PDF aprendido y borrado")
+                print(f"[LEARNING] ✅ PDF aprendido; fuente conservada")
                 return learned
 
         except Exception as e:
