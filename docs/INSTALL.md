@@ -41,6 +41,12 @@ If that check fails, treat it as a packaging bug. Do **not** work around it by i
 
 ## 5. Install
 
+The continuous-learning daemon installer is intentionally isolated from the system
+Python. It creates a project virtual environment and does not automatically install
+or start a systemd unit. The tracked unit is a portable template: create a host-local
+copy and replace `EIDOS_ROOT` / `EIDOS_VENV` before installing it.
+
+
 For the dependency-light public gateway/CLI package, use:
 
 ```bash
