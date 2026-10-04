@@ -59,6 +59,12 @@ class TreeCompareTests(unittest.TestCase):
             "web-panel/static/_archive/index.html": "backup_history",
             "VSEIDOS/data/Cache/blob": "state_data_reports",
             "core/live_runtime.py": "project_candidate",
+            "evolution_brain.db": "state_data_reports",
+            "worker.log": "state_data_reports",
+            "a.out": "generated_env_vcs_cache",
+            "index-all.html": "generated_env_vcs_cache",
+            "core/backups_pre_auditoria/old.py": "backup_history",
+            "VSEIDOS/cache/blob": "state_data_reports",
         }
         for path, expected in cases.items():
             with self.subTest(path=path):

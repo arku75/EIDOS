@@ -50,13 +50,23 @@ HISTORICAL_MARKERS = (
 GENERATED_COMPONENTS = {
     "target", "node_modules", "__pycache__", ".pytest_cache", ".mypy_cache",
     ".ruff_cache", ".cache", ".nyc_output", ".next", ".parcel-cache",
-    "dist", "build",
+    "dist", "build", ".gradle", ".idea", ".vscode-test", "htmlcov", "site-packages",
 }
 HISTORY_COMPONENTS = {
     "_archived", "_archive", "_legacy", "_RESCATADO_DEL_ZIP",
     "_DEAD_CODE_20260530", "_DEAD_DBS_20260530", "release_tmp",
+    "backups_pre_auditoria",
 }
-STATE_PREFIXES = ("VSEIDOS/data/",)
+STATE_PREFIXES = ("VSEIDOS/data/", "VSEIDOS/cache/", "VSEIDOS/logs/")
+ROOT_STATE_SUFFIXES = (".db", ".sqlite", ".sqlite3", ".log", ".dump", ".core", ".pid", ".sock")
+ROOT_GENERATED_SUFFIXES = (".aux", ".bib", ".exe", ".o", ".out", ".tree", ".class", ".jar", ".tmp")
+ROOT_NOISE_PREFIXES = (".screenshot", ".my.cnf.", ".mysql.", ".my.output.", "#cvsblame.", "temp", "cvsbackport.")
+ROOT_GENERATED_NAMES = {
+    "allclasses-frame.html", "deprecated-list.html", "help-doc.html",
+    "index-all.html", "inherit.gif", "overview-frame.html", "overview-summary.html",
+    "package-list", "stylesheet.css", "NamespaceSummaries.xml", "NewClasses.plist",
+    "help.pdf", "image0", "pp.save", "a.out",
+}
 
 
 def _clean_tree_name(raw: str) -> tuple[str, bool]:
@@ -116,6 +126,15 @@ def classify(path: str) -> str:
         return "third_party_vendor"
     if top in STATE_TOPS:
         return "state_data_reports"
+    if "/" not in path:
+        if path.endswith(ROOT_STATE_SUFFIXES):
+            return "state_data_reports"
+        if (
+            path.endswith(ROOT_GENERATED_SUFFIXES)
+            or path in ROOT_GENERATED_NAMES
+            or path.startswith(ROOT_NOISE_PREFIXES)
+        ):
+            return "generated_env_vcs_cache"
     return "project_candidate"
 
 
