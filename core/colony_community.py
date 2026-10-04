@@ -2816,7 +2816,19 @@ Responde de forma natural y conversacional.""")
             display_name = self._participants[agent_id].get("name", agent_id)
 
         conf = max(0.0, min(1.0, float(confidence)))
-        evidence_json = json.dumps(evidence or {}, ensure_ascii=False, default=str)[:8000]
+        evidence = dict(evidence or {})
+        evidence_source = str(evidence.get("evidence_source", "")).strip().lower()
+        # Colony reputation must be earned from an independent/observed effect.
+        # Self-claims, inherited knowledge and unobserved persistence are useful
+        # context but cannot mint trusted reputation.
+        if evidence_source in {"self", "self_report", "inheritance", "unobserved"}:
+            return {
+                "success": False,
+                "error": "untrusted evidence source cannot change effect reputation",
+                "agent_id": agent_id,
+                "evidence_source": evidence_source,
+            }
+        evidence_json = json.dumps(evidence, ensure_ascii=False, default=str)[:8000]
         with get_conn_ctx(self.db_path) as conn:
             conn.execute(
                 """INSERT INTO agent_outcomes
