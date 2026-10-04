@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 from core.character_lifecycle import ABSORPTION_THRESHOLD, CharacterLifecycleManager
 
@@ -19,6 +20,21 @@ class TestCharacterLifecycleContract(unittest.TestCase):
         manager = self._manager(parent, incomplete)
         self.assertIsNone(
             manager.execute_reproduction("colony_python", "colony_javascript")
+        )
+
+    def test_reproduction_source_never_grants_child_sovereignty(self):
+        source = Path("core/character_lifecycle.py").read_text()
+        self.assertNotIn(
+            '(child_name, child_emoji, time.time(), "merge", "sovereign"',
+            source,
+        )
+        self.assertIn(
+            '(child_name, child_emoji, time.time(), "merge", "learning"',
+            source,
+        )
+        self.assertIn(
+            '"merge", "learning",\n                     0.0, 0, 0',
+            source,
         )
 
     def test_both_incomplete_parents_cannot_create_child(self):
