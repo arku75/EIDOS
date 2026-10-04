@@ -6,12 +6,12 @@ Wants=eidos-bridge.service
 [Service]
 Type=simple
 ExecStart=/usr/bin/python3 -m core.eidos_websocket
-WorkingDirectory=/home/ser/EIDOS
-Environment=PYTHONPATH=/home/ser/EIDOS
+WorkingDirectory=%h/EIDOS
+Environment=PYTHONPATH=%h/EIDOS
 Restart=always
 RestartSec=5
-StandardOutput=append:/home/ser/.eidos/websocket.log
-StandardError=append:/home/ser/.eidos/websocket.log
+StandardOutput=append:%h/.eidos/websocket.log
+StandardError=append:%h/.eidos/websocket.log
 
 [Install]
 WantedBy=default.target
