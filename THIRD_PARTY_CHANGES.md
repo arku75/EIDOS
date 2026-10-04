@@ -16,5 +16,7 @@ terminates the license automatically.
 
 | 2026-10-04 | OpenAI ChatGPT, authorized by SER | `AGENTS.md`, `.github/workflows/sanitation-ci.yml` | Removed a hard-coded Bridge API key from documentation, retired a stale restoration snapshot, and added isolated Ubuntu CI for syntax, packaging and safe tests. | Prevent credential reuse and make public-repo claims reproducible on a clean machine. |
 
+| 2026-10-04 | OpenAI ChatGPT, authorized by SER | `README.md`, `docs/ARCHITECTURE.md`, `docs/INSTALL.md`, `docs/KNOWN_ISSUES.md`, `core/claude_web.py`, CI/issues | Rebuilt public documentation around current evidence, removed an unused first-party provider-specific adapter, added clean dependency-resolution validation, and documented Chroma/metadata/code-scanning gaps instead of presenting stale June state as current. | Make the public repository reproducible, provider-neutral and technically honest while preserving historical evidence separately. |
+
 ---
 © 2026 SER. All Rights Reserved. EIDOS is proprietary & source-available (ESSL v1.0).
