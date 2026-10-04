@@ -213,8 +213,8 @@ class ActionVerifier:
                 if short_text and short_text in ocr_text.lower():
                     return True, "text_found_partial_in_field"
 
-        # Without coordinates, assume success — typing usually works
-        return True, "assumed_ok_no_target_coords"
+        # Without an observable target there is no evidence that typing worked.
+        return False, "unverified_no_target_coords"
 
     def verify_navigate(self, url: str, screen_before_hash: str,
                         expected_in_title: str = "") -> Tuple[bool, str]:
@@ -274,16 +274,16 @@ class ActionVerifier:
                 expected = url.split("/")[0].split(".")[0]  # e.g. "github" from "github.com/..."
             return self.verify_navigate(url, screen_before_hash, expected)
         elif action_type == "key":
-            # Key presses are hard to verify without known effect
-            return True, "key_action_assumed_ok"
+            # A key dispatch without an expected observable effect is not success.
+            return False, "unverified_key_action"
         elif action_type == "scroll":
             # Scroll doesn't always change window titles but may change OCR
             time.sleep(0.5)
             after_hash = _screen_hash()
             return (after_hash != screen_before_hash), "scroll_hash_check"
         else:
-            # Unknown action → assume success
-            return True, f"unknown_action_type: {action_type}"
+            # Unknown actions fail closed until an observer can prove an effect.
+            return False, f"unverified_unknown_action_type: {action_type}"
 
 
 # ── 2. DIALOG DETECTOR ────────────────────────────────────────────────────────
