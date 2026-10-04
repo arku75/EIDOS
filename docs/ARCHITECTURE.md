@@ -141,13 +141,14 @@ EIDOS has several action/perception paths:
 
 - accessibility APIs;
 - OCR/vision;
-- browser automation;
+- DOM/browser automation;
+- USB Gadget HID and uinput experiments;
 - X11-style input;
 - window state;
 - desktop actions;
 - effect verification.
 
-X11 and Wayland are not interchangeable.
+Actuators are alternatives selected by environment and policy, not synonyms. USB HID remains a first-class low-level route. X11 and Wayland are not interchangeable, and dispatching an input report is never by itself proof of the intended world effect.
 
 The clean Ubuntu CI can validate virtual X11 primitives and headless browser behavior. The real KDE/Wayland body must be validated separately on target hardware.
 
@@ -219,3 +220,23 @@ See also:
 - [AUTONOMY_LAB.md](AUTONOMY_LAB.md)
 - [KNOWN_ISSUES.md](KNOWN_ISSUES.md)
 - [EIDOS_EVOLUTION_DOCUMENTARY.md](EIDOS_EVOLUTION_DOCUMENTARY.md)
+
+
+## Capability and authority
+
+EIDOS keeps these concepts separate:
+
+```text
+capability exists
+!= capability is loaded
+!= action is authorized
+!= action was dispatched
+!= intended effect occurred
+!= effect was independently verified
+```
+
+The operation-mode manager starts in `PLAN`. Elevating to `PLAN+EDIT` changes operational permissions but does not override constitution, ToolGuard, scope, provenance or operator authorization.
+
+## Unified CLI
+
+The canonical interactive entrypoint is the shared Runtime Hub terminal. Running `python eidos.py` with no mode and running `python eidos.py cli` converge on that terminal. Legacy modes remain explicit compatibility paths.
