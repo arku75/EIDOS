@@ -8,9 +8,12 @@ import sys
 import subprocess
 import asyncio
 import argparse
+from pathlib import Path
 
-EIDOS_ROOT = "/home/ser/EIDOS"
-sys.path.insert(0, EIDOS_ROOT)
+# Resolve the checkout/install location instead of binding EIDOS to SER's machine.
+EIDOS_ROOT = Path(__file__).resolve().parents[1]
+if str(EIDOS_ROOT) not in sys.path:
+    sys.path.insert(0, str(EIDOS_ROOT))
 
 
 def check_ollama():
