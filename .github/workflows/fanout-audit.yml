@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   python-shards:
     name: python-shard-${{ matrix.shard }}
@@ -117,10 +121,14 @@ jobs:
             command: PYTHONPATH=. python -m unittest -v tests.test_autonomy_benchmark
           - name: self-edit
             command: PYTHONPATH=. python -m unittest -v tests.test_self_edit_lab
+          - name: self-edit-guardrails
+            command: PYTHONPATH=. python -m unittest -v tests.test_self_edit_guardrails
           - name: constitution
             command: PYTHONPATH=. python -m unittest -v tests.test_constitution
           - name: colony
             command: PYTHONPATH=. python -m unittest -v tests.test_colony_community
+          - name: colony-effect-reputation
+            command: PYTHONPATH=. python -m unittest -v tests.test_colony_effect_reputation
           - name: hardware-validation
             command: PYTHONPATH=. python -m unittest -v tests.test_hardware_validation
 
