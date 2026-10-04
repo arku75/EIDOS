@@ -350,8 +350,26 @@ class EIDOSRuntimeHub:
             "colony_reputation": colony_reputation,
             "created_at": time.time(),
         }
+        # Verified outcomes become reusable shared evidence. This does not
+        # execute anything: it closes Verification → Learning/Reuse by exposing
+        # the correlated transition to later planners/agents.
+        learning_record = {
+            "proposal_id": payload["proposal_id"],
+            "action": dict(action),
+            "before": dict(before),
+            "after": dict(after),
+            "verified": credited_verified,
+            "observed_verified": observed_verified,
+            "confidence": float(verification.confidence),
+            "reason": verification.reason,
+            "evidence_source": observer,
+            "created_at": payload["created_at"],
+        }
+        payload["learning_recorded"] = True
         self.bus.publish("action.verified", payload, source="runtime-hub")
+        self.bus.publish("learning.causal_outcome", learning_record, source="runtime-hub")
         self.board.write("last_action_outcome", payload, agent="runtime-hub")
+        self.board.write("last_causal_learning", learning_record, agent="runtime-hub")
         if payload["proposal_id"]:
             self.board.write(
                 f"action.outcome.{payload['proposal_id']}",
