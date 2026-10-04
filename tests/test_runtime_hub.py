@@ -189,11 +189,6 @@ class TestRuntimeHub(unittest.TestCase):
             )
 
     def test_registered_observations_verify_correlated_proposal(self):
-        proposal = self.hub.propose_action(
-            {"action": "click", "x": 10, "y": 20},
-            source="colony_coder",
-            expected_outcome="result appears",
-        )
         before = self.hub.record_observation(
             {
                 "window_title": "Before",
@@ -201,6 +196,11 @@ class TestRuntimeHub(unittest.TestCase):
                 "regions": [{"text": "Search"}],
             },
             observer="runtime-observer",
+        )
+        proposal = self.hub.propose_action(
+            {"action": "click", "x": 10, "y": 20},
+            source="colony_coder",
+            expected_outcome="result appears",
         )
         after = self.hub.record_observation(
             {
@@ -253,6 +253,48 @@ class TestRuntimeHub(unittest.TestCase):
                 before["observation_id"],
                 after["observation_id"],
             )
+
+
+    def test_registered_observations_must_bracket_proposal(self):
+        proposal = self.hub.propose_action(
+            {"action": "click", "x": 1, "y": 2},
+            source="colony_coder",
+        )
+        before = self.hub.record_observation(
+            {"window_title": "Too late", "ocr_full_text": "A", "regions": []},
+            observer="runtime-observer",
+        )
+        after = self.hub.record_observation(
+            {"window_title": "After", "ocr_full_text": "B", "regions": []},
+            observer="runtime-observer",
+        )
+        with self.assertRaises(ValueError):
+            self.hub.verify_observations(
+                proposal, before["observation_id"], after["observation_id"]
+            )
+
+    def test_self_evidence_updates_world_truth_without_reputation_credit(self):
+        proposal = self.hub.propose_action(
+            {"action": "click", "x": 2, "y": 3},
+            source="colony_coder",
+            expected_outcome="changed",
+        )
+        before = {"window_title": "Before", "ocr_full_text": "A", "regions": []}
+        after = {
+            "window_title": "After",
+            "ocr_full_text": "A changed",
+            "regions": [{"text": "changed"}],
+        }
+        with patch.object(self.hub.world_model, "record_outcome") as record, \
+             patch("core.colony_community.get_colony_community") as community:
+            result = self.hub.verify_action_effect(
+                proposal, before, after, evidence_source="colony_coder"
+            )
+        self.assertTrue(result["observed_verified"])
+        self.assertFalse(result["credited_verified"])
+        self.assertEqual(result["status"], "untrusted_evidence")
+        self.assertTrue(record.call_args.args[1])
+        community.assert_not_called()
 
     def test_observation_requires_provenance(self):
         with self.assertRaises(ValueError):
