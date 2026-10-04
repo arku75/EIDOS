@@ -195,6 +195,21 @@ def _act(element: Any, dry_run: bool) -> bool:
         log.info("[DRY] click virtual en '%s' (%d,%d) via %s", label, x, y, backend)
         return True
 
+    # ── S125-READY: GATE de presencia de SER ──────────────────────────────
+    # Solo actuar si SER está presente O EIDOS_MASTER_MODE=1
+    if os.environ.get("EIDOS_MASTER_MODE") != "1":
+        try:
+            import subprocess
+            r = subprocess.run(["xprintidle"], capture_output=True, text=True, timeout=3)
+            idle_ms = int(r.stdout.strip() or 0)
+            if idle_ms > 300_000:  # 5 minutos sin actividad = SER ausente
+                log.warning("[BOM] SER ausente (%ds idle) → no actúo sin supervisión", idle_ms // 1000)
+                return False
+        except Exception as exc:
+            # Fail closed: inability to establish operator presence is not
+            # evidence that a real GUI action is safe.
+            log.warning("[BOM] no pude verificar presencia de SER: %s → no actúo", exc)
+            return False
     # ── screen_controller path: usa HumanEmulator/InputBackend en vez de xdotool directo ─
     if from_sc:
         try:
@@ -213,29 +228,15 @@ def _act(element: Any, dry_run: bool) -> bool:
             log.warning("InputBackend click falló: %s → fallback xdotool", e)
             # fall through to xdotool path below
 
-    # ── S125-READY: GATE de presencia de SER ──────────────────────────────
-    # Solo actuar si SER está presente O EIDOS_MASTER_MODE=1
-    if os.environ.get("EIDOS_MASTER_MODE") != "1":
-        try:
-            import subprocess
-            r = subprocess.run(["xprintidle"], capture_output=True, text=True, timeout=3)
-            idle_ms = int(r.stdout.strip() or 0)
-            if idle_ms > 300_000:  # 5 minutos sin actividad = SER ausente
-                log.warning("[BOM] SER ausente (%ds idle) → no actúo sin supervisión", idle_ms // 1000)
-                return False
-        except Exception as exc:
-            # Fail closed: inability to establish operator presence is not
-            # evidence that a real GUI action is safe.
-            log.warning("[BOM] no pude verificar presencia de SER: %s → no actúo", exc)
-            return False
     # ── autoconcepto operativo: ¿tengo mano? mi mano es xdotool ──────────
     try:
         from core.body import hand_ok
         if not hand_ok():
             log.warning("[CUERPO] no tengo mano (xdotool ausente) → no puedo tocar")
             return False
-    except Exception:
-        pass
+    except Exception as exc:
+        log.warning("[CUERPO] no pude verificar mi mano: %s → no actúo", exc)
+        return False
     try:  # real: endpoint del web-panel (xdotool)
         import urllib.request, json
         req = urllib.request.Request(
