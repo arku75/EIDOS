@@ -43,7 +43,7 @@ Next front after these repairs: measurable Runtime Hub/Colony integration, prese
 Block 3 is accepted only when its release gates are green. The implementation now enforces these contracts:
 
 - Character synthesis requires `absorption_pct == 1.0` for both parents; incomplete learning cannot create a child.
-- Genealogy carries knowledge and reduced-strength synapses, and an isolated benchmark requires that inheritance measurably changes the child's later resonance.
+- Genealogy carries knowledge and reduced-strength synapses, and an isolated benchmark requires that inheritance measurably changes the child's later resonance. Offspring start in `learning` with `absorption_pct=0.0`: inherited structure is a head start, never inherited sovereignty.
 - Inherited competence is not earned reputation. Self-report, inheritance and explicitly unobserved evidence cannot write effect reputation.
 - Effect reputation remains bounded by repeated verified outcomes and can change later routing; persistence across restart is covered by the existing reputation regression.
 - Learned tool remediation cannot silently escalate privileges, and dynamically generated tools follow GENERATE -> VALIDATE -> TEST -> PROMOTE.
