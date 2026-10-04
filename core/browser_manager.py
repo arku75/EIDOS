@@ -103,12 +103,12 @@ def navigate_with_session(url: str, extract_text: bool = True) -> Dict[str, Any]
     No se descubre ni reutiliza automáticamente el perfil autenticado del usuario.
     """
     p = None
+    if not FIREFOX_PROFILE:
+        return {"ok": False, "url": url, "error": "session_profile_not_authorized"}
+
     try:
         from playwright.sync_api import sync_playwright
         p = sync_playwright().start()
-
-        if not FIREFOX_PROFILE:
-            return {"ok": False, "url": url, "error": "session_profile_not_authorized"}
 
         ctx = p.firefox.launch_persistent_context(
             user_data_dir=FIREFOX_PROFILE,

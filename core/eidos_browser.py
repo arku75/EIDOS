@@ -9,25 +9,14 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 
-# Try Playwright first (venv con chromium propio), fallback to Selenium
+# Optional browser engines are discovered from the active Python environment.
+# EIDOS never reaches into a developer-specific virtualenv path.
 PLAYWRIGHT_AVAILABLE = False
 SELENIUM_AVAILABLE = False
-VENV_PYTHON = "/home/ser/EIDOS/.venv/bin/python"
 
 try:
-    # Intentar primero el playwright del venv EIDOS (tiene chromium propio)
-    import sys as _sys
-    _venv_site = "/home/ser/EIDOS/.venv/lib/python{}.{}/site-packages".format(
-        _sys.version_info.major, _sys.version_info.minor
-    )
-    if _venv_site not in _sys.path:
-        _sys.path.insert(0, _venv_site)
     from playwright.sync_api import sync_playwright, Browser, Page, BrowserContext
-    # Test rápido que el driver funciona (el del sistema está roto)
-    import subprocess as _sp
-    _test = _sp.run([VENV_PYTHON, "-c", "from playwright.sync_api import sync_playwright"],
-                    capture_output=True, timeout=3)
-    PLAYWRIGHT_AVAILABLE = (_test.returncode == 0)
+    PLAYWRIGHT_AVAILABLE = True
 except Exception:
     PLAYWRIGHT_AVAILABLE = False
 

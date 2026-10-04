@@ -53,7 +53,6 @@ def learn_phase() -> dict[str, Any]:
     _assert_zero_llm_loaded()
 
     from core.colony_community import ColonyCommunity
-    from core.colony_community import ColonyCommunity
     from core.eidos_rl import QLearningAgent
     from core.runtime_hub import EIDOSRuntimeHub
     from core.self_edit_lab import assess_python_edit, stage_candidate
@@ -240,6 +239,7 @@ def verify_phase() -> dict[str, Any]:
         raise RuntimeError("learn phase evidence is missing")
     previous = json.loads(contract_path.read_text(encoding="utf-8"))
 
+    from core.colony_community import ColonyCommunity
     from core.eidos_rl import QLearningAgent
     from core.runtime_hub import EIDOSRuntimeHub
 

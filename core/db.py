@@ -19,7 +19,7 @@ Uso:
 
     conn = get_conn("self.db")
     # o con path absoluto:
-    conn = get_conn("/home/ser/.eidos/evolution_brain.db")
+    conn = get_conn(Path.home() / ".eidos" / "evolution_brain.db")
     # o con Path:
     conn = get_conn(Path.home() / ".eidos" / "vivo.db")
 
@@ -124,7 +124,16 @@ def get_conn(db_name: Union[str, Path],
         sqlite3.Error: Si hay error de conexión.
     """
     db_path = _resolve_db_path(db_name)
-    # SQLite connections created with check_same_thread=True are bound to the\n    # creating thread. Cache them per-thread so another worker can never receive\n    # a connection it is forbidden to use. Connections explicitly created with\n    # check_same_thread=False retain shared-cache semantics; callers that do not\n    # want sharing must pass cache=False.\n    thread_scope = threading.get_ident() if check_same_thread else "shared"\n    cache_key = (\n        f"{db_path}:{thread_scope}:{check_same_thread}:"\n        f"{isolation_level}:{read_only}"\n    )
+    # SQLite connections created with check_same_thread=True are bound to the
+    # creating thread. Cache them per-thread so another worker can never receive
+    # a connection it is forbidden to use. Connections explicitly created with
+    # check_same_thread=False retain shared-cache semantics; callers that do not
+    # want sharing must pass cache=False.
+    thread_scope = threading.get_ident() if check_same_thread else "shared"
+    cache_key = (
+        f"{db_path}:{thread_scope}:{check_same_thread}:"
+        f"{isolation_level}:{read_only}"
+    )
 
     # Si está en caché y los parámetros coinciden, devolver la caché
     if cache and not read_only:
