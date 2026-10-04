@@ -193,6 +193,37 @@ class EIDOSRuntimeHub:
         )
         return proposal
 
+    def record_action_execution(
+        self,
+        proposal: Dict[str, Any],
+        *,
+        executor: str,
+        execution_id: str,
+    ) -> dict:
+        """Record that a registered proposal crossed an execution boundary.
+
+        This records provenance only; Runtime Hub still does not execute actions.
+        """
+        proposal = self._canonical_proposal(proposal)
+        executor_id = str(executor or "").strip()
+        execution_ref = str(execution_id or "").strip()
+        if not executor_id or not execution_ref:
+            raise ValueError("executor and execution_id are required")
+        payload = {
+            "proposal_id": proposal["proposal_id"],
+            "execution_id": execution_ref,
+            "executor": executor_id,
+            "executed_at": time.time(),
+        }
+        self.bus.publish("action.executed", payload, source=executor_id)
+        self.board.write(
+            f"action.execution.{proposal['proposal_id']}",
+            payload,
+            agent=executor_id,
+        )
+        self.board.write("last_action_execution", payload, agent=executor_id)
+        return payload
+
     def record_observation(
         self,
         snapshot: Dict[str, Any],
@@ -288,6 +319,14 @@ class EIDOSRuntimeHub:
             raise ValueError("before observation is newer than after observation")
         if not proposal_at or not (before_at <= proposal_at <= after_at):
             raise ValueError("observations must bracket the proposed action")
+        execution = self.board.read(
+            f"action.execution.{proposal['proposal_id']}"
+        )
+        if not isinstance(execution, dict):
+            raise ValueError("registered action execution is required")
+        executed_at = float(execution.get("executed_at", 0.0))
+        if not (before_at <= executed_at <= after_at):
+            raise ValueError("observations must bracket the recorded execution")
 
         return self.verify_action_effect(
             proposal,
