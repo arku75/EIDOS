@@ -15,19 +15,16 @@ However, "the tests pass" is not the same as "a completely new user can install 
 
 A dependency-resolution CI job has been added. Full runtime/service startup remains a separate acceptance target.
 
-## 2. ChromaDB runtime compatibility still needs end-to-end proof
+## 2. ChromaDB clean-CI integration
 
-**Status: OPEN — GitHub issue #8**
+**Status: VERIFIED IN CLEAN CI / LIVE PRIVATE STATE SEPARATE**
 
-The first-party topology is now aligned on port **8767**. The historical
+The first-party topology is aligned on port **8767** and the historical
 `bin/chroma_http_server.py` entrypoint delegates to the canonical
-`core/eidos_chroma_server.py` implementation instead of maintaining a second
-server.
-
-What remains open is runtime/API compatibility: an isolated Ubuntu test must
-start the supported Chroma dependency, then prove heartbeat, collection
-creation, upsert, query, count, restart/persistence and fallback behavior.
-Topology alignment alone is not enough to close the issue.
+`core/eidos_chroma_server.py` implementation. The project-owned
+`chroma-integration` workflow now provides the isolated Ubuntu integration
+gate. Passing that gate is evidence for the clean test environment, not proof
+of SER's private live database contents or machine-specific service state.
 
 ## 3. Wayland body is not equivalent to the historical X11 body
 
