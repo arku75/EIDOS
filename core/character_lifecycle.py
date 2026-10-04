@@ -1240,8 +1240,8 @@ class CharacterLifecycleManager:
                      absorption_pct,knowledge_nodes,target_nodes,
                      style,traits,greeting,catchphrases,parent1,parent2)
                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                    (child_name, child_emoji, time.time(), "merge", "sovereign",
-                     1.0, 0, 0,
+                    (child_name, child_emoji, time.time(), "merge", "learning",
+                     0.0, 0, 0,
                      merged_style,
                      json.dumps(merged_traits),
                      child_greeting,
