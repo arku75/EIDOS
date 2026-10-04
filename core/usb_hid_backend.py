@@ -1,26 +1,16 @@
 """
 core/usb_hid_backend.py — Backend USB Gadget HID [S88 GOLD]
 
-"Nivel kernel: el hardware no miente" — DeepSeek
+Backend experimental USB Gadget HID [S88].
 
-Implementa un dispositivo USB HID falso a nivel de kernel Linux usando
-dummy_hcd + usb_f_hid (USB Gadget). El sistema operativo lo ve como
-hardware FÍSICO conectado por USB — completamente indistinguible de un
-ratón/teclado real.
+Implementa varias rutas de entrada Linux (USB Gadget, uinput y xdotool).
+Ninguna ruta se considera "indetectable": aplicaciones, compositores, políticas
+del sistema y telemetría pueden distinguir o bloquear automatización. Este
+módulo describe mecanismos de entrada, no garantías de evasión.
 
-¿Por qué es indetectable?
-  1. dummy_hcd crea un controlador USB virtual en el kernel
-  2. usb_f_hid registra una función HID en el gadget
-  3. Los eventos se escriben como raw HID reports en /dev/hidg0
-  4. X11/Wayland reciben eventos del kernel EXACTAMENTE igual que
-     si vinieran de un dispositivo USB físico
-  5. No hay uinput, no hay xdotool, no hay XTest — es hardware "real"
-
-Comparativa de detección:
-  xdotool     → detectable via XTest extension check
-  uinput      → detectable via /sys/module/uinput + heuristics
-  USB Gadget  → INDETECTABLE (el kernel lo trata como HW físico)
-  Arduino HID → INDETECTABLE (pero requiere hardware real)
+El acceso USB Gadget/uinput requiere privilegios y hardware/kernel compatibles.
+La validación en CI se limita a selección/fallo seguro; comportamiento físico
+real requiere pruebas HIL explícitamente autorizadas.
 
 Capas de fallback:
   1. USB Gadget HID (nivel kernel) — GOLD
