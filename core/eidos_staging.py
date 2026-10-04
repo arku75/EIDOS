@@ -152,9 +152,13 @@ class StagingDB:
                 status TEXT,
                 result_json TEXT,
                 created_at TEXT,
-                validated_at TEXT
+                validated_at TEXT,
+                production_sha256 TEXT DEFAULT ''
             )
         """)
+        columns = {row[1] for row in cursor.execute("PRAGMA table_info(staged_changes)")}
+        if "production_sha256" not in columns:
+            cursor.execute("ALTER TABLE staged_changes ADD COLUMN production_sha256 TEXT DEFAULT ''")
         
         conn.commit()
         pass  # S109: get_conn no necesita close()
@@ -166,14 +170,19 @@ class StagingDB:
         result_json = json.dumps(change.result.__dict__ if change.result else {})
         
         cursor.execute("""
-            INSERT OR REPLACE INTO staged_changes VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            INSERT OR REPLACE INTO staged_changes
+            (id,file_path,change_type,description,original_code,new_code,diff,
+             staging_path,production_path,status,result_json,created_at,validated_at,
+             production_sha256)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             change.id, change.file_path, change.change_type, change.description,
             change.original_code, change.new_code, change.diff,
             change.staging_path, change.production_path, change.status,
             result_json,
             change.created_at.isoformat(),
-            change.validated_at.isoformat() if change.validated_at else None
+            change.validated_at.isoformat() if change.validated_at else None,
+            change.production_sha256,
         ))
         
         conn.commit()
@@ -461,17 +470,22 @@ class StagingSystem:
 
         # Reject time-of-check/time-of-use drift: only promote the exact file
         # version whose candidate was validated.
-        expected_sha = hashlib.sha256(original_code.encode("utf-8")).hexdigest()
+        expected_sha = str(row[13] or "")
         try:
-            current_sha = hashlib.sha256(production_file.read_bytes()).hexdigest()
-        except OSError as exc:
+            current_bytes = production_file.read_bytes()
+            current_sha = hashlib.sha256(current_bytes).hexdigest()
+            current_text = current_bytes.decode("utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
             log.error("No se puede verificar archivo de producción: %s", exc)
             return False
-        # original_code can be a fragment in historical callers, so additionally
-        # require it to be present. Full-file staging callers get exact hash safety.
-        current_text = production_file.read_text(encoding="utf-8")
+        if not expected_sha or current_sha != expected_sha:
+            log.error(
+                "Producción cambió desde la validación: expected=%s current=%s",
+                expected_sha[:12], current_sha[:12],
+            )
+            return False
         if original_code not in current_text:
-            log.error("Producción cambió desde la validación; fragmento original ausente")
+            log.error("Fragmento validado ausente en producción")
             return False
 
         # Verificar que sigue dentro del árbol real.
