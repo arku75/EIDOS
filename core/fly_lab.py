@@ -326,4 +326,4 @@ def validate_synthetic(seed: int = 317) -> FlyValidationResult:
 
 
 if __name__ == "__main__":
-    print(json.dumps(validate_synthetic().to_dict(), indent=2))
+    print(json.dumps(validate_seed_sweep(), indent=2))
