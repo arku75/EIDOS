@@ -171,6 +171,16 @@ jobs:
             command: PYTHONPATH=. python -m unittest -v tests.test_hardware_validation
           - name: config
             command: PYTHONPATH=. python -m unittest -v tests.test_config_loader
+          - name: bridge-shell-boundary
+            command: PYTHONPATH=. python -m unittest -v tests.test_bridge_shell_boundary
+          - name: causal-loop-safety
+            command: PYTHONPATH=. python -m unittest -v tests.test_causal_loop_safety
+          - name: learning-retention
+            command: PYTHONPATH=. python -m unittest -v tests.test_learning_retention_contract
+          - name: memory-config
+            command: PYTHONPATH=. python -m unittest -v tests.test_unified_memory_config
+          - name: service-portability
+            command: PYTHONPATH=. python -m unittest -v tests.test_service_portability
 
     steps:
       - uses: actions/checkout@v4
