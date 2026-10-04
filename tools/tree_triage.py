@@ -12,7 +12,7 @@ import json
 import re
 from pathlib import Path
 
-VERSION_SUFFIX = re.compile(r"(?:_v\\d+|_v\\d+_\\d+)$", re.I)
+VERSION_SUFFIX = re.compile(r"(?:_v\d+|_v\d+_\d+)$", re.I)
 
 
 def normalized_stem(path: str) -> str:
