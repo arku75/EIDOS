@@ -74,7 +74,11 @@ MAX_IMPORTANCE = 1.0
 CONSOLIDATION_SIMILARITY = 0.85  # cosine threshold for "same memory"
 MAX_MEMORIES_BEFORE_CONSOLIDATE = 500
 
-EIDOS_DIR.mkdir(parents=True, exist_ok=True)
+EIDOS_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+try:
+    EIDOS_DIR.chmod(0o700)
+except OSError as exc:
+    log.warning("Cannot enforce private permissions on EIDOS_HOME %s: %s", EIDOS_DIR, exc)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
