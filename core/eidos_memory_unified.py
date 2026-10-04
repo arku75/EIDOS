@@ -52,7 +52,7 @@ log = logging.getLogger("eidos.unified_memory")
 # CONFIG
 # ══════════════════════════════════════════════════════════════════════════════
 
-EIDOS_DIR = Path.home() / ".eidos"
+EIDOS_DIR = Path(os.environ.get("EIDOS_HOME", str(Path.home() / ".eidos"))).expanduser()
 UNIFIED_DB = EIDOS_DIR / "unified_memory.db"
 
 # ChromaDB
@@ -123,7 +123,7 @@ def embed_texts(texts: List[str]) -> Optional[List[List[float]]]:
 def _embed_ollama(texts: List[str]) -> Optional[List[List[float]]]:
     """Fallback: Ollama embeddings via HTTP."""
     import urllib.request
-    OLLAMA_URL = "http://localhost:11434"
+    OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434").rstrip("/")
     embeddings = []
     for text in texts:
         try:
