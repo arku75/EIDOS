@@ -188,6 +188,19 @@ class EIDOSRuntimeHub:
             value = self.board.read("last_action_proposal")
         return dict(value) if isinstance(value, dict) else None
 
+    def _canonical_proposal(self, proposal: Dict[str, Any]) -> dict:
+        """Resolve the registered proposal and reject forged or mutated input."""
+        proposal_id = str(proposal.get("proposal_id") or "").strip()
+        if not proposal_id:
+            raise ValueError("proposal_id is required")
+        registered = self.action_proposal(proposal_id)
+        if registered is None:
+            raise KeyError("proposal is not registered")
+        for field in ("proposal_id", "action", "source", "expected_outcome"):
+            if proposal.get(field) != registered.get(field):
+                raise ValueError(f"proposal field was modified: {field}")
+        return registered
+
     def action_outcome(self, proposal_id: Optional[str] = None) -> Optional[dict]:
         """Read a verified/failed outcome by proposal id, or the latest outcome."""
         if proposal_id:
@@ -207,6 +220,7 @@ class EIDOSRuntimeHub:
         before_observation_id: str,
         after_observation_id: str,
     ) -> dict:
+        proposal = self._canonical_proposal(proposal)
         """Verify an action from two registered observations.
 
         Both observations must come from the same observer and the observer must
@@ -256,6 +270,7 @@ class EIDOSRuntimeHub:
         3) records prediction accuracy in the world model,
         4) publishes the evidence for Colony/agents.
         """
+        proposal = self._canonical_proposal(proposal)
         action = dict(proposal.get("action") or {})
         if not action:
             raise ValueError("proposal has no action")
