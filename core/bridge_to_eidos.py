@@ -146,6 +146,12 @@ def _safe_shell_argv(cmd: str) -> Tuple[list[str] | None, str]:
     """Parse an explicit SER command without invoking a shell interpreter."""
     if not cmd or not cmd.strip():
         return None, "Comando vacío"
+    # Reject shell grammar before argv parsing. The bridge intentionally
+    # supports commands + arguments, not pipelines/redirections/control flow.
+    # Quoted metacharacters are still rejected: callers needing literal shell
+    # syntax must use the separately authorized interactive terminal.
+    if any(marker in cmd for marker in (";", "|", "&", ">", "<", "$(", "`", "\n", "\r")):
+        return None, "Metacaracteres de shell no permitidos en el bridge automático"
     try:
         argv = shlex.split(cmd)
     except ValueError as exc:
