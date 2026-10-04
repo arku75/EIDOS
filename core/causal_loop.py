@@ -258,7 +258,9 @@ def _act(element: Any, dry_run: bool) -> bool:
             recovery = get_recovery()
             fallback_result = recovery.fallback_engine.fallback_click(x, y, 1)
             if fallback_result and fallback_result.get("ok"):
-                log.info("[RECOVERY] fallback click exitoso en (%d,%d)", x, y)
+                # Fallback dispatch is still only motor execution. The caller must
+                # re-perceive and verify world effect before crediting success.
+                log.info("[RECOVERY] fallback click despachado en (%d,%d)", x, y)
                 return True
         except Exception:
             pass
