@@ -1,0 +1,93 @@
+name: promotion-validation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: promotion-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  clean-install-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Create clean venv and install public package
+        run: |
+          python -m venv "${RUNNER_TEMP}/eidos-clean"
+          "${RUNNER_TEMP}/eidos-clean/bin/python" -m pip install --upgrade pip
+          "${RUNNER_TEMP}/eidos-clean/bin/python" -m pip install .
+          echo "${RUNNER_TEMP}/eidos-clean/bin" >> "$GITHUB_PATH"
+
+      - name: Prove installed CLI outside checkout
+        working-directory: ${{ runner.temp }}
+        run: |
+          eidos-gateway --help > gateway-help.txt
+          eidos-config --help > config-help.txt
+          test -s gateway-help.txt
+          test -s config-help.txt
+
+      - name: Run dependency-light consolidation contracts
+        env:
+          EIDOS_HOME: ${{ runner.temp }}/eidos-state
+        run: |
+          mkdir -p reports
+          set -o pipefail
+          python -m unittest -v \
+            tests.test_runtime_hub \
+            tests.test_colony_effect_reputation \
+            tests.test_fly_lab \
+            tests.test_learning_retention_contract \
+            tests.test_unified_memory_config \
+            tests.test_service_portability \
+            tests.test_causal_loop_safety \
+            2>&1 | tee reports/promotion-smoke.log
+
+      - name: Build provenance report
+        if: always()
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, pathlib, platform, sys
+          report = pathlib.Path("reports")
+          report.mkdir(exist_ok=True)
+          log = report / "promotion-smoke.log"
+          data = log.read_bytes() if log.exists() else b""
+          payload = {
+              "commit": os.environ["COMMIT_SHA"],
+              "python": sys.version,
+              "platform": platform.platform(),
+              "smoke_log_bytes": len(data),
+              "smoke_log_sha256": hashlib.sha256(data).hexdigest(),
+              "scope": "clean public package + dependency-light behavioral contracts",
+              "not_verified_here": [
+                  "Dell RTX A5000/CUDA",
+                  "KDE Wayland physical input",
+                  "private graph/databases",
+                  "Ollama/local GGUF",
+                  "real systemd activation",
+              ],
+          }
+          (report / "promotion-report.json").write_text(json.dumps(payload, indent=2))
+          PY
+
+      - name: Upload promotion evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eidos-promotion-validation
+          path: reports/
+          retention-days: 7
+          if-no-files-found: error
