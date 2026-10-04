@@ -121,6 +121,7 @@ class StagedChange:
     result: Optional[StagingResult] = None
     created_at: datetime = field(default_factory=datetime.now)
     validated_at: Optional[datetime] = None
+    production_sha256: str = ""
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -350,6 +351,9 @@ class StagingSystem:
             tofile='new'
         ))
         
+        production_source = (EIDOS_ROOT / relative_path).resolve().read_bytes()
+        production_sha256 = hashlib.sha256(production_source).hexdigest()
+
         change = StagedChange(
             id=change_id,
             file_path=str(file_path),
@@ -360,7 +364,8 @@ class StagingSystem:
             diff=diff,
             staging_path=str(staging_file),
             production_path=str((EIDOS_ROOT / relative_path).resolve()),
-            status="testing"
+            status="testing",
+            production_sha256=production_sha256,
         )
         
         # 4. Aplicar cambio en staging
@@ -453,6 +458,21 @@ class StagingSystem:
         original_code = row[4]
         new_code = row[5]
         production_file = Path(row[8]).expanduser().resolve()  # production_path
+
+        # Reject time-of-check/time-of-use drift: only promote the exact file
+        # version whose candidate was validated.
+        expected_sha = hashlib.sha256(original_code.encode("utf-8")).hexdigest()
+        try:
+            current_sha = hashlib.sha256(production_file.read_bytes()).hexdigest()
+        except OSError as exc:
+            log.error("No se puede verificar archivo de producción: %s", exc)
+            return False
+        # original_code can be a fragment in historical callers, so additionally
+        # require it to be present. Full-file staging callers get exact hash safety.
+        current_text = production_file.read_text(encoding="utf-8")
+        if original_code not in current_text:
+            log.error("Producción cambió desde la validación; fragmento original ausente")
+            return False
 
         # Verificar que sigue dentro del árbol real.
         try:
