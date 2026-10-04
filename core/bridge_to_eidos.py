@@ -1,7 +1,7 @@
 """
 core/bridge_to_eidos.py — Bridge universal EIDOS ↔ cualquier IA
 
-Servidor HTTP ligero (Flask) en puerto 8003 que permite a Claude Code
+Servidor HTTP ligero (Flask) en puerto interno 18003 que permite a EIDOS
 hablar directamente con Colony, consultar el estado de EIDOS, lanzar
 estudios y verificar el conocimiento — sin necesitar el CLI interactivo.
 
@@ -21,11 +21,11 @@ Endpoints:
     GET  /self_analyze   — EIDOS analiza su propio cuerpo: módulos, brain, código
 
 Uso desde Claude Code (Bash tool):
-    curl -s http://localhost:8003/health
-    curl -s -X POST http://localhost:8003/talk -H 'Content-Type: application/json' \
+    curl -s http://localhost:18003/health
+    curl -s -X POST http://localhost:18003/talk -H 'Content-Type: application/json' \
          -d '{"message": "hola EIDOS, qué sabes de n8n?"}'
-    curl -s http://localhost:8003/brain
-    curl -s -X POST http://localhost:8003/study \
+    curl -s http://localhost:18003/brain
+    curl -s -X POST http://localhost:18003/study \
          -d '{"url": "https://github.com/n8n-io/n8n"}'
 """
 from __future__ import annotations
@@ -71,6 +71,13 @@ except ImportError:
     log.error("flask no disponible — instala con: pip install flask")
 
 app = Flask("bridge_to_eidos") if HAS_FLASK else None
+
+def _bridge_port() -> int:
+    """Internal bridge port; public traffic belongs on the unified gateway."""
+    try:
+        return int(os.environ.get("EIDOS_BRIDGE_PORT", "18003"))
+    except (TypeError, ValueError):
+        return 18003
 
 _colony = None
 _colony_lock = threading.Lock()
@@ -174,7 +181,7 @@ def _get_colony():
 @app.route("/health", methods=["GET"])
 def health():
     """Ping para verificar que el bridge está activo."""
-    return jsonify({"status": "ok", "service": "bridge_to_eidos", "port": 8003})
+    return jsonify({"status": "ok", "service": "bridge_to_eidos", "port": _bridge_port()})
 
 
 @app.route("/talk", methods=["POST"])
@@ -2469,7 +2476,9 @@ def self_test():
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
-def run_bridge(port: int = 8003, host: str = "127.0.0.1"):
+def run_bridge(port: int | None = None, host: str = "127.0.0.1"):
+    if port is None:
+        port = _bridge_port()
     if not HAS_FLASK:
         print("ERROR: flask no disponible")
         sys.exit(1)
