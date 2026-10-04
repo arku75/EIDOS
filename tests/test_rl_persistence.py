@@ -40,6 +40,25 @@ class TestRLPersistence(unittest.TestCase):
             )
             self.assertAlmostEqual(float(second), float(first), places=8)
 
+    def test_persisted_learning_transfers_to_similar_unseen_state(self):
+        with tempfile.TemporaryDirectory() as td:
+            home = pathlib.Path(td) / "state"
+            self.run_code(
+                home,
+                "from core.eidos_rl import QLearningAgent;"
+                "a=QLearningAgent();"
+                "a.learn('seen','open-settings',8.0,'next',node_names='gear,settings,window');"
+                "print('ok')",
+            )
+            choice = self.run_code(
+                home,
+                "from core.eidos_rl import QLearningAgent;"
+                "a=QLearningAgent();"
+                "print(a.best_action('unseen',['open-settings','other'],"
+                "node_names='gear,settings,panel'))",
+            )
+            self.assertEqual(choice, "open-settings")
+
     def test_persisted_learning_changes_fresh_process_best_action(self):
         with tempfile.TemporaryDirectory() as td:
             home = pathlib.Path(td) / "state"
