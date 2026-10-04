@@ -1,0 +1,71 @@
+name: chroma-integration
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: chroma-integration-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  official-client-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pinned Chroma
+        run: python -m pip install "chromadb==1.5.9"
+      - name: Start isolated first-party server
+        env:
+          HOME: ${{ runner.temp }}/home
+          EIDOS_CHROMA_PORT: "18767"
+        run: |
+          mkdir -p "$HOME" reports
+          python core/eidos_chroma_server.py --host 127.0.0.1 --port 18767 >reports/server.log 2>&1 &
+          echo $! > reports/server.pid
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:18767/api/v1/heartbeat >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat reports/server.log
+          exit 1
+      - name: Test official HttpClient compatibility
+        continue-on-error: true
+        id: official
+        run: |
+          set -o pipefail
+          python - <<'PY' 2>&1 | tee reports/official-client.log
+          import chromadb
+          client=chromadb.HttpClient(host="127.0.0.1",port=18767)
+          print("heartbeat",client.heartbeat())
+          col=client.get_or_create_collection("eidos_ci")
+          col.upsert(ids=["a"],embeddings=[[1.0,0.0]],documents=["alpha"])
+          print("count",col.count())
+          print("query",col.query(query_embeddings=[[1.0,0.0]],n_results=1)["ids"])
+          PY
+      - name: Record compatibility verdict
+        env:
+          OFFICIAL_OUTCOME: ${{ steps.official.outcome }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          python - <<'PY'
+          import json,os,pathlib
+          pathlib.Path("reports/verdict.json").write_text(json.dumps({
+            "commit":os.environ["COMMIT_SHA"],
+            "chromadb":"1.5.9",
+            "official_http_client_against_first_party_server":os.environ["OFFICIAL_OUTCOME"],
+            "interpretation":"success means protocol-compatible; failure means the custom server must not be advertised as chromadb.HttpClient compatible"
+          },indent=2))
+          PY
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chroma-integration-${{ github.sha }}
+          path: reports/
+          retention-days: 7
+          if-no-files-found: error
