@@ -16,7 +16,7 @@ Features:
 Uso:
     from core.extension_intelligence import get_extension_intelligence
     ei = get_extension_intelligence()
-    ei.analyze_workspace("/home/ser/EIDOS")
+    ei.analyze_workspace("~/EIDOS")
     ei.auto_install()
     ei.install("rust-lang.rust-analyzer")
     ei.uninstall("ms-python.isort")

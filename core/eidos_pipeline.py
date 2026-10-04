@@ -8,7 +8,7 @@ NO es un mega-orquestador. Es el pegamento que faltaba (~170 líneas).
 
 Uso:
     python3 -m core.eidos_pipeline "investiga nginx, clónalo y compílalo"
-    python3 -m core.eidos_pipeline "estudia el directorio /home/ser/MIS PROGRAMAS/blender"
+    python3 -m core.eidos_pipeline "estudia el directorio ~/MIS PROGRAMAS/blender"
     eidos pipeline "crea un canal de telegram sobre seguridad"
 """
 from __future__ import annotations

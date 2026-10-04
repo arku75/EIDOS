@@ -2,7 +2,7 @@
 core/eidos_metaclaw_bridge.py — Puente EIDOS ↔ MetaClaw [S88 CARNE]
 
 MetaClaw: Meta-aprendizaje RL con GRPO, skill evolution, detección de idle.
-Ubicación: /home/ser/claws_analysis/MetaClaw-main/
+Ubicación: ~/claws_analysis/MetaClaw-main/
 
 Este bridge integra SIN requerir Tinker/MinT (sin API keys):
   1. SkillManager → skills Markdown que EIDOS crea/evoluciona autónomamente

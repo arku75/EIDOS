@@ -3,7 +3,7 @@ EIDOS core/octoclaw_bridge.py — Puente OctoClaw ↔ EIDOS + HybridRouter
 =======================================================================
 v2.0 — integración completa: HybridRouter = SmartRouter (15D) + OctoClaw features
 
-OctoClaw vive en /home/ser/EIDOS/external/octoclaw/lib/.
+OctoClaw vive en $EIDOS_SOURCE_ROOT/external/octoclaw/lib/.
 Este bridge:
 - Configura WORKSPACE=EIDOS_DIR antes de importar
 - Expone HybridRouter: decide el modelo Ollama óptimo para cada tarea
