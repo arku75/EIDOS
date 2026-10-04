@@ -134,6 +134,8 @@ jobs:
             command: PYTHONPATH=. python -m unittest -v tests.test_colony_effect_reputation
           - name: hardware-validation
             command: PYTHONPATH=. python -m unittest -v tests.test_hardware_validation
+          - name: config
+            command: PYTHONPATH=. python -m unittest -v tests.test_config_loader
 
     steps:
       - uses: actions/checkout@v4
