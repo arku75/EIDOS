@@ -126,3 +126,23 @@ Block 10 contract:
 - OperationModeManager starts in PLAN, fail-closed.
 - PLAN+EDIT grants operational write/execute permissions but never bypasses constitution, ToolGuard, scope or operator authorization.
 - Capability availability is distinct from authority to use it.
+
+
+## Final evidence matrix
+
+| Area | Current public evidence | Boundary |
+|---|---|---|
+| Install/packaging | clean-install CI contracts | full private runtime startup remains separate |
+| Causal action loop | proposal provenance + execution bracket + independent effect verification tests | dispatch alone is never success |
+| Colony/characters | lifecycle, inheritance and effect-linked reputation tests | inheritance is not mastery |
+| Memory/learning | positive RL restart persistence + negative Antibiblioteca + future-choice change | storage alone is not learning |
+| Fly/plasticity | five-seed synthetic benchmark + shuffled controls + pruning mutation tests | no biological-equivalence or x10 claim |
+| Unified CLI | no-arg/cli convergence + Runtime Hub capability catalog gate | legacy modes remain explicit |
+| Body/actuators | X11 selection tests + Wayland fail-closed + USB HID retained | physical HID/Wayland requires authorized HIL |
+| Self-evolution | isolated staging, path confinement, source-drift rejection, regression suite | public suite is not private held-out proof |
+| Security/authority | PLAN default + PLAN+EDIT non-bypass contract | capability is not authority |
+| Documentation | README/architecture/status reconciled to tested contracts | dated/private runtime facts remain snapshots |
+
+### Consolidation closure rule
+
+A block is closed only against an exact repository HEAD whose required project-owned workflows complete successfully. A cancelled workflow caused by a newer push is not counted as a failure, but also is not counted as final verification for the superseded SHA.
