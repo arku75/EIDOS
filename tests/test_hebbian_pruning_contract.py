@@ -39,6 +39,25 @@ print(json.dumps({"reported":r["edges_pruned"],"left":left}))
             self.assertGreaterEqual(out["reported"], 1)
             self.assertEqual(out["left"], 1)
 
+    def test_null_source_orphan_is_not_silently_exempt(self):
+        with tempfile.TemporaryDirectory() as td:
+            code = r"""
+import json
+from core.eidos_hebbian_pruning import HebbianPruner, BRAIN_DB
+from core.db import get_conn
+p=HebbianPruner(); c=get_conn(BRAIN_DB)
+c.execute("CREATE TABLE IF NOT EXISTS knowledge_nodes(id TEXT PRIMARY KEY, concept TEXT, source TEXT)")
+c.execute("CREATE TABLE IF NOT EXISTS knowledge_edges(from_node TEXT, to_node TEXT, relation_type TEXT, strength REAL, PRIMARY KEY(from_node,to_node,relation_type))")
+c.execute("INSERT OR REPLACE INTO knowledge_nodes(id,concept,source) VALUES('null-source','n',NULL)")
+c.commit()
+r=p.prune(dry_run=False)
+left=c.execute("SELECT COUNT(*) FROM knowledge_nodes WHERE id='null-source'").fetchone()[0]
+print(json.dumps({"nodes_pruned":r["nodes_pruned"],"left":left}))
+"""
+            out = json.loads(self.run_code(pathlib.Path(td) / "state", code))
+            self.assertEqual(out["left"], 0)
+            self.assertGreaterEqual(out["nodes_pruned"], 1)
+
     def test_real_prune_reports_and_removes_orphan_nodes(self):
         with tempfile.TemporaryDirectory() as td:
             code = """
