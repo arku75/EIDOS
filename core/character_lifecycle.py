@@ -902,7 +902,7 @@ class CharacterLifecycleManager:
         Los hallazgos se guardan como knowledge nodes para que Colony los use.
         """
         import re, ast
-        eidos_dir = Path("/home/ser/EIDOS")
+        eidos_dir = Path(os.environ.get("EIDOS_ROOT", Path(__file__).resolve().parents[1])).expanduser().resolve()
         core_dir = eidos_dir / "core"
         if not core_dir.exists():
             return 0
