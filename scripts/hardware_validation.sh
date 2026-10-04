@@ -5,6 +5,8 @@ set -euo pipefail
 # Read-only by default. Use --active only for explicitly permitted active checks.
 
 MODE="dry"
+EIDOS_ROOT="${EIDOS_ROOT:-$HOME/EIDOS-SANEADO}"
+EIDOS_HOME="${EIDOS_HOME:-$HOME/.eidos}"
 if [[ "${1:-}" == "--active" ]]; then
   MODE="active"
 fi
@@ -29,9 +31,11 @@ fi
 if have nvidia-smi; then
   say "gpu:"
   nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader || true
+  say "cuda_driver=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -n1 || true)"
 else
   say "gpu=nvidia-smi unavailable"
 fi
+if have nvcc; then say "cuda_toolkit=$(nvcc --version | tail -n1)"; else say "cuda_toolkit=nvcc unavailable"; fi
 
 if have free; then
   say "memory:"
@@ -43,7 +47,7 @@ if have df; then
   df -h / /home 2>/dev/null || true
 fi
 
-for cmd in ollama llama-cli llama-server xdotool wmctrl scrot tesseract chromium google-chrome playwright; do
+for cmd in ollama llama-cli llama-server xdotool ydotool wtype grim spectacle gnome-screenshot wmctrl scrot tesseract chromium google-chrome playwright; do
   if have "$cmd"; then
     say "tool:$cmd=$(command -v "$cmd")"
   else
@@ -52,7 +56,7 @@ for cmd in ollama llama-cli llama-server xdotool wmctrl scrot tesseract chromium
 done
 
 say "paths:"
-for path in   "/home/ser/EIDOS"   "/home/ser/EIDOS-SANEADO"   "$HOME/.eidos"; do
+for path in "$EIDOS_ROOT" "$EIDOS_HOME"; do
   if [[ -e "$path" ]]; then
     say "  present $path"
   else
@@ -62,7 +66,7 @@ done
 
 say "ports:"
 if have ss; then
-  for port in 8001 8003 8004 8080 8766 8767 11434; do
+  for port in 8001 8003 8004 8080 8767 11434 18003 18789 18790; do
     if ss -ltn 2>/dev/null | awk '{print $4}' | grep -Eq "[:.]$port$"; then
       say "  listening $port"
     else
@@ -73,6 +77,20 @@ else
   say "  ss unavailable"
 fi
 
+say "permissions:"
+for path in "$EIDOS_ROOT" "$EIDOS_HOME"; do
+  if [[ -e "$path" ]]; then
+    stat -c '  %a %U:%G %n' "$path" 2>/dev/null || true
+  fi
+done
+
+say "accessibility:"
+if have gdbus; then
+  gdbus call --session --dest org.a11y.Bus --object-path /org/a11y/bus --method org.a11y.Bus.GetAddress 2>/dev/null || say "  at-spi bus unavailable"
+else
+  say "  gdbus unavailable"
+fi
+
 say "services:"
 if have systemctl; then
   systemctl --user --no-pager --plain --type=service --all 2>/dev/null | grep -i eidos || true
@@ -81,8 +99,8 @@ else
 fi
 
 say "databases:"
-if [[ -d "$HOME/.eidos" ]]; then
-  find "$HOME/.eidos" -maxdepth 2 -type f \( -name '*.db' -o -name '*.sqlite' -o -name '*.sqlite3' \) -printf '  %p %s bytes\n' 2>/dev/null | sort || true
+if [[ -d "$EIDOS_HOME" ]]; then
+  find "$EIDOS_HOME" -maxdepth 2 -type f \( -name '*.db' -o -name '*.sqlite' -o -name '*.sqlite3' \) -printf '  %p %s bytes\n' 2>/dev/null | sort || true
 fi
 
 if [[ "$MODE" != "active" ]]; then
