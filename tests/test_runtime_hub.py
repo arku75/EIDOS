@@ -14,6 +14,15 @@ class TestRuntimeHub(unittest.TestCase):
             self.assertIn(name, components)
             self.assertTrue(components[name]["available"], name)
 
+    def test_capability_catalog_distinguishes_existence_from_wiring(self):
+        catalog = self.hub.capability_catalog()
+        self.assertIn("tools", catalog)
+        self.assertIn("skills", catalog)
+        self.assertIn(catalog["tools"]["state"], {"EXISTS", "UNAVAILABLE"})
+        self.assertNotEqual(catalog["tools"]["state"], "MASTERED")
+        self.assertEqual(catalog["world_effect_verification"]["state"], "WIRED")
+        self.assertEqual(catalog["causal_reuse"]["state"], "WIRED")
+
     def test_snapshot_is_non_executing(self):
         snapshot = self.hub.snapshot()
         self.assertFalse(snapshot["safety"]["executes_actions"])
