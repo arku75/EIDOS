@@ -172,6 +172,9 @@ jobs:
           eidos-acceptance-zero-llm learn > /tmp/eidos-zero-llm-learn.json
           eidos-acceptance-zero-llm verify > /tmp/eidos-zero-llm-verify.json
           grep -q '"effect_verified": true' /tmp/eidos-zero-llm-learn.json
+          grep -q '"negative_control_rejected": true' /tmp/eidos-zero-llm-learn.json
+          grep -q '"colony_routing": \["colony_coder", "colony_analyst"\]' /tmp/eidos-zero-llm-learn.json
+          grep -q '"colony_routing_persisted": \["colony_coder", "colony_analyst"\]' /tmp/eidos-zero-llm-verify.json
           grep -q '"llm_modules_loaded": false' /tmp/eidos-zero-llm-verify.json
 
       - name: Record install continuity and checksums
