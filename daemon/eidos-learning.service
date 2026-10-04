@@ -1,23 +1,22 @@
 [Unit]
-Description=EIDOS Learning Daemon - Aprendizaje Continuo 24/7
-After=network.target
+Description=EIDOS Learning Daemon
+After=network-online.target
+Wants=network-online.target
 
+# Portable template. Replace EIDOS_ROOT and EIDOS_VENV in a host-local copy
+# before installing under /etc/systemd/system. Do not commit host-specific paths.
 [Service]
 Type=simple
-User=ser
-WorkingDirectory=/home/ser/EIDOS
-ExecStart=/usr/bin/python3 /home/ser/EIDOS/eidos_learning_daemon.py
-Restart=always
+WorkingDirectory=EIDOS_ROOT
+ExecStart=EIDOS_VENV/bin/python EIDOS_ROOT/daemon/eidos_learning_daemon.py
+Restart=on-failure
 RestartSec=10
-StandardOutput=append:/home/ser/.eidos/logs/learning_daemon.log
-StandardError=append:/home/ser/.eidos/logs/learning_daemon_error.log
-
-# Variables de entorno
-Environment="PYTHONUNBUFFERED=1"
-
-# Seguridad
+Environment=PYTHONUNBUFFERED=1
 PrivateTmp=true
 NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.eidos
 
 [Install]
 WantedBy=multi-user.target
