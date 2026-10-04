@@ -43,6 +43,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Union
 import logging
 from core.db import get_conn
+from core.self_edit_lab import run_safe_regression_suite
 
 log = logging.getLogger("eidos.staging")
 
@@ -61,6 +62,20 @@ IMMUTABLE_FILES = [
     "core/ram_guardian.py",  # Protección de RAM
     "core/eidos_trust_model.py",  # Seguridad
 ]
+
+
+def _repo_relative_path(file_path: Union[str, Path]) -> Path:
+    """Normalize a requested source path and reject any escape from EIDOS_ROOT."""
+    root = EIDOS_ROOT.resolve()
+    raw = Path(file_path).expanduser()
+    candidate = raw.resolve() if raw.is_absolute() else (root / raw).resolve()
+    try:
+        relative = candidate.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(f"path escapes EIDOS root: {file_path}") from exc
+    if any(part == ".." for part in relative.parts):
+        raise ValueError(f"unsafe relative path: {file_path}")
+    return relative
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -243,53 +258,21 @@ class StagingEnvironment:
             return False
     
     def run_tests_in_staging(self) -> tuple[bool, str, int, int]:
-        """
-        Ejecuta tests en el entorno de staging.
-        
-        Returns:
-            (success, output, passed, failed)
-        """
-        log.info("Ejecutando tests en staging...")
-        
+        """Run the canonical public regression gate inside the staging checkout."""
+        log.info("Ejecutando gate de regresión en staging...")
         try:
-            # Cambiar a directorio staging y ejecutar tests
-            result = subprocess.run(
-                [sys.executable, "tests/test_eidos_suite.py"],
-                cwd=self.staging_root,
-                capture_output=True,
-                text=True,
-                timeout=120  # 2 minutos máximo
+            result = run_safe_regression_suite(self.staging_root, timeout=180)
+            output = (result.stdout or "") + "\n" + (result.stderr or "")
+            failed = 0 if result.passed else 1
+            log.info(
+                "Gate completado: passed=%s tests=%s",
+                result.passed,
+                result.tests_run,
             )
-            
-            output = result.stdout + "\n" + result.stderr
-            
-            # Parsear resultados
-            passed = 0
-            failed = 0
-            
-            for line in output.split('\n'):
-                if 'tests in' in line and 's' in line:
-                    # Línea típica: "Ran 36 tests in 0.823s"
-                    parts = line.split()
-                    if len(parts) >= 2:
-                        try:
-                            passed = int(parts[1])
-                        except Exception:
-                            pass  # error no crítico, continuar
-                if 'FAILED' in line or 'errors' in line.lower():
-                    failed += 1
-            
-            success = result.returncode == 0
-            
-            log.info(f"Tests completados: {passed} pasaron, {failed} fallaron")
-            return success, output, passed, failed
-            
-        except subprocess.TimeoutExpired:
-            log.error("Tests timeout (2 min)")
-            return False, "Timeout", 0, 0
+            return result.passed, output, result.tests_run, failed
         except Exception as e:
-            log.error(f"Error ejecutando tests: {e}")
-            return False, str(e), 0, 0
+            log.error(f"Error ejecutando gate en staging: {e}")
+            return False, str(e), 0, 1
     
     def destroy_staging(self):
         """Destruye el entorno de staging (para limpieza)."""
@@ -323,15 +306,30 @@ class StagingSystem:
         
         Este es el método principal del sistema de staging.
         """
-        change_id = f"staging_{int(datetime.now().timestamp())}_{hashlib.md5(file_path.encode()).hexdigest()[:8]}"
-        
+        try:
+            relative_path = _repo_relative_path(file_path)
+        except ValueError as exc:
+            return StagingResult(
+                success=False,
+                change_id="invalid_path",
+                file_path=str(relative_path),
+                description=description,
+                error=str(exc),
+            )
+
+        change_id = (
+            f"staging_{int(datetime.now().timestamp())}_"
+            f"{hashlib.md5(str(relative_path).encode()).hexdigest()[:8]}"
+        )
+
         log.info(f"=== STAGING TEST: {change_id} ===")
-        log.info(f"Archivo: {file_path}")
+        log.info(f"Archivo: {relative_path}")
         log.info(f"Descripción: {description}")
-        
-        # 1. Crear staging limpio
+
+        # 1. Crear staging limpio y medir baseline antes de tocarlo.
         staging_root = self.env.create_staging_clone(fresh=True)
-        staging_file = staging_root / file_path
+        baseline_ok, baseline_output, baseline_passed, baseline_failed = self.env.run_tests_in_staging()
+        staging_file = staging_root / relative_path
         
         # 2. Verificar que archivo existe en staging
         if not staging_file.exists():
@@ -361,7 +359,7 @@ class StagingSystem:
             new_code=new_code,
             diff=diff,
             staging_path=str(staging_file),
-            production_path=str(EIDOS_ROOT / file_path),
+            production_path=str((EIDOS_ROOT / relative_path).resolve()),
             status="testing"
         )
         
@@ -378,12 +376,23 @@ class StagingSystem:
                 error="No se pudo aplicar cambio en staging"
             )
         
-        # 5. Ejecutar tests
+        # 5. Ejecutar el mismo gate después de aplicar el candidato.
         success, output, passed, failed = self.env.run_tests_in_staging()
-        
+
+        # Baseline rota + candidato verde = mejora válida.
+        # Baseline verde + candidato debe permanecer verde (no regresión).
+        non_regression = success and failed == 0
+        if baseline_ok and not non_regression:
+            output = (
+                "BASELINE PASSED but candidate regressed\n"
+                + baseline_output
+                + "\n--- CANDIDATE ---\n"
+                + output
+            )
+
         # 6. Evaluar resultado
         result = StagingResult(
-            success=success and failed == 0,
+            success=non_regression,
             change_id=change_id,
             file_path=str(file_path),
             description=description,
@@ -391,7 +400,7 @@ class StagingSystem:
             tests_failed=failed,
             test_output=output,
             staging_path=str(staging_file),
-            can_promote=(success and failed == 0)
+            can_promote=non_regression
         )
         
         if not result.success:
@@ -443,10 +452,14 @@ class StagingSystem:
         file_path = row[1]
         original_code = row[4]
         new_code = row[5]
-        production_file = Path(row[8])  # production_path
-        
-        # Verificar que es seguro
-        relative = production_file.relative_to(EIDOS_ROOT)
+        production_file = Path(row[8]).expanduser().resolve()  # production_path
+
+        # Verificar que sigue dentro del árbol real.
+        try:
+            relative = production_file.relative_to(EIDOS_ROOT.resolve())
+        except ValueError:
+            log.error("Ruta de producción fuera de EIDOS_ROOT")
+            return False
         if str(relative) in IMMUTABLE_FILES:
             log.error("No se puede modificar archivo protegido")
             return False
