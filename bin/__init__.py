@@ -1,0 +1,1 @@
+"""Installable EIDOS command modules."""
