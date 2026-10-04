@@ -115,9 +115,14 @@ jobs:
           eidos-acceptance-zero-llm verify | tee /tmp/eidos-zero-llm-verify.json
 
           grep -q '"effect_verified": true' /tmp/eidos-zero-llm-learn.json
+          grep -q '"negative_control_credited": false' /tmp/eidos-zero-llm-learn.json
+          grep -q '"negative_control_rejected": true' /tmp/eidos-zero-llm-learn.json
+          grep -q '"colony_routing": \["colony_coder", "colony_analyst"\]' /tmp/eidos-zero-llm-learn.json
           grep -q '"phase": "verify-after-restart"' /tmp/eidos-zero-llm-verify.json
           grep -q '"fixture_effect_persisted": true' /tmp/eidos-zero-llm-verify.json
           grep -q '"self_edit_source_unchanged": true' /tmp/eidos-zero-llm-verify.json
+          grep -q '"colony_routing_persisted": \["colony_coder", "colony_analyst"\]' /tmp/eidos-zero-llm-verify.json
+          grep -q '"colony_verified_outcomes": 5' /tmp/eidos-zero-llm-verify.json
           grep -q '"llm_modules_loaded": false' /tmp/eidos-zero-llm-verify.json
 
       - name: Verify headless fail-closed and DB thread isolation
