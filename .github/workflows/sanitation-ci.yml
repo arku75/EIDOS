@@ -28,6 +28,8 @@ jobs:
             core/runtime_hub.py \
             core/autonomy_benchmark.py \
             core/self_edit_lab.py \
+            core/zero_llm_acceptance.py \
+            core/db.py \
             bin/eidos_agents_terminal.py
           python -m py_compile \
             tests/test_fly_lab.py \
@@ -36,7 +38,8 @@ jobs:
             tests/test_autonomy_benchmark.py \
             tests/test_self_edit_lab.py \
             tests/test_self_edit_guardrails.py \
-            tests/test_colony_effect_reputation.py
+            tests/test_colony_effect_reputation.py \
+            tests/test_db_thread_contract.py
 
       - name: Run pure integration tests
         run: |
@@ -47,7 +50,8 @@ jobs:
             tests.test_autonomy_benchmark \
             tests.test_self_edit_lab \
             tests.test_self_edit_guardrails \
-            tests.test_colony_effect_reputation
+            tests.test_colony_effect_reputation \
+            tests.test_db_thread_contract
 
       - name: Run autonomy benchmark
         run: |
@@ -125,17 +129,20 @@ jobs:
         run: |
           python -m pip install --dry-run --ignore-installed --report reports/dependency-resolution.json -r requirements.txt
 
-      - name: Verify installable gateway package and console scripts
+      - name: Verify installable EIDOS core and console scripts
         run: |
-          # Install the gateway distribution with its declared dependencies in
-          # the same venv; full-runtime requirements remain resolution-only.
+          # Base install contains the model-independent EIDOS core. Heavy ML,
+          # browser and hardware stacks remain optional capability layers.
           python -m pip install .
           python -m pip check
-          python -m pip freeze > reports/gateway-installed.txt
+          python -m pip freeze > reports/eidos-core-installed.txt
           export EIDOS_HOME="${RUNNER_TEMP}/eidos-install-state"
           cd "${RUNNER_TEMP}"
+
+          eidos --help >/tmp/eidos-help.txt
           eidos-gateway --help >/tmp/eidos-gateway-help.txt
           eidos-config --help >/tmp/eidos-config-help.txt
+          grep -q "EIDOS CASCADE" /tmp/eidos-help.txt
           grep -q "EIDOS Gateway CLI" /tmp/eidos-gateway-help.txt
           grep -q "EIDOS Config CLI" /tmp/eidos-config-help.txt
           eidos-config init
@@ -143,10 +150,11 @@ jobs:
           test "$(eidos-config get gateway.port)" = "19000"
           test -s "${EIDOS_HOME}/config.yaml"
 
-          # Negative control: packaging must not expose unrelated first-party
-          # runtime packages as part of the gateway distribution.
+          # The installed distribution must expose the core and shared CLI,
+          # while heavyweight model libraries remain optional.
           python - <<'PY'
           from importlib.metadata import distribution
+          from importlib.util import find_spec
 
           top_level = {
               line.strip()
@@ -155,8 +163,16 @@ jobs:
               .splitlines()
               if line.strip()
           }
-          assert top_level == {"cli", "config", "gateway"}, top_level
+          required = {"core", "bin", "cli", "config", "gateway", "eidos"}
+          assert required.issubset(top_level), (required, top_level)
+          assert find_spec("torch") is None
+          assert find_spec("transformers") is None
           PY
+
+          eidos-acceptance-zero-llm learn > /tmp/eidos-zero-llm-learn.json
+          eidos-acceptance-zero-llm verify > /tmp/eidos-zero-llm-verify.json
+          grep -q '"effect_verified": true' /tmp/eidos-zero-llm-learn.json
+          grep -q '"llm_modules_loaded": false' /tmp/eidos-zero-llm-verify.json
 
       - name: Record install continuity and checksums
         if: always()
@@ -172,7 +188,7 @@ jobs:
               "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
               "runner": os.environ["RUNNER_NAME"],
               "python": platform.python_version(),
-              "scope": "gateway installed; full runtime dependency resolution only",
+              "scope": "installable model-independent EIDOS core; heavy optional runtime dependencies resolution-only",
               "restore": "checkout head; recreate venv; reuse pip cache keyed by requirements/setup; verify report hashes",
               "files": [],
           }
