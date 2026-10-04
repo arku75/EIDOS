@@ -29,6 +29,10 @@ class SharedAgentsTerminal(cmd.Cmd):
         """status -- show integrated component/safety snapshot"""
         print(json.dumps(self.hub.snapshot(), indent=2, default=str))
 
+    def do_capabilities(self, arg: str) -> None:
+        """capabilities -- one evidence-aware catalog shared with Runtime Hub"""
+        print(json.dumps(self.hub.capability_catalog(), indent=2, default=str))
+
     def do_components(self, arg: str) -> None:
         """components -- list World/Actions/Characters/Neural/Fly components"""
         print(json.dumps(self.hub.components(), indent=2))
