@@ -21,63 +21,7 @@ jobs:
       fail-fast: false
       max-parallel: 56
       matrix:
-        shard:
-          - 0
-          - 1
-          - 2
-          - 3
-          - 4
-          - 5
-          - 6
-          - 7
-          - 8
-          - 9
-          - 10
-          - 11
-          - 12
-          - 13
-          - 14
-          - 15
-          - 16
-          - 17
-          - 18
-          - 19
-          - 20
-          - 21
-          - 22
-          - 23
-          - 24
-          - 25
-          - 26
-          - 27
-          - 28
-          - 29
-          - 30
-          - 31
-          - 32
-          - 33
-          - 34
-          - 35
-          - 36
-          - 37
-          - 38
-          - 39
-          - 40
-          - 41
-          - 42
-          - 43
-          - 44
-          - 45
-          - 46
-          - 47
-          - 48
-          - 49
-          - 50
-          - 51
-          - 52
-          - 53
-          - 54
-          - 55
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55]
 
     steps:
       - uses: actions/checkout@v4
@@ -99,7 +43,6 @@ jobs:
 
           shard = int(os.environ["SHARD"])
           total = int(os.environ["TOTAL_SHARDS"])
-
           roots = [
               Path("core"), Path("bin"), Path("cli"), Path("config"),
               Path("gateway"), Path("terminal"), Path("tests"),
@@ -131,8 +74,8 @@ jobs:
 
           for path in assigned:
               try:
-                  src = path.read_text(encoding="utf-8", errors="strict")
-                  ast.parse(src, filename=str(path))
+                  source = path.read_text(encoding="utf-8", errors="strict")
+                  ast.parse(source, filename=str(path))
                   report["ast_ok"] += 1
                   py_compile.compile(str(path), doraise=True)
                   report["compiled"] += 1
@@ -145,7 +88,6 @@ jobs:
           out = Path("reports") / f"python-shard-{shard:02d}.json"
           out.write_text(json.dumps(report, indent=2), encoding="utf-8")
           print(json.dumps(report, indent=2))
-
           if report["errors"]:
               raise SystemExit(1)
           PY
@@ -182,15 +124,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
       - name: Run subsystem test
         shell: bash
         run: |
           mkdir -p reports
           set -o pipefail
           ( ${{ matrix.command }} ) 2>&1 | tee "reports/${{ matrix.name }}.log"
+
       - name: Upload subsystem report
         if: always()
         uses: actions/upload-artifact@v4
@@ -231,19 +176,25 @@ jobs:
           xdotool type --delay 20 'EIDOS_KEYBOARD_EFFECT_OK'
           xdotool key Return
           wait "$XPID"
+
           cp /tmp/eidos-fanout-typed.txt reports/typed.txt
-          grep -q '^EIDOS_KEYBOARD_EFFECT_OK
+          grep -q '^EIDOS_KEYBOARD_EFFECT_OK$' reports/typed.txt
+
       - name: Test local headless browser
         run: |
           python -m http.server 8765 --bind 127.0.0.1 --directory tests/fixtures/browser >reports/http.log 2>&1 &
           HPID=$!
           sleep 1
+
           BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$BROWSER"
-          "$BROWSER" --headless --no-sandbox --disable-gpu --dump-dom http://127.0.0.1:8765/index.html > reports/browser-dom.html
+
+          "$BROWSER" --headless --no-sandbox --disable-gpu             --dump-dom http://127.0.0.1:8765/index.html > reports/browser-dom.html
           grep -q EIDOS_BROWSER_OK reports/browser-dom.html
-          "$BROWSER" --headless --no-sandbox --disable-gpu --screenshot=reports/browser.png http://127.0.0.1:8765/index.html
+
+          "$BROWSER" --headless --no-sandbox --disable-gpu             --screenshot=reports/browser.png http://127.0.0.1:8765/index.html
           test -s reports/browser.png
+
           kill "$HPID" || true
 
       - name: Upload browser/desktop evidence
@@ -262,6 +213,7 @@ jobs:
       - python-shards
       - subsystem-tests
       - browser-desktop
+
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -272,84 +224,23 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import json, hashlib
+          import hashlib, json
 
           base = Path("all-artifacts")
           items = []
-          for p in sorted(base.rglob("*")):
-              if p.is_file():
-                  data = p.read_bytes()
+          for path in sorted(base.rglob("*")):
+              if path.is_file():
+                  data = path.read_bytes()
                   items.append({
-                      "path": str(p),
+                      "path": str(path),
                       "bytes": len(data),
                       "sha256": hashlib.sha256(data).hexdigest(),
                   })
-          Path("fanout-manifest.json").write_text(json.dumps(items, indent=2), encoding="utf-8")
-          print(f"artifact files: {len(items)}")
-          PY
 
-      - name: Upload complete fanout bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: eidos-fanout-bundle
-          path: |
-            all-artifacts/
-            fanout-manifest.json
-          retention-days: 7
- reports/typed.txt
-
-      - name: Test local headless browser
-        run: |
-          python -m http.server 8765 --bind 127.0.0.1 --directory tests/fixtures/browser >reports/http.log 2>&1 &
-          HPID=$!
-          sleep 1
-          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
-          test -n "$BROWSER"
-          "$BROWSER" --headless --no-sandbox --disable-gpu --dump-dom http://127.0.0.1:8765/index.html > reports/browser-dom.html
-          grep -q EIDOS_BROWSER_OK reports/browser-dom.html
-          "$BROWSER" --headless --no-sandbox --disable-gpu --screenshot=reports/browser.png http://127.0.0.1:8765/index.html
-          test -s reports/browser.png
-          kill "$HPID" || true
-
-      - name: Upload browser/desktop evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: browser-desktop-evidence
-          path: reports/
-          retention-days: 7
-
-  aggregate:
-    name: aggregate-reports
-    runs-on: ubuntu-latest
-    if: always()
-    needs:
-      - python-shards
-      - subsystem-tests
-      - browser-desktop
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: all-artifacts
-          merge-multiple: false
-
-      - name: Build manifest
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import json, hashlib
-
-          base = Path("all-artifacts")
-          items = []
-          for p in sorted(base.rglob("*")):
-              if p.is_file():
-                  data = p.read_bytes()
-                  items.append({
-                      "path": str(p),
-                      "bytes": len(data),
-                      "sha256": hashlib.sha256(data).hexdigest(),
-                  })
-          Path("fanout-manifest.json").write_text(json.dumps(items, indent=2), encoding="utf-8")
+          Path("fanout-manifest.json").write_text(
+              json.dumps(items, indent=2),
+              encoding="utf-8",
+          )
           print(f"artifact files: {len(items)}")
           PY
 
