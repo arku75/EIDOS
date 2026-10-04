@@ -128,6 +128,7 @@ def stage_candidate(source_path: str | Path, candidate: str) -> tuple[Path, Edit
 # on a clean public checkout. Hardware/private-state tests stay outside this list.
 SAFE_REGRESSION_MODULES = (
     "tests.test_self_edit_lab",
+    "tests.test_self_edit_guardrails",
     "tests.test_fly_lab",
     "tests.test_runtime_hub",
     "tests.test_autonomy_benchmark",
