@@ -43,13 +43,13 @@ def load_eidos_dotenv(
     Carga archivos .env de EIDOS.
     
     Orden de carga:
-    1. ~/.eidos/.env (usuario)
+    1. EIDOS_HOME/.env (usuario; ~/.eidos por defecto)
     2. ./.env (proyecto, fallback)
     """
     loaded: List[Path] = []
     
     if eidos_home is None:
-        eidos_home = Path.home() / ".eidos"
+        eidos_home = get_eidos_home()
     
     user_env = eidos_home / ".env"
     

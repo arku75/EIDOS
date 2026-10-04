@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
@@ -107,23 +110,38 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            setup.py
+      - name: Create reusable job environment
+        run: |
+          python -m venv "${RUNNER_TEMP}/eidos-install-venv"
+          echo "${RUNNER_TEMP}/eidos-install-venv/bin" >> "$GITHUB_PATH"
+          mkdir -p reports
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
       - name: Resolve public requirements without installing
         run: |
-          python -m pip install --dry-run --ignore-installed -r requirements.txt
+          python -m pip install --dry-run --ignore-installed --report reports/dependency-resolution.json -r requirements.txt
 
       - name: Verify installable gateway package and console scripts
         run: |
-          # Packaging smoke test: do not install the full dependency graph here.
-          # The previous step owns dependency resolution; this step proves that
-          # setup.py exposes a self-contained gateway/config package surface.
-          python -m pip install --no-deps .
+          # Install the gateway distribution with its declared dependencies in
+          # the same venv; full-runtime requirements remain resolution-only.
+          python -m pip install .
+          python -m pip check
+          python -m pip freeze > reports/gateway-installed.txt
+          export EIDOS_HOME="${RUNNER_TEMP}/eidos-install-state"
           cd "${RUNNER_TEMP}"
           eidos-gateway --help >/tmp/eidos-gateway-help.txt
           eidos-config --help >/tmp/eidos-config-help.txt
           grep -q "EIDOS Gateway CLI" /tmp/eidos-gateway-help.txt
           grep -q "EIDOS Config CLI" /tmp/eidos-config-help.txt
+          eidos-config init
+          eidos-config set gateway.port 19000
+          test "$(eidos-config get gateway.port)" = "19000"
+          test -s "${EIDOS_HOME}/config.yaml"
 
           # Negative control: packaging must not expose unrelated first-party
           # runtime packages as part of the gateway distribution.
@@ -139,3 +157,37 @@ jobs:
           }
           assert top_level == {"cli", "config", "gateway"}, top_level
           PY
+
+      - name: Record install continuity and checksums
+        if: always()
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, platform, subprocess
+          from pathlib import Path
+          reports = Path("reports")
+          reports.mkdir(exist_ok=True)
+          manifest = {
+              "head": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+              "run_id": os.environ["GITHUB_RUN_ID"],
+              "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+              "runner": os.environ["RUNNER_NAME"],
+              "python": platform.python_version(),
+              "scope": "gateway installed; full runtime dependency resolution only",
+              "restore": "checkout head; recreate venv; reuse pip cache keyed by requirements/setup; verify report hashes",
+              "files": [],
+          }
+          for path in sorted(reports.iterdir()):
+              if path.is_file() and path.name != "continuity.json":
+                  data = path.read_bytes()
+                  manifest["files"].append({"path": path.name, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()})
+          (reports / "continuity.json").write_text(json.dumps(manifest, indent=2))
+          PY
+
+      - name: Preserve install evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eidos-install-evidence
+          path: reports/
+          retention-days: 7
+          if-no-files-found: error

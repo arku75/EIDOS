@@ -20,3 +20,5 @@ terminates the license automatically.
 
 ---
 © 2026 SER. All Rights Reserved. EIDOS is proprietary & source-available (ESSL v1.0).
+
+| 2026-10-04 | OpenAI Codex with parallel review agents, authorized by SER | `config/loader.py`, `config/env_loader.py`, `tests/test_config_loader.py`, `.github/workflows/fanout-audit.yml`, `.github/workflows/sanitation-ci.yml`, `docs/CONSOLIDATION_STATUS.md` | Honor EIDOS_HOME for config/dotenv; reject existing YAML configuration when its parser is missing; add isolated round-trip/negative tests; install declared config test dependencies; preserve a single install-job venv, pip cache and seven-day checksummed evidence. Five-perspective file committee recorded in the continuity ledger. | Prevent unintended state access, repair deterministic CI failure and prove the installed configuration surface without claiming full-runtime installation. |

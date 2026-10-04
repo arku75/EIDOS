@@ -9,6 +9,8 @@ import re
 from pathlib import Path
 from typing import Dict, Any, Optional
 
+from .env_loader import get_eidos_home
+
 try:
     import yaml
     HAS_YAML = True
@@ -83,7 +85,7 @@ def get_config_path() -> Path:
     env_path = os.getenv("EIDOS_CONFIG")
     if env_path:
         return Path(env_path)
-    return Path.home() / ".eidos" / "config.yaml"
+    return get_eidos_home() / "config.yaml"
 
 def load_config(config_path: Optional[Path] = None) -> Dict[str, Any]:
     """
@@ -99,6 +101,9 @@ def load_config(config_path: Optional[Path] = None) -> Dict[str, Any]:
     
     config = copy.deepcopy(DEFAULT_CONFIG)
     
+    if config_path.exists() and not HAS_YAML:
+        raise ImportError("PyYAML requerido para cargar config existente")
+
     if HAS_YAML and config_path.exists():
         try:
             with open(config_path, encoding="utf-8") as f:

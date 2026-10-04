@@ -179,6 +179,13 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install declared configuration dependencies
+        if: matrix.name == 'config'
+        run: |
+          python -m venv "${RUNNER_TEMP}/eidos-config-venv"
+          "${RUNNER_TEMP}/eidos-config-venv/bin/python" -m pip install .
+          echo "${RUNNER_TEMP}/eidos-config-venv/bin" >> "$GITHUB_PATH"
+
       - name: Run subsystem test
         shell: bash
         run: |
