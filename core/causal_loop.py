@@ -223,8 +223,11 @@ def _act(element: Any, dry_run: bool) -> bool:
             if idle_ms > 300_000:  # 5 minutos sin actividad = SER ausente
                 log.warning("[BOM] SER ausente (%ds idle) → no actúo sin supervisión", idle_ms // 1000)
                 return False
-        except Exception:
-            pass  # si no podemos verificar, asumimos seguro y no actuamos
+        except Exception as exc:
+            # Fail closed: inability to establish operator presence is not
+            # evidence that a real GUI action is safe.
+            log.warning("[BOM] no pude verificar presencia de SER: %s → no actúo", exc)
+            return False
     # ── autoconcepto operativo: ¿tengo mano? mi mano es xdotool ──────────
     try:
         from core.body import hand_ok
