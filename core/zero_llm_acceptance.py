@@ -3,8 +3,8 @@
 This module is intentionally dependency-light and deterministic.  It proves that
 EIDOS can boot useful core machinery without importing or contacting an LLM,
 close one real controlled filesystem effect through Runtime Hub verification,
-persist RL learning, survive a fresh Python process, and validate a self-edit in
-staging without overwriting its source.
+persist RL learning, persist evidence-linked Colony routing across a fresh
+Python process, and validate a self-edit in staging without overwriting source.
 """
 from __future__ import annotations
 
@@ -52,9 +52,11 @@ def learn_phase() -> dict[str, Any]:
     home = _home()
     _assert_zero_llm_loaded()
 
+    from core.colony_community import ColonyCommunity
+    from core.colony_community import ColonyCommunity
     from core.eidos_rl import QLearningAgent
     from core.runtime_hub import EIDOSRuntimeHub
-    from core.self_edit_lab import stage_candidate
+    from core.self_edit_lab import assess_python_edit, stage_candidate
 
     _assert_zero_llm_loaded()
 
@@ -75,6 +77,37 @@ def learn_phase() -> dict[str, Any]:
         },
         observer="acceptance-observer",
     )
+    # Negative control: a changed world without a registered execution must
+    # never mint causal credit for a proposal.
+    control_before = hub.record_observation(
+        {
+            "ocr_full_text": "control before",
+            "window_title": "zero-llm-negative-control",
+            "regions": [],
+        },
+        observer="acceptance-observer",
+    )
+    control = hub.propose_action(
+        {"action": "write_fixture", "path": str(home / "never-executed.txt")},
+        source="acceptance-core",
+        expected_outcome="control after",
+    )
+    control_after = hub.record_observation(
+        {
+            "ocr_full_text": "control after",
+            "window_title": "zero-llm-negative-control",
+            "regions": [],
+        },
+        observer="acceptance-observer",
+    )
+    control_outcome = hub.verify_observations(
+        control,
+        control_before["observation_id"],
+        control_after["observation_id"],
+    )
+    assert control_outcome["observed_verified"] is True
+    assert control_outcome["credited_verified"] is False
+
     proposal = hub.propose_action(
         {"action": "write_fixture", "path": str(fixture)},
         source="acceptance-core",
@@ -112,6 +145,57 @@ def learn_phase() -> dict[str, Any]:
     q_value = rl.q_value_report(state).get(action, 0.0)
     assert q_value > 0.0
 
+    colony = object.__new__(ColonyCommunity)
+    colony.db_path = home / "colony-acceptance.db"
+    colony._current_session = "acceptance-learn"
+    colony._participants = {
+        "colony_coder": {
+            "agent_id": "colony_coder",
+            "name": "Coder",
+            "emoji": "C",
+        },
+        "colony_analyst": {
+            "agent_id": "colony_analyst",
+            "name": "Analyst",
+            "emoji": "A",
+        },
+    }
+    colony._message_handlers = []
+    colony._init_db()
+    semantic_order = ["colony_analyst", "colony_coder"]
+    assert colony._rank_responders_by_effect(semantic_order) == semantic_order
+
+    for index in range(5):
+        good = colony.record_verified_outcome(
+            "colony_coder",
+            True,
+            1.0,
+            reason="independently verified fixture effect",
+            proposal_id=f"{proposal['proposal_id']}-coder-{index}",
+            action_type="write_fixture",
+            evidence={
+                "evidence_source": "acceptance-observer",
+                "effect_verified": True,
+            },
+        )
+        bad = colony.record_verified_outcome(
+            "colony_analyst",
+            False,
+            1.0,
+            reason="independently verified control failure",
+            proposal_id=f"{proposal['proposal_id']}-analyst-{index}",
+            action_type="write_fixture",
+            evidence={
+                "evidence_source": "acceptance-observer",
+                "effect_verified": False,
+            },
+        )
+        assert good["success"] is True
+        assert bad["success"] is True
+
+    colony_routing = colony._rank_responders_by_effect(semantic_order)
+    assert colony_routing == ["colony_coder", "colony_analyst"]
+
     source = home / "self_edit_source.py"
     source.write_text("VALUE = 1\n", encoding="utf-8")
     staged, assessment = stage_candidate(source, "VALUE = 2\n")
@@ -119,6 +203,8 @@ def learn_phase() -> dict[str, Any]:
     assert source.read_text(encoding="utf-8") == "VALUE = 1\n"
     assert staged.read_text(encoding="utf-8") == "VALUE = 2\n"
     assert staged.resolve() != source.resolve()
+    unsafe = assess_python_edit("VALUE = 1\n", "VALUE = 1\neval('2+2')\n")
+    assert unsafe.accepted is False
 
     contract = {
         "phase": "learn",
@@ -129,6 +215,9 @@ def learn_phase() -> dict[str, Any]:
         "proposal_id": proposal["proposal_id"],
         "execution_id": execution["execution_id"],
         "effect_verified": outcome["credited_verified"],
+        "negative_control_credited": control_outcome["credited_verified"],
+        "colony_routing": colony_routing,
+        "colony_db": str(colony.db_path),
         "fixture": str(fixture),
         "self_edit_source": str(source),
         "runtime_components": len(snap["components"]),
@@ -167,6 +256,31 @@ def verify_phase() -> dict[str, Any]:
     source = Path(previous["self_edit_source"])
     assert source.read_text(encoding="utf-8") == "VALUE = 1\n"
 
+    restarted_colony = object.__new__(ColonyCommunity)
+    restarted_colony.db_path = Path(previous["colony_db"])
+    restarted_colony._current_session = "acceptance-restart"
+    restarted_colony._participants = {
+        "colony_coder": {
+            "agent_id": "colony_coder",
+            "name": "Coder",
+            "emoji": "C",
+        },
+        "colony_analyst": {
+            "agent_id": "colony_analyst",
+            "name": "Analyst",
+            "emoji": "A",
+        },
+    }
+    restarted_colony._message_handlers = []
+    restarted_colony._init_db()
+    persisted_routing = restarted_colony._rank_responders_by_effect(
+        ["colony_analyst", "colony_coder"]
+    )
+    assert persisted_routing == ["colony_coder", "colony_analyst"]
+    colony_stats = restarted_colony.get_agent_outcome_stats("colony_coder")
+    assert colony_stats["total_outcomes"] == 5
+    assert colony_stats["reputation_score"] > 0
+
     hub = EIDOSRuntimeHub()
     snap = hub.snapshot()
     assert snap["safety"]["executes_actions"] is False
@@ -177,6 +291,8 @@ def verify_phase() -> dict[str, Any]:
         "chosen_action": chosen,
         "fixture_effect_persisted": True,
         "self_edit_source_unchanged": True,
+        "colony_routing_persisted": persisted_routing,
+        "colony_verified_outcomes": colony_stats["total_outcomes"],
         "runtime_components": len(snap["components"]),
         "llm_modules_loaded": False,
     }
