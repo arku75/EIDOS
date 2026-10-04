@@ -62,6 +62,56 @@ class TestCausalLoopSafety(unittest.TestCase):
         self.assertLessEqual(result["reward"], 0)
         learn.assert_called_once()
 
+    def test_verified_failure_is_written_to_negative_memory(self):
+        fake_element = element()
+        fake_rl = MagicMock()
+        fake_rl.select_action.return_value = "click:safe button"
+        fake_rl.q_value_report.return_value = {"click:safe button": 1.0}
+        anti = MagicMock()
+        anti.rank_strategies.return_value = [("click:safe button", 1.0)]
+        with patch.object(causal_loop, "_perceive", side_effect=[
+                ("same", [fake_element]), ("same", [fake_element])
+             ]), \
+             patch.object(causal_loop, "_affordances",
+                          return_value=[("click:safe button", fake_element, "")]), \
+             patch.object(causal_loop, "_relocate", return_value=fake_element), \
+             patch.object(causal_loop, "_act", return_value=True), \
+             patch.object(causal_loop, "_learn"), \
+             patch("core.eidos_rl.get_rl_agent", return_value=fake_rl), \
+             patch("core.antibiblioteca.Antibiblioteca", return_value=anti), \
+             patch("core.body.hand_position", return_value=None), \
+             patch("time.sleep"):
+            result = causal_loop.step("goal", dry_run=False)
+        self.assertFalse(result["effect_verified"])
+        anti.record_failure.assert_called_once()
+        self.assertEqual(anti.record_failure.call_args.kwargs["evidence_source"], "causal-loop")
+
+    def test_negative_memory_can_override_rl_preference(self):
+        first = element()
+        second = types.SimpleNamespace(text="Other", x=30, y=40, from_sc=False)
+        fake_rl = MagicMock()
+        fake_rl.select_action.return_value = "click:safe button"
+        fake_rl.q_value_report.return_value = {
+            "click:safe button": 1.0,
+            "click:other": 0.8,
+        }
+        anti = MagicMock()
+        anti.rank_strategies.return_value = [
+            ("click:other", 0.8), ("click:safe button", 0.1)
+        ]
+        with patch.object(causal_loop, "_perceive", return_value=("state", [first, second])), \
+             patch.object(causal_loop, "_affordances", return_value=[
+                 ("click:safe button", first, "known"),
+                 ("click:other", second, "known"),
+             ]), \
+             patch.object(causal_loop, "_act", return_value=True), \
+             patch.object(causal_loop, "_learn"), \
+             patch("core.eidos_rl.get_rl_agent", return_value=fake_rl), \
+             patch("core.antibiblioteca.Antibiblioteca", return_value=anti), \
+             patch("core.body.hand_position", return_value=None):
+            result = causal_loop.step("goal", dry_run=True)
+        self.assertEqual(result["action"], "click:other")
+
     def test_body_check_exception_fails_closed_before_webpanel(self):
         proc = types.SimpleNamespace(stdout="0\n")
         with patch("subprocess.run", return_value=proc), \
