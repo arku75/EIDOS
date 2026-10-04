@@ -161,17 +161,14 @@ Database access should prefer the project's unified DB layer where applicable an
 
 ## Vector memory / ChromaDB
 
-The public tree currently contains **multiple historical Chroma strategies** and a port/client mismatch. This is tracked in GitHub issue #8.
+The first-party topology now has one canonical server implementation,
+`core/eidos_chroma_server.py`, on port **8767**. The historical bin entrypoint
+is retained only as a compatibility wrapper.
 
-Until that issue is closed, documentation must not imply that one Chroma path is fully canonical.
-
-Required end state:
-
-- one supported server strategy;
-- one canonical port;
-- explicit client/server compatibility;
-- isolated integration test;
-- fallback behavior when unavailable.
+GitHub issue #8 remains open because topology is not the same as runtime
+compatibility. The remaining acceptance gate is an isolated integration test
+covering heartbeat, collection creation, upsert/query/count, restart persistence
+and fallback behavior with the supported Chroma dependency.
 
 ## Services and ports
 
