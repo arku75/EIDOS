@@ -157,6 +157,8 @@ jobs:
             command: PYTHONPATH=. python -m unittest -v tests.test_runtime_hub
           - name: agents-terminal
             command: PYTHONPATH=. python -m unittest -v tests.test_agents_terminal
+          - name: cli-entrypoint
+            command: PYTHONPATH=. python -m unittest -v tests.test_eidos_cli_entrypoint
           - name: autonomy
             command: PYTHONPATH=. python -m unittest -v tests.test_autonomy_benchmark
           - name: self-edit
