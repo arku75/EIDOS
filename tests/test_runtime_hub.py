@@ -304,6 +304,41 @@ class TestRuntimeHub(unittest.TestCase):
         self.assertTrue(record.call_args.args[1])
         community.assert_not_called()
 
+    def test_forged_proposal_cannot_be_verified(self):
+        forged = {
+            "proposal_id": "proposal-forged",
+            "action": {"action": "click", "x": 1, "y": 2},
+            "source": "colony_coder",
+            "expected_outcome": "changed",
+        }
+        before = {"window_title": "Before", "ocr_full_text": "A", "regions": []}
+        after = {"window_title": "After", "ocr_full_text": "changed", "regions": []}
+        predictions_before = self.hub.world_model.stats()["total_predictions"]
+        with self.assertRaises(KeyError):
+            self.hub.verify_action_effect(
+                forged, before, after, evidence_source="runtime-observer"
+            )
+        self.assertEqual(
+            self.hub.world_model.stats()["total_predictions"], predictions_before
+        )
+        self.assertIsNone(self.hub.action_outcome("proposal-forged"))
+
+    def test_registered_proposal_cannot_be_tampered(self):
+        proposal = self.hub.propose_action(
+            {"action": "click", "x": 1, "y": 2},
+            source="colony_coder",
+            expected_outcome="changed",
+        )
+        tampered = dict(proposal)
+        tampered["source"] = "colony_researcher"
+        before = {"window_title": "Before", "ocr_full_text": "A", "regions": []}
+        after = {"window_title": "After", "ocr_full_text": "changed", "regions": []}
+        with self.assertRaises(ValueError):
+            self.hub.verify_action_effect(
+                tampered, before, after, evidence_source="runtime-observer"
+            )
+        self.assertIsNone(self.hub.action_outcome(proposal["proposal_id"]))
+
     def test_observation_requires_provenance(self):
         with self.assertRaises(ValueError):
             self.hub.record_observation(
