@@ -34,6 +34,12 @@ class TestCausalLoopSafety(unittest.TestCase):
             self.assertFalse(causal_loop._act(element(from_sc=True), dry_run=False))
         fake_sc.human_emulator.click_at.assert_not_called()
 
+    def test_act_does_not_credit_motor_success_before_verification(self):
+        import inspect
+        source = inspect.getsource(causal_loop._act)
+        self.assertNotIn("remember_motor", source)
+        self.assertNotIn("success=True", source)
+
     def test_body_check_exception_fails_closed_before_webpanel(self):
         proc = types.SimpleNamespace(stdout="0\n")
         with patch("subprocess.run", return_value=proc), \
