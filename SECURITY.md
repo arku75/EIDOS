@@ -10,3 +10,14 @@ Incluye:
 - Severidad estimada
 
 No publiques exploits en Issues públicas; usa el canal privado anterior para que podamos corregirlo.
+
+## Secretos y credenciales
+
+- Nunca incluyas claves, tokens, cookies, archivos `.env`, credenciales cloud o claves SSH en Issues, PRs, logs o commits.
+- Si una credencial llega a Git, **revócala o rótala primero**. Eliminarla del archivo actual no la elimina del historial.
+- Después de rotarla, limpia el historial cuando corresponda y vuelve a verificar con GitHub Secret Scanning.
+- Usa `.env.example` únicamente con valores vacíos o ficticios; las credenciales reales deben permanecer fuera del repositorio.
+
+## Dependencias
+
+Las alertas de Dependabot deben revisarse antes de fusionar actualizaciones grandes. Se priorizan parches/minor de seguridad compatibles y se prueban los cambios que impliquen saltos de versión mayor.

@@ -51,6 +51,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 from core.db import get_conn
+from core.self_edit_lab import run_safe_regression_suite
 
 log = logging.getLogger("eidos.self_improvement")
 
@@ -649,15 +650,17 @@ class SelfImprovementSystem:
         self.db.save_change(change)
         return change
     
-    def apply_improvement(self, change_id: str, 
+    def apply_improvement(self, change_id: str,
                           run_tests: bool = True,
                           auto_commit: bool = True,
-                          use_staging: bool = False) -> bool:
-        """
-        Aplica una mejora propuesta.
-        
-        Por defecto (use_staging=False): Aplica directamente para máxima velocidad.
-        Con use_staging=True: Usa staging para seguridad adicional.
+                          use_staging: bool = True) -> bool:
+        """Apply a proposed change through staging by default.
+
+        Direct live editing is disabled unless both:
+        - use_staging=False is passed explicitly, and
+        - EIDOS_UNSAFE_DIRECT_SELF_EDIT=1 is present in the environment.
+
+        This prevents a staging failure from silently becoming a production edit.
         """
         # Cargar cambio
         conn = get_conn(self.db.db_path)
@@ -732,13 +735,18 @@ class SelfImprovementSystem:
                     
             except Exception as e:
                 log.error(f"Error en proceso de staging: {e}")
-                # Fallback a método directo (sin staging)
-                log.warning("Fallback a aplicación directa (sin staging)")
-                use_staging = False
-        
-        # Método directo (sin staging) - menos seguro
+                log.error("Staging falló; el cambio NO se aplicará directamente")
+                return False
+
+        # Método directo: solo override explícito y auditable.
         if not use_staging:
-            log.warning("Aplicando cambio DIRECTAMENTE (sin staging)")
+            if os.environ.get("EIDOS_UNSAFE_DIRECT_SELF_EDIT") != "1":
+                log.error(
+                    "Edición directa bloqueada. "
+                    "Use staging o establezca EIDOS_UNSAFE_DIRECT_SELF_EDIT=1 explícitamente."
+                )
+                return False
+            log.warning("Aplicando cambio DIRECTAMENTE por override explícito")
             
             # 1. Aplicar cambio directamente
             if not self.modifier.apply_change(change):
@@ -788,17 +796,18 @@ class SelfImprovementSystem:
         print(f"{'='*60}\n")
     
     def _run_tests(self) -> bool:
-        """Ejecuta tests para verificar que el cambio no rompe nada."""
+        """Run the canonical public regression gate."""
         try:
-            result = subprocess.run(
-                [sys.executable, "tests/test_eidos_suite.py"],
-                cwd=EIDOS_ROOT,
-                capture_output=True,
-                timeout=60
-            )
-            return result.returncode == 0
+            result = run_safe_regression_suite(EIDOS_ROOT, timeout=180)
+            if not result.passed:
+                log.error(
+                    "Regression gate failed: returncode=%s tests=%s",
+                    result.returncode,
+                    result.tests_run,
+                )
+            return result.passed
         except Exception as e:
-            log.error(f"Error ejecutando tests: {e}")
+            log.error(f"Error ejecutando regression gate: {e}")
             return False
     
     def _generate_diff(self, original: str, new: str) -> str:

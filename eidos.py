@@ -34,7 +34,7 @@ from pathlib import Path
 # ═══════════════════════════════════════════════════════════════════════════════
 #  PATH CONFIGURATION
 # ═══════════════════════════════════════════════════════════════════════════════
-EIDOS_ROOT = Path("/home/ser/EIDOS")
+EIDOS_ROOT = Path(os.environ.get("EIDOS_ROOT", Path(__file__).resolve().parent)).expanduser().resolve()
 sys.path.insert(0, str(EIDOS_ROOT))
 
 # ═══════════════════════════════════════════════════════════════════════════════

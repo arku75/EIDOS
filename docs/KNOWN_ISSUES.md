@@ -1,80 +1,207 @@
-> ⚖️ **EIDOS © 2026 SER · Licencia [ESSL v1.0](../LICENSE) — propietaria, source-available.** Prohibida la replicación, el uso comercial y construir un producto competidor. Todo cambio o propuesta debe documentarse en `THIRD_PARTY_CHANGES.md` y comunicarse a SER. EIDOS **no** es open source.
-
 # Known Issues & Honest Status
 
-EIDOS is an **experimental, single‑developer research organism**. It is real and
-it runs, but it is not a polished product. In the spirit of honesty (which is one
-of its core rules), here is what is genuinely incomplete or broken — measured from
-the code and databases, not marketing.
+> Updated 2026-10-04.
+>
+> This file separates current verified gaps from historical limitations. Old metrics are
+> not automatically treated as current truth.
 
-## Deep / structural gaps
+## 1. Full clean-clone installation is not yet proven end-to-end
 
-### 1. It accumulates knowledge but rarely reuses it
-- **~89% of knowledge nodes have `usage_count = 0`** — written once, never read
-  again in reasoning. Only a few hundred nodes are used more than once.
-- The machinery to increment reuse exists (`ganglia`, `rl_madmax`,
-  `auto_research_claw`) but the everyday reasoning/search path does not exercise
-  it. The graph behaves more like a warehouse than a working memory.
-- **Fix in progress:** wire "do I already know this?" + `usage_count` increment
-  into the main search/reason path.
+**Status: OPEN**
 
-### 2. It ingests text but doesn't always conclude
-- The crawler follows sub‑links and stores text, but does not write **its own
-  synthesized conclusion** back to the graph at the end of a crawl.
-- A comprehension engine exists (`eidos_deep_comprehension.comprehend()`) but is
-  **not yet hooked** to the end of `colony_studier` / `eidos_deep_research`.
-- No cross‑source **contradiction detection** yet.
+The code now compiles and the focused sanitation/autonomy tests run in clean Ubuntu CI.
 
-### 3. Three search paths are not unified
-- (A) chat → Colony → `eidos_action_executor` (recently fixed to search **and**
-  read results), (B) the Bridge fast‑path (still opens Google), (C)
-  `eidos_deep_research` (DuckDuckGo‑lite crawl). They overlap and behave slightly
-  differently. Planned: a single `research(query, mode=quick|deep, visible)` API.
+However, "the tests pass" is not the same as "a completely new user can install and start every EIDOS subsystem".
 
-### 4. The Body (BOM) is real but nascent
-- ~41 motor‑memory rows and ~51 learned skills exist, but the BOM has **only run
-  in dry mode** — it has never learned from a full **real** GUI session. Real mode
-  is gated behind `EIDOS_BOM=1` + owner present.
+A dependency-resolution CI job has been added. Full runtime/service startup remains a separate acceptance target.
 
-### 5. Autonomous learning loop can stall
-- The night/autonomous study loop runs slowly (≈1 concept per cycle), hits LLM
-  rate limits, and has stalled for days at a time. "Alive" currently means
-  "services up", not "continuously compounding".
+## 2. ChromaDB strategy is internally inconsistent
 
-## Practical / smaller issues
+**Status: OPEN — GitHub issue #8**
 
-- **Result parsing is fragile**: `eidos_deep_research._http_get` uses a single
-  User‑Agent, no captcha/challenge detection, no multi‑engine fallback. It works
-  today (DuckDuckGo‑lite responds) but is a single point of failure.
-- **Graph composition is inflated**: roughly half the nodes are EIDOS indexing its
-  **own source code** + man‑page/dictionary entries; some `research:duckduckgo`
-  nodes are low quality. The 39k figure overstates "world knowledge".
-- **Local LLMs are slow**: developed on a laptop with an AMD iGPU that does **not**
-  accelerate inference. Cloud (DeepSeek/Groq) is primary; Ollama is a slow
-  fallback.
-- **The repo was heavy**: the project tree contains large vendored third‑party
-  material and private dev notes that are excluded from this public release via
-  `.gitignore`. If you clone the full dev tree elsewhere, mind the size.
-- **LLMs hallucinate internal names**: when asking an LLM about EIDOS's own code,
-  always verify function/file names against the source — they are often invented.
+The public tree currently mixes:
 
-## SQLite / runtime gotchas (will bite you)
+- port 8766 and port 8767;
+- external CLI service and custom Python server paths;
+- raw-HTTP assumptions and `chromadb.HttpClient`;
+- historical client/server version constraints.
 
-- **Never** `sqlite3.connect()` directly in `core/` — use `from core.db import
-  get_conn` (applies `busy_timeout`, WAL, mmap). Otherwise: `database is locked`.
-- **Never** set `max_tokens`/`num_predict` on LLM calls — by design EIDOS runs them
-  unbounded; setting limits truncates responses.
-- **Don't chain‑restart the Bridge** — each start rebuilds the in‑memory graph
-  (~5 cores for minutes); under load it can cascade.
-- **ChromaDB** ≥1.5 Python client has a thread‑safety regression — use the bundled
-  1.4.4 CLI microservice (port 8767).
+This must be resolved with an isolated end-to-end vector-store test, not a documentation-only change.
 
-## Roadmap
+## 3. Wayland body is not equivalent to the historical X11 body
 
-See the [README roadmap](../README.md#roadmap). Top priorities, in order: reuse
-wiring (#1), crawl→conclusion (#2), unify search (#3), then real BOM sessions (#4).
+**Status: OPEN / HARDWARE-IN-THE-LOOP**
+
+Historical desktop-control code uses X11-era tools and assumptions.
+
+Clean CI can prove virtual X11 primitives. It cannot prove native control of SER's KDE/Wayland session.
+
+The real body needs target-hardware tests for:
+
+- pointer movement;
+- click;
+- keyboard input;
+- focus/window targeting;
+- before/after screen effect;
+- failure diagnosis.
+
+## 4. Graph size is not the same thing as useful reasoning
+
+**Status: ACTIVE RESEARCH**
+
+Historical snapshots exceeded 1.2M nodes, but the important question is how much state is reused causally.
+
+The current direction is to measure:
+
+- which nodes/edges are activated;
+- whether learned weights change later choices;
+- retrieval/reuse rate;
+- effect-verifiable decisions.
+
+Old claims such as "~89% usage_count=0" are retained as historical diagnostics unless re-measured on the current private graph.
+
+## 5. Many organs historically existed before they were wired together
+
+**Status: ACTIVE CONSOLIDATION**
+
+EIDOS accumulated research engines, memory systems, Colony paths, self-models, body components and builders across many sessions.
+
+The current Runtime Hub is an integration/inspection facade, not proof that every old subsystem already participates in one causal loop.
+
+The acceptance loop is:
+
+```text
+intent → mechanism → action → observed effect → verifier → memory/weights → later changed decision
+```
+
+## 6. Colony volume is not the same as deliberation quality
+
+**Status: ACTIVE RESEARCH**
+
+Historical audits found many messages/elevations that did not reliably map to effect-verifiable actions.
+
+Desired end state:
+
+- claims are attributable to characters;
+- recommendations are scored against later outcomes;
+- reputation changes from evidence;
+- character specialization is measurable.
+
+## 7. Character counts vary by store/snapshot
+
+**Status: DOCUMENTATION FIXED, RUNTIME CENSUS PENDING**
+
+Historical documentation used fixed numbers such as 12 characters.
+
+Later audits found different counts for base characters, souls/identities and descendants.
+
+The README now avoids presenting one frozen number as "the Colony".
+
+## 8. Fly/Insect is not yet a live biological-connectome brain
+
+**Status: EXPERIMENTAL**
+
+The public Fly Lab proves only isolated sparse/plastic learning experiments.
+
+Real connectome integration requires:
+
+- dataset provenance/checksum/license;
+- typed neuron/circuit mapping;
+- negative controls;
+- measurable improvement;
+- explicit isolation from the live graph until verified.
+
+## 9. Self-editing is staged, not autonomous live overwrite
+
+**Status: SAFE PROTOTYPE**
+
+`core/self_edit_lab.py` can validate/stage candidates, but EIDOS does not yet have authority to replace arbitrary live core files based solely on its own judgment.
+
+That is intentional.
+
+## 10. Model "distillation" needs precise language
+
+**Status: ACTIVE RESEARCH**
+
+EIDOS may learn from model outputs, examples, APIs, documentation and benchmarks.
+
+Ordinary interaction does not expose another model's hidden proprietary chain-of-thought or internal weights.
+
+Future distillation work must define:
+
+- source dataset;
+- teacher outputs that may legally/technically be used;
+- student model/mechanism;
+- held-out benchmark;
+- baseline and regression criteria.
+
+## 11. Secret history requires rotation, not only deletion
+
+**Status: MANUAL SECURITY TASK**
+
+Removing a credential from the current tree does not erase it from Git history.
+
+Any previously valid credential must be revoked/rotated and then reviewed with secret scanning.
+
+## 12. Repository homepage metadata is stale
+
+**Status: OPEN — GitHub issue #7**
+
+The repository description still advertises an early ~39K-node snapshot and old wording.
+
+The code connector used for the sanitation work does not expose repository-description/branch-protection settings, so this remains a GitHub settings task.
+
+## 13. GitHub "Code scanning AI findings" currently fails for quota, not code
+
+**Status: EXTERNAL**
+
+The GitHub-generated AI review workflow returned HTTP 402 because its monthly model quota was exhausted.
+
+This should not be interpreted as a failing EIDOS security test.
+
+The project-owned `sanity` and `sanitation-ci` checks remain the relevant reproducible CI signals.
+
+## 14. Third-party vendored tools contain provider names
+
+**Status: EXPECTED**
+
+Some vendored/upstream tool documentation may mention supported clients such as Claude Desktop.
+
+Those names are not treated as EIDOS authorship or branding and should not be mass-edited unless the vendored component itself is forked/maintained.
+
+First-party unused Claude-specific adapter code has been removed from the sanitation branch.
 
 ---
 
-*This document is intentionally candid. If you hit something not listed here,
-please open an issue — honest bug reports are the most useful contribution.*
+## Historical findings worth re-testing on the private live system
+
+The internal TASK history documented, at different points:
+
+- stalled learning loops;
+- weak reuse of stored graph knowledge;
+- disconnected action/verifier paths;
+- false-positive autonomy tests;
+- Colony advice not reaching effect verification;
+- Chroma/threading problems;
+- X11/HiDPI targeting errors;
+- service/unit drift;
+- synthetic success that failed harder language/task banks.
+
+These are valuable regression targets, not automatically current bugs.
+
+---
+
+## Definition of "fixed"
+
+A problem is not closed because code was written.
+
+Prefer this evidence chain:
+
+```text
+reproduce failure
+→ make minimal change
+→ test positive case
+→ test negative/control case
+→ verify no regression
+→ record result
+```

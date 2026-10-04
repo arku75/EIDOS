@@ -1,0 +1,141 @@
+name: sanitation-ci
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile integration and autonomy layers
+        run: |
+          python -m py_compile \
+            core/fly_lab.py \
+            core/runtime_hub.py \
+            core/autonomy_benchmark.py \
+            core/self_edit_lab.py \
+            bin/eidos_agents_terminal.py
+          python -m py_compile \
+            tests/test_fly_lab.py \
+            tests/test_runtime_hub.py \
+            tests/test_agents_terminal.py \
+            tests/test_autonomy_benchmark.py \
+            tests/test_self_edit_lab.py \
+            tests/test_self_edit_guardrails.py \
+            tests/test_colony_effect_reputation.py
+
+      - name: Run pure integration tests
+        run: |
+          PYTHONPATH=. python -m unittest -v \
+            tests.test_fly_lab \
+            tests.test_runtime_hub \
+            tests.test_agents_terminal \
+            tests.test_autonomy_benchmark \
+            tests.test_self_edit_lab \
+            tests.test_self_edit_guardrails \
+            tests.test_colony_effect_reputation
+
+      - name: Run autonomy benchmark
+        run: |
+          PYTHONPATH=. python core/autonomy_benchmark.py
+
+  desktop-browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install virtual desktop tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y xvfb xdotool x11-apps x11-utils xterm
+
+      - name: Verify virtual mouse and keyboard primitives
+        run: |
+          Xvfb :99 -screen 0 1280x720x24 +extension XTEST >/tmp/xvfb.log 2>&1 &
+          export DISPLAY=:99
+          sleep 1
+
+          # Hosted Xvfb runners can keep the virtual pointer pinned to the
+          # screen centre even when XTEST is advertised. Verify the extension,
+          # then test an observable keyboard effect. Real pointer movement is
+          # reserved for the hardware-in-the-loop Dell suite.
+          xdpyinfo -ext XTEST >/tmp/xtest.txt
+          grep -q 'XTEST' /tmp/xtest.txt
+
+          xterm -T EIDOS_TERMINAL_SMOKE -e bash -lc 'read line; printf "%s" "$line" > /tmp/eidos-typed.txt' >/tmp/xterm.log 2>&1 &
+          XPID=$!
+          sleep 1
+          WIN="$(xdotool search --name EIDOS_TERMINAL_SMOKE | head -n1)"
+          test -n "$WIN"
+          xdotool windowfocus --sync "$WIN"
+          xdotool type --delay 20 'EIDOS_KEYBOARD_OK'
+          xdotool key Return
+          wait "$XPID"
+          grep -q '^EIDOS_KEYBOARD_OK$' /tmp/eidos-typed.txt
+
+      - name: Verify local browser world
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 --directory tests/fixtures/browser >/tmp/eidos-http.log 2>&1 &
+          HPID=$!
+          sleep 1
+          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$BROWSER"
+          "$BROWSER" --headless --no-sandbox --disable-gpu --dump-dom http://127.0.0.1:8765/index.html > /tmp/eidos-dom.html
+          grep -q EIDOS_BROWSER_OK /tmp/eidos-dom.html
+          "$BROWSER" --headless --no-sandbox --disable-gpu --screenshot=/tmp/eidos-browser.png http://127.0.0.1:8765/index.html
+          test -s /tmp/eidos-browser.png
+          kill "$HPID" || true
+
+
+  dependency-resolution:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+      - name: Resolve public requirements without installing
+        run: |
+          python -m pip install --dry-run --ignore-installed -r requirements.txt
+
+      - name: Verify installable gateway package and console scripts
+        run: |
+          # Packaging smoke test: do not install the full dependency graph here.
+          # The previous step owns dependency resolution; this step proves that
+          # setup.py exposes a self-contained gateway/config package surface.
+          python -m pip install --no-deps .
+          cd "${RUNNER_TEMP}"
+          eidos-gateway --help >/tmp/eidos-gateway-help.txt
+          eidos-config --help >/tmp/eidos-config-help.txt
+          grep -q "EIDOS Gateway CLI" /tmp/eidos-gateway-help.txt
+          grep -q "EIDOS Config CLI" /tmp/eidos-config-help.txt
+
+          # Negative control: packaging must not expose unrelated first-party
+          # runtime packages as part of the gateway distribution.
+          python - <<'PY'
+          from importlib.metadata import distribution
+
+          top_level = {
+              line.strip()
+              for line in distribution("eidos-gateway")
+              .read_text("top_level.txt")
+              .splitlines()
+              if line.strip()
+          }
+          assert top_level == {"cli", "config", "gateway"}, top_level
+          PY

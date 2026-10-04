@@ -200,8 +200,7 @@ def main():
 
     # 2. Indexar en ChromaDB
     count = build_chroma_collection(rows, args.batch, args.host, args.port)
-    print(f"\n✅ ChromaDB reconstruido: {count} vectores en '{
-          COLLECTION_NAME}'")
+    print(f"\n✅ ChromaDB reconstruido: {count} vectores en '{COLLECTION_NAME}'")
 
 
 if __name__ == "__main__":

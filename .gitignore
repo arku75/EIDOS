@@ -1,16 +1,31 @@
 # ── Secretos (NUNCA subir) ───────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+!.env.sample
 *.env
 secrets.env
 .env.local
 api_keys.json
-_DOCS_NOTES/
-**/API_KEYS*.md
+credentials*.json
+service-account*.json
+*.credentials
+.npmrc
+.pypirc
+.netrc
+.aws/
+.ssh/
 *.key
 *.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
 id_rsa*
 id_ed25519*
 *.kdbx
-
+_DOCS_NOTES/
+**/API_KEYS*.md
 # ── Datos / bases de datos (privadas, pesadas) ───────────────────────────
 *.db
 *.db-wal
