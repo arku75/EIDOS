@@ -187,6 +187,8 @@ jobs:
             command: PYTHONPATH=. python -m unittest -v tests.test_learning_retention_contract
           - name: antibiblioteca-causality
             command: PYTHONPATH=. python -m unittest -v tests.test_antibiblioteca_causality
+          - name: rl-persistence
+            command: PYTHONPATH=. python -m unittest -v tests.test_rl_persistence
           - name: memory-config
             command: PYTHONPATH=. python -m unittest -v tests.test_unified_memory_config
           - name: service-portability
