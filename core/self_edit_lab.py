@@ -122,3 +122,92 @@ def stage_candidate(source_path: str | Path, candidate: str) -> tuple[Path, Edit
     staged = temp_dir / source.name
     staged.write_text(candidate, encoding="utf-8")
     return staged, assessment
+
+
+# A deliberately small, deterministic regression gate that is known to run
+# on a clean public checkout. Hardware/private-state tests stay outside this list.
+SAFE_REGRESSION_MODULES = (
+    "tests.test_self_edit_lab",
+    "tests.test_fly_lab",
+    "tests.test_runtime_hub",
+    "tests.test_autonomy_benchmark",
+    "tests.test_hardware_validation",
+    "tests.test_constitution",
+    "tests.test_colony_community",
+)
+
+
+@dataclass(frozen=True)
+class RegressionGateResult:
+    passed: bool
+    returncode: int
+    tests_run: int
+    stdout: str
+    stderr: str
+    modules: tuple[str, ...]
+
+    def to_dict(self) -> dict:
+        return {
+            "passed": self.passed,
+            "returncode": self.returncode,
+            "tests_run": self.tests_run,
+            "stdout": self.stdout,
+            "stderr": self.stderr,
+            "modules": list(self.modules),
+        }
+
+
+def _parse_unittest_count(output: str) -> int:
+    """Extract the unittest 'Ran N tests' count without treating prose as proof."""
+    import re
+
+    match = re.search(r"Ran\s+(\d+)\s+tests?", output)
+    return int(match.group(1)) if match else 0
+
+
+def run_safe_regression_suite(
+    root: str | Path | None = None,
+    *,
+    timeout: int = 180,
+    modules: tuple[str, ...] = SAFE_REGRESSION_MODULES,
+) -> RegressionGateResult:
+    """Run the public, deterministic regression gate in an isolated checkout.
+
+    This is a regression gate, not a claim of held-out generalization. A truly
+    private/held-out evaluator must be supplied by a separate environment.
+    """
+    import subprocess
+    import sys
+
+    checkout = Path(root).expanduser().resolve() if root else Path(__file__).resolve().parents[1]
+    existing = tuple(
+        module for module in modules
+        if (checkout / (module.replace(".", "/") + ".py")).exists()
+    )
+    if not existing:
+        return RegressionGateResult(
+            passed=False,
+            returncode=2,
+            tests_run=0,
+            stdout="",
+            stderr="no safe regression modules found",
+            modules=(),
+        )
+
+    proc = subprocess.run(
+        [sys.executable, "-m", "unittest", "-v", *existing],
+        cwd=checkout,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        check=False,
+    )
+    combined = (proc.stdout or "") + "\n" + (proc.stderr or "")
+    return RegressionGateResult(
+        passed=proc.returncode == 0,
+        returncode=proc.returncode,
+        tests_run=_parse_unittest_count(combined),
+        stdout=proc.stdout or "",
+        stderr=proc.stderr or "",
+        modules=existing,
+    )
