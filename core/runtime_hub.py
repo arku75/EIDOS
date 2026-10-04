@@ -144,7 +144,96 @@ class EIDOSRuntimeHub:
         }
         self.bus.publish("action.proposed", proposal, source=source)
         self.board.write("last_action_proposal", proposal, agent=source)
+        self.board.write(
+            f"action.proposal.{proposal['proposal_id']}",
+            proposal,
+            agent=source,
+        )
         return proposal
+
+    def record_observation(
+        self,
+        snapshot: Dict[str, Any],
+        *,
+        observer: str,
+    ) -> dict:
+        """Register a world observation with explicit provenance.
+
+        Observation and action are separate channels. This method never executes
+        anything; it only records what an observer reports seeing.
+        """
+        observer_id = str(observer or "").strip()
+        if not observer_id:
+            raise ValueError("observer is required")
+        payload = {
+            "observation_id": f"obs-{time.time_ns()}",
+            "observer": observer_id,
+            "snapshot": dict(snapshot),
+            "created_at": time.time(),
+        }
+        self.bus.publish("world.observed", payload, source=observer_id)
+        self.board.write(
+            f"world.observation.{payload['observation_id']}",
+            payload,
+            agent=observer_id,
+        )
+        self.board.write("last_world_observation", payload, agent=observer_id)
+        return payload
+
+    def action_proposal(self, proposal_id: Optional[str] = None) -> Optional[dict]:
+        """Read a proposal by correlation id, or return the latest proposal."""
+        if proposal_id:
+            value = self.board.read(f"action.proposal.{proposal_id}")
+        else:
+            value = self.board.read("last_action_proposal")
+        return dict(value) if isinstance(value, dict) else None
+
+    def action_outcome(self, proposal_id: Optional[str] = None) -> Optional[dict]:
+        """Read a verified/failed outcome by proposal id, or the latest outcome."""
+        if proposal_id:
+            value = self.board.read(f"action.outcome.{proposal_id}")
+        else:
+            value = self.board.read("last_action_outcome")
+        return dict(value) if isinstance(value, dict) else None
+
+    def colony_reputation(self, agent_id: str) -> dict:
+        """Expose effect-derived Colony reputation without touching token rewards."""
+        from core.colony_community import get_colony_community
+        return get_colony_community().get_agent_outcome_stats(agent_id)
+
+    def verify_observations(
+        self,
+        proposal: Dict[str, Any],
+        before_observation_id: str,
+        after_observation_id: str,
+    ) -> dict:
+        """Verify an action from two registered observations.
+
+        Both observations must come from the same observer and the observer must
+        differ from the actor before learning/reputation can be credited.
+        """
+        before_record = self.board.read(
+            f"world.observation.{before_observation_id}"
+        )
+        after_record = self.board.read(
+            f"world.observation.{after_observation_id}"
+        )
+        if not isinstance(before_record, dict) or not isinstance(after_record, dict):
+            raise KeyError("observation not found")
+
+        before_observer = str(before_record.get("observer", ""))
+        after_observer = str(after_record.get("observer", ""))
+        if not before_observer or before_observer != after_observer:
+            raise ValueError("before/after observations must share one observer")
+        if float(before_record.get("created_at", 0.0)) > float(after_record.get("created_at", 0.0)):
+            raise ValueError("before observation is newer than after observation")
+
+        return self.verify_action_effect(
+            proposal,
+            dict(before_record.get("snapshot") or {}),
+            dict(after_record.get("snapshot") or {}),
+            evidence_source=before_observer,
+        )
 
     def verify_action_effect(
         self,
