@@ -50,3 +50,19 @@ Block 3 is accepted only when its release gates are green. The implementation no
 - These Colony/tool invariants are included in fanout and the conservative self-edit regression suite so autonomous edits cannot remove them unnoticed.
 
 This closes architecture/test wiring for the block; CI status is recorded by GitHub Actions for the corresponding main HEAD. It does not claim that every possible programming language/domain is mastered, nor that inherited knowledge is generalization until held-out behavior demonstrates it.
+
+
+## World / Actions causal consolidation
+
+Block 4 acceptance contract:
+
+- `PROPOSED != EXECUTED != OBSERVED != VERIFIED != LEARNED`.
+- Runtime Hub records executor provenance separately from proposals and observations; registered before/after evidence must bracket the recorded execution.
+- World change without execution evidence cannot be credited to a proposal.
+- Actor/self evidence may describe state but cannot mint trusted Colony effect reputation.
+- Legacy BOM action dispatch exposes `action_executed` separately and only reports `ok/effect_verified` after positive post-action effect.
+- Primary and recovery verifiers fail closed for unchanged click/type/key/scroll/navigation and unknown actions; dispatch alone is not success.
+- Recovery fallbacks are motor attempts and require post-fallback verification before success.
+- The shared terminal exposes proposal, execution provenance, observation, verification and outcome as separate channels.
+- These causal invariants are permanent fanout and self-edit regression gates.
+- Ubuntu/Xvfb CI can verify deterministic causal semantics and virtual X11/browser effects. Physical Dell/Wayland/HID behavior remains hardware-in-the-loop and is not claimed verified by CI.
