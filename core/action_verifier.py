@@ -389,11 +389,15 @@ class StateChecker:
                         "Scroll ejecutado (sin cambio detectable en OCR)",
                         None)
 
-        # Type → verificado casi siempre
+        # Type requires an observable state change; execution alone is not success.
         if action_type == "type":
-            return (Verdict.VERIFIED,
-                    "Texto escrito",
-                    None)
+            if new_count > 0 or lost_count > 0 or title_changed or similarity < 0.92:
+                return (Verdict.VERIFIED,
+                        "Escritura produjo un cambio observable",
+                        None)
+            return (Verdict.STUCK,
+                    f"Escritura sin efecto observable (sim={similarity:.2f})",
+                    RecoveryAction.RETRY)
 
         # Click o acción interactiva
         if action_type in ("click", "click_center", "click_center_offset", "key"):
@@ -436,21 +440,25 @@ class StateChecker:
                     f"Cambio moderado detectado (sim={similarity:.2f}, +{new_count})",
                     None)
 
-        # Wait → siempre verificado
+        # Wait completion is not itself an externally verified effect.
         if action_type == "wait":
-            return (Verdict.VERIFIED, "Espera completada", None)
+            if new_count > 0 or lost_count > 0 or title_changed or similarity < 0.92:
+                return (Verdict.VERIFIED, "Cambio observable durante la espera", None)
+            return (Verdict.STUCK, "Espera completada sin efecto observable", None)
 
-        # Acciones de extracción
+        # Extraction/evaluation must surface an observable result.
         if action_type in ("extract", "evaluate"):
-            return (Verdict.VERIFIED, "Extracción/evaluación completada", None)
+            if new_count > 0 or lost_count > 0 or title_changed or similarity < 0.92:
+                return (Verdict.VERIFIED, "Extracción/evaluación produjo resultado observable", None)
+            return (Verdict.STUCK, "Sin resultado observable de extracción/evaluación", None)
 
-        # Default
-        if new_count > 0 or title_changed:
+        # Unknown actions fail closed: execution is never equivalent to success.
+        if new_count > 0 or lost_count > 0 or title_changed or similarity < 0.92:
             return (Verdict.VERIFIED,
-                    f"Cambio detectado: +{new_count} elementos",
+                    f"Cambio observable detectado: +{new_count}/-{lost_count} elementos",
                     None)
 
-        return (Verdict.VERIFIED, "Acción ejecutada", None)
+        return (Verdict.STUCK, "Acción sin efecto observable", RecoveryAction.REPLAN)
 
     def _compute_confidence(self, verdict: Verdict, similarity: float,
                             new_count: int) -> float:
