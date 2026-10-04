@@ -80,3 +80,16 @@ Block 5 acceptance contract:
 - The real BOM consults Antibiblioteca during action selection and records negative memory only after a real dispatched action fails post-action effect verification; dry-run cannot mint failure evidence.
 - Positive causal skill nodes remain in the authoritative evolution brain graph; legacy knowledge_graph.db remains non-authoritative.
 - Learning-retention, Antibiblioteca causality, RL restart persistence and causal-loop integration are permanent fanout/self-edit regression contracts.
+
+
+## Fly / Insect plasticity consolidation
+
+Block 6 evidence contract:
+
+- Fly Lab remains isolated from the live EIDOS graph unless a later promotion path independently validates an experiment.
+- MushroomBodyAssociator is an engineering abstraction (sparse expansion plus reward-modulated weights), not a biological brain simulation.
+- Synthetic learning must beat a shuffled-label negative control at preregistered thresholds.
+- The default benchmark is a five-seed deterministic sweep; a favorable single seed is insufficient.
+- Connectome wiring experiments compare observed propagation with a shuffled-wiring control and preserve dataset provenance.
+- No x10, cognition, consciousness, or biological-equivalence claim follows from these benchmarks.
+- Real MaleCNS/FlyWire inputs remain external datasets; synthetic CI does not validate a real connectome.
