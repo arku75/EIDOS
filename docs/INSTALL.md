@@ -41,13 +41,26 @@ If that check fails, treat it as a packaging bug. Do **not** work around it by i
 
 ## 5. Install
 
-Once dependency resolution is green:
+For the dependency-light public gateway/CLI package, use:
+
+```bash
+python -m pip install .
+eidos-gateway --help
+eidos-config --help
+```
+
+CI proves those installed entrypoints from outside the source checkout.
+
+The broader research/runtime environment is a separate layer:
 
 ```bash
 python -m pip install -r requirements.txt
 ```
 
-Some capabilities also depend on system packages or external runtimes. Install those only for the capability you intend to test.
+CI currently proves dependency resolution for that broader file; individual
+hardware/model/desktop capabilities still require their own runtime tests.
+Some capabilities also depend on system packages or external runtimes. Install
+only the layer needed for the capability you intend to test.
 
 Common desktop/vision development packages include:
 
@@ -107,7 +120,7 @@ Do not present a clean clone as equivalent to the live private EIDOS instance un
 
 ## 9. ChromaDB warning
 
-The public tree currently contains conflicting historical Chroma strategies/ports. See GitHub issue #8 and [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
+The first-party Chroma topology now targets port 8767 and one canonical server implementation, but runtime/API compatibility is still open under GitHub issue #8. See [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
 
 Do not use a live `~/.eidos/chroma` directory as an integration-test fixture.
 
