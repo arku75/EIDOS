@@ -271,6 +271,25 @@ def validate_connectome_signal(
     }
 
 
+def validate_seed_sweep(seeds: Sequence[int] = (101, 211, 317, 419, 523)) -> dict:
+    """Run the synthetic experiment across independent deterministic seeds.
+
+    A single favorable seed is not sufficient evidence. The sweep reports every
+    run and passes only when every seed clears the same preregistered threshold.
+    """
+    results = [validate_synthetic(int(seed)) for seed in seeds]
+    return {
+        "seeds": [r.seed for r in results],
+        "runs": [r.to_dict() for r in results],
+        "mean_baseline_accuracy": round(sum(r.baseline_accuracy for r in results) / len(results), 4),
+        "mean_shuffled_accuracy": round(sum(r.shuffled_accuracy for r in results) / len(results), 4),
+        "mean_margin": round(sum(r.margin for r in results) / len(results), 4),
+        "all_passed": all(r.passed for r in results),
+        "claim": "synthetic associative benchmark only",
+        "biological_equivalence_claimed": False,
+    }
+
+
 def validate_synthetic(seed: int = 317) -> FlyValidationResult:
     """Deterministic positive-vs-shuffled control used by CI.
 
