@@ -20,6 +20,9 @@ class TestBridgeShellBoundary(unittest.TestCase):
             "echo $(id)",
             "echo ok > /tmp/eidos-output",
             "printf ok; id",
+            "echo foo&&id",
+            "echo x|id",
+            "echo ok 2>/tmp/eidos-output",
         ):
             argv, reason = _safe_shell_argv(cmd)
             self.assertIsNone(argv, cmd)
