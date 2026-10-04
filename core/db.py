@@ -43,7 +43,7 @@ log = logging.getLogger("eidos.db")
 
 # ── Constantes ─────────────────────────────────────────────────────────────
 
-EIDOS_DB_DIR = Path.home() / ".eidos"
+EIDOS_DB_DIR = Path(os.environ.get("EIDOS_HOME", str(Path.home() / ".eidos"))).expanduser()
 
 # PRAGMAs que se aplican a TODA conexión
 DEFAULT_PRAGMAS: Dict[str, Any] = {
@@ -158,6 +158,9 @@ def get_conn(db_name: Union[str, Path],
     if uri or read_only:
         conn_kwargs["uri"] = True
     conn_kwargs.update(kwargs)
+
+    if not read_only and not uri:
+        db_path.parent.mkdir(parents=True, exist_ok=True)
 
     conn = sqlite3.connect(connect_target, **conn_kwargs)
     conn.row_factory = sqlite3.Row
