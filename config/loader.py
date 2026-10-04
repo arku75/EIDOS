@@ -3,6 +3,7 @@ EIDOS Config Loader
 Carga configuración YAML con soporte de variables de entorno
 """
 
+import copy
 import os
 import re
 from pathlib import Path
@@ -16,14 +17,20 @@ except ImportError:
     yaml = None
 
 def _expand_env_vars(data: Any) -> Any:
-    """Expandir ${ENV_VAR} en valores de config"""
+    """Expand ${VAR} and ${VAR:-default} without shell evaluation."""
     if isinstance(data, dict):
         return {k: _expand_env_vars(v) for k, v in data.items()}
     elif isinstance(data, list):
         return [_expand_env_vars(item) for item in data]
     elif isinstance(data, str):
-        pattern = re.compile(r'\$\{([^}]+)\}')
-        return pattern.sub(lambda m: os.getenv(m.group(1), m.group(0)), data)
+        pattern = re.compile(r'\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}')
+        def replace(match: re.Match) -> str:
+            name, default = match.group(1), match.group(2)
+            value = os.getenv(name)
+            if value is not None and value != "":
+                return value
+            return default if default is not None else match.group(0)
+        return pattern.sub(replace, data)
     return data
 
 DEFAULT_CONFIG = {
@@ -61,6 +68,16 @@ DEFAULT_CONFIG = {
     },
 }
 
+def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+    """Recursively merge mappings so partial user config preserves defaults."""
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(base.get(key), dict):
+            _deep_merge(base[key], value)
+        else:
+            base[key] = value
+    return base
+
+
 def get_config_path() -> Path:
     """Obtener ruta del archivo de configuración"""
     env_path = os.getenv("EIDOS_CONFIG")
@@ -80,13 +97,15 @@ def load_config(config_path: Optional[Path] = None) -> Dict[str, Any]:
     if config_path is None:
         config_path = get_config_path()
     
-    config = DEFAULT_CONFIG.copy()
+    config = copy.deepcopy(DEFAULT_CONFIG)
     
     if HAS_YAML and config_path.exists():
         try:
             with open(config_path, encoding="utf-8") as f:
                 user_config = yaml.safe_load(f) or {}
-            config.update(user_config)
+            if not isinstance(user_config, dict):
+                raise ValueError("config root must be a mapping")
+            _deep_merge(config, user_config)
         except Exception as e:
             print(f"⚠️ Error loading config: {e}")
     
