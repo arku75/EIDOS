@@ -41,7 +41,7 @@ BRAIN_DB      = Path.home() / ".eidos" / "evolution_brain.db"
 LIFECYCLE_DB  = Path.home() / ".eidos" / "lifecycle.db"
 API_KEYS_FILE = Path.home() / ".eidos" / "api_keys.json"
 
-ABSORPTION_THRESHOLD = 0.90
+ABSORPTION_THRESHOLD = 1.00
 LEARNING_INTERVAL    = 120   # segundos entre ciclos
 MIN_NODES_BORN       = 3
 PEER_COMM_INTERVAL   = 5     # cada N ciclos de aprendizaje, comunicar con peers
@@ -1182,6 +1182,19 @@ class CharacterLifecycleManager:
         c1 = self.get_character(char1)
         c2 = self.get_character(char2)
         if not c1 or not c2:
+            return None
+
+        # A birth is an earned synthesis, not a shortcut around learning.
+        # Both parents must complete their curricula before seeding a child.
+        if (
+            float(c1.get("absorption_pct", 0.0)) < ABSORPTION_THRESHOLD
+            or float(c2.get("absorption_pct", 0.0)) < ABSORPTION_THRESHOLD
+        ):
+            log.warning(
+                "execute_reproduction blocked: parents not fully learned (%s=%.3f, %s=%.3f)",
+                char1, float(c1.get("absorption_pct", 0.0)),
+                char2, float(c2.get("absorption_pct", 0.0)),
+            )
             return None
 
         def _parse_list(val) -> list:
