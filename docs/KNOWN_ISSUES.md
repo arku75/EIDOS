@@ -33,9 +33,9 @@ Topology alignment alone is not enough to close the issue.
 
 **Status: OPEN / HARDWARE-IN-THE-LOOP**
 
-Historical desktop-control code uses X11-era tools and assumptions.
+Historical desktop-control code uses X11-era tools and assumptions. EIDOS also contains USB Gadget HID/uinput paths, but their real-device behavior is privileged hardware-in-the-loop and is not established by clean CI.
 
-Clean CI can prove virtual X11 primitives. It cannot prove native control of SER's KDE/Wayland session.
+The generic selector now fails closed on Wayland instead of silently treating xdotool/XTest as a valid native backend. Clean CI can prove selection logic and virtual X11 primitives; it cannot prove native control of SER's KDE/Wayland session or physical HID behavior.
 
 The real body needs target-hardware tests for:
 
@@ -114,9 +114,9 @@ Real connectome integration requires:
 
 ## 9. Self-editing is staged, not autonomous live overwrite
 
-**Status: SAFE PROTOTYPE**
+**Status: CONTROLLED / LIVE PROMOTION STILL GATED**
 
-`core/self_edit_lab.py` can validate/stage candidates, but EIDOS does not yet have authority to replace arbitrary live core files based solely on its own judgment.
+`core/self_edit_lab.py` can validate/stage candidates; staging rejects repository path escape and production promotion rejects source drift after validation. Public regression tests are not a private held-out judge, and EIDOS does not have authority to replace arbitrary live core files based solely on its own judgment.
 
 That is intentional.
 
