@@ -401,11 +401,11 @@ def initialize():
     return config
 
 
-File: /home/ser/EIDOS/core/kernel.py
-File: /home/ser/EIDOS/core/agent.py
-File: /home/ser/EIDOS/core/autonomous.py
-File: /home/ser/EIDOS/core/tools.py
-File: /home/ser/EIDOS/core/memory.py
+File: core/kernel.py
+File: core/agent.py
+File: core/autonomous.py
+File: core/tools.py
+File: core/memory.py
 
 Output:
 Line 1 of output

@@ -26,10 +26,9 @@ Service unit (TODO after testing):
     After=network.target
     [Service]
     Type=simple
-    ExecStart=/usr/bin/python3 /home/ser/EIDOS/core/eidos_healer.py --daemon
+    ExecStart=/usr/bin/env python3 -m core.eidos_healer --daemon
     Restart=always
     RestartSec=10
-    Environment=PYTHONPATH=/home/ser/EIDOS
     [Install]
     WantedBy=default.target
 """

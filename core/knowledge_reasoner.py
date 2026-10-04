@@ -38,6 +38,8 @@ import traceback
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from core.paths import REPO_ROOT
 from typing import Any, Dict, List, Optional, Set, Tuple
 from difflib import SequenceMatcher
 from core.db import get_conn
@@ -1583,7 +1585,7 @@ class KnowledgeReasoner:
                 ["grep", "-rIn", "-m", "5",
                  "--include=*.py",
                  "-E", rf"(def|class)\s+{re.escape(concept)}\b",
-                 "/home/ser/EIDOS/core"],
+                 str(REPO_ROOT / "core")],
                 stderr=_sp.DEVNULL, timeout=3, text=True, errors="replace",
             )
             if out.strip():

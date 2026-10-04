@@ -10,23 +10,23 @@ Se ejecuta a las 3am via cron. EIDOS trabaja mientras SER duerme:
 
 REGLA: NUNCA modifica el sistema real. Solo el clon y el brain.
 """
-import subprocess, time, sqlite3, uuid, logging, re
+import subprocess, time, sqlite3, uuid, logging, re, os
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from core.db import get_conn
+from core.paths import EIDOS_HOME, REPO_ROOT, SANDBOX_ROOT, USER_HOME
 
 log = logging.getLogger("night_cycle")
 
-EIDOS_HOME   = Path.home() / ".eidos"
 BRAIN_DB     = EIDOS_HOME / "evolution_brain.db"
-CLONE_DIR    = Path("/home/ser/NO TOCAR/S@NDBOX_EIDOS/eidos_clon")
-REAL_DIR     = Path("/home/ser/EIDOS")
-REPORTS_DIR  = Path("/home/ser/NO TOCAR/S@NDBOX_EIDOS/reports")
+CLONE_DIR    = SANDBOX_ROOT / "eidos_clon"
+REAL_DIR     = REPO_ROOT
+REPORTS_DIR  = SANDBOX_ROOT / "reports"
 TELEGRAM_CHAT_ID = "7060736317"
 
 # S63: herramientas de análisis externas (lectura-solo)
-ANALIZADOR_DIR = Path("/home/ser/MIS PROGRAMAS/ANALIZADOR")
+ANALIZADOR_DIR = Path(os.environ.get("EIDOS_ANALYZER_DIR", str(USER_HOME / "MIS PROGRAMAS" / "ANALIZADOR"))).expanduser()
 JSCPD_BIN      = ANALIZADOR_DIR / "jscpd" / "jscpd.sh"
 TOKEI_BIN      = ANALIZADOR_DIR / "tokei" / "tokei"
 
