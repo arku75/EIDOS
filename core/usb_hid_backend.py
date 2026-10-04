@@ -184,10 +184,31 @@ def _check_udc_available() -> Optional[str]:
     return udcs[0].name
 
 
+@dataclass(frozen=True)
+class ActuationDispatch:
+    """Evidence for transport dispatch only; never proof of world effect."""
+    requested_backend: str
+    actual_backend: str
+    dispatched: bool
+    verification: str = "pending"
+    fallback_from: Optional[str] = None
+    error: Optional[str] = None
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            "requested_backend": self.requested_backend,
+            "actual_backend": self.actual_backend,
+            "dispatched": self.dispatched,
+            "verification": self.verification,
+            "fallback_from": self.fallback_from,
+            "error": self.error,
+        }
+
+
 class USBHIDBackend:
     """Backend de entrada USB Gadget HID a nivel kernel.
 
-    Crea un dispositivo USB HID falso que el SO ve como hardware físico.
+    Puede crear un dispositivo USB Gadget HID presentado al host como dispositivo HID.
     Soporta mouse (absoluto + relativo) y teclado (boot keyboard).
 
     Attributes:
@@ -208,6 +229,21 @@ class USBHIDBackend:
         self._mouse_fd = None
         self._kbd_fd = None
         self._mouse_pos: Tuple[int, int] = (400, 300)
+        self._last_dispatch: Optional[ActuationDispatch] = None
+
+    def _record_dispatch(self, actual_backend: str, dispatched: bool, *,
+                         requested_backend: Optional[str] = None,
+                         fallback_from: Optional[str] = None,
+                         error: Optional[str] = None) -> Dict[str, Any]:
+        evidence = ActuationDispatch(
+            requested_backend=requested_backend or self._tier,
+            actual_backend=actual_backend,
+            dispatched=bool(dispatched),
+            fallback_from=fallback_from,
+            error=error,
+        )
+        self._last_dispatch = evidence
+        return evidence.as_dict()
 
     # ── Inicialización ──────────────────────────────────────────────────────────
 
@@ -541,20 +577,32 @@ class USBHIDBackend:
                                  hid_code, 0x00, 0x00, 0x00, 0x00, 0x00)
             try:
                 self._hidg_kbd.write_bytes(report)
-            except Exception:
-                # Fallback: ignorar silenciosamente
-                pass
+            except Exception as exc:
+                log.warning("HID keyboard write falló: %s", exc)
+                return self._record_dispatch(
+                    "usb_gadget_hid", False, requested_backend="usb_gadget_hid",
+                    error=f"{type(exc).__name__}: {exc}",
+                )
+            return self._record_dispatch("usb_gadget_hid", True, requested_backend="usb_gadget_hid")
         elif self._tier == "silver":
-            # uinput keyboard
-            pass
+            # El backend uinput actual sólo crea mouse; no fingir teclado.
+            return self._record_dispatch(
+                "uinput", False, requested_backend="uinput",
+                error="keyboard_not_implemented",
+            )
         else:
             # xdotool fallback
             key_name = self._hid_to_xdotool_key(hid_code)
             if key_name:
-                subprocess.run(
+                r = subprocess.run(
                     ["xdotool", "keydown", key_name],
                     capture_output=True, timeout=1
                 )
+                return self._record_dispatch("xdotool", r.returncode == 0,
+                                             requested_backend="xdotool",
+                                             error=None if r.returncode == 0 else "xdotool_failed")
+            return self._record_dispatch("xdotool", False, requested_backend="xdotool",
+                                         error="unsupported_key")
 
     def keyboard_release(self, hid_code: int):
         """Suelta una tecla HID."""
@@ -714,6 +762,7 @@ class USBHIDBackend:
             "hidg_kbd": str(self._hidg_kbd) if self._hidg_kbd else None,
             "mouse_pos": self._mouse_pos,
             "screen": f"{self._screen_w}x{self._screen_h}",
+            "last_dispatch": self._last_dispatch.as_dict() if self._last_dispatch else None,
         }
 
 
