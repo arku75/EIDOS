@@ -251,17 +251,24 @@ class SkillEvolver:
             trigger = f"{tool} timeout"
             name = f"retry_{tool}_timeout"
 
-        # Detectar permission denied → sugerir sudo
+        # Permission/install failures become proposals, never autonomous elevation.
         elif any("permission" in e.lower() or "denied" in e.lower() for e in errors):
-            solution = f"sudo {tool}"
+            solution = (
+                f"# Permission boundary reached for {tool}. "
+                "Inspect ownership/capabilities and request explicit operator approval "
+                "before any privileged change."
+            )
             trigger = f"{tool} permission denied"
-            name = f"sudo_{tool}"
+            name = f"review_{tool}_permissions"
 
-        # Detectar not found → sugerir instalación
         elif any("not found" in e.lower() or "no such" in e.lower() for e in errors):
-            solution = f"sudo apt install -y {tool} && {tool}"
+            solution = (
+                f"# Missing dependency: {tool}. Read the project's official installation "
+                "documentation, verify package/source and compatibility, then stage an "
+                "installation proposal for explicit approval; do not auto-install."
+            )
             trigger = f"{tool} not found"
-            name = f"install_{tool}"
+            name = f"propose_install_{tool}"
 
         # Generic fallback
         else:
