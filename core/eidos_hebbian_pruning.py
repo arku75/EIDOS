@@ -45,7 +45,7 @@ MAX_EDGE_WEIGHT = 1.0           # peso máximo
 
 
 class HebbianPruner:
-    """Poda conexiones débiles, consolida las fuertes. Como el sueño biológico."""
+    """Heurística de plasticidad: poda y consolidación controladas del grafo."""
 
     def __init__(self):
         self._prune_history: List[Dict[str, Any]] = []
@@ -129,7 +129,6 @@ class HebbianPruner:
             "nodes_pruned": 0,
             "edges_degraded": 0,
             "nodes_orphaned": 0,
-            "nodes_pruned": 0,
             "timestamp": time.time(),
         }
 
@@ -206,7 +205,7 @@ class HebbianPruner:
                     "    FROM knowledge_edges GROUP BY to_node"
                     "  ) GROUP BY node_id"
                     ") ec ON n.id = ec.node_id "
-                    "WHERE n.source NOT IN ('graphify', 'wordnet') "
+                    "WHERE COALESCE(n.source, '') NOT IN ('graphify', 'wordnet') "
                     "ORDER BY ec ASC LIMIT ?",
                     (MAX_ORPHAN_PER_CYCLE,)
                 ).fetchall()
@@ -295,10 +294,9 @@ class HebbianPruner:
     # ── Decaimiento natural ─────────────────────────────────────────────────
 
     def decay_all(self, decay_rate: float = HEBBIAN_DECAY_RATE) -> Dict[str, Any]:
-        """Aplica decaimiento hebbiano a TODAS las aristas (llamado por ciclo o batch).
+        """Aplica una heurística de decaimiento de peso.
 
-        Cada arista pierde `decay_rate` de su peso por ciclo sin activación.
-        Esto simula el olvido natural del cerebro biológico.
+        No modela olvido biológico ni demuestra equivalencia neuronal.
         """
         try:
             conn = get_conn(BRAIN_DB, timeout=30)
