@@ -12,10 +12,11 @@ import glob
 import os
 import subprocess
 import sys
+from pathlib import Path
 import time
 import uuid
 
-sys.path.insert(0, "/home/ser/EIDOS")
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from core.db import get_conn
 
 DB = os.path.expanduser("~/.eidos/evolution_brain.db")

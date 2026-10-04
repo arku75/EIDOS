@@ -257,7 +257,7 @@ def feed_brain(since_ts: float, limit: int = 500) -> dict:
     if not rows:
         return {"ok": True, "fed": 0}
     try:
-        sys.path.insert(0, "/home/ser/EIDOS")
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
         from core.eidos_brain import BrainMemory  # type: ignore
         bm = BrainMemory()
         n_fed = 0

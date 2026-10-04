@@ -11,10 +11,11 @@ No es evasión: navegador real, sesión real, sin trucos.
 import logging
 import os
 import sys
+from pathlib import Path
 import time
 import uuid
 
-sys.path.insert(0, "/home/ser/EIDOS")
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 log = logging.getLogger("labex")
 

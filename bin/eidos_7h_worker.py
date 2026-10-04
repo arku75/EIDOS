@@ -9,7 +9,7 @@ Cada 60 segundos:
   4. Verifica que EIDOS puede responder sobre el tema
   5. Registra todo en ~/.eidos/7h_worker.log
 
-Ejecutar: PYTHONPATH=/home/ser/EIDOS python3 bin/eidos_7h_worker.py
+Ejecutar: PYTHONPATH=. python3 bin/eidos_7h_worker.py
 Duración: 7 horas (420 ciclos de ~60s)
 """
 import sys, os, time, random, subprocess, uuid, json, logging
