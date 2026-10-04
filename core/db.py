@@ -124,7 +124,7 @@ def get_conn(db_name: Union[str, Path],
         sqlite3.Error: Si hay error de conexión.
     """
     db_path = _resolve_db_path(db_name)
-    cache_key = f"{db_path}:{check_same_thread}:{isolation_level}:{read_only}"
+    # SQLite connections created with check_same_thread=True are bound to the\n    # creating thread. Cache them per-thread so another worker can never receive\n    # a connection it is forbidden to use. Connections explicitly created with\n    # check_same_thread=False retain shared-cache semantics; callers that do not\n    # want sharing must pass cache=False.\n    thread_scope = threading.get_ident() if check_same_thread else "shared"\n    cache_key = (\n        f"{db_path}:{thread_scope}:{check_same_thread}:"\n        f"{isolation_level}:{read_only}"\n    )
 
     # Si está en caché y los parámetros coinciden, devolver la caché
     if cache and not read_only:
