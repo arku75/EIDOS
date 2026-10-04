@@ -42,7 +42,11 @@ log = logging.getLogger("eidos.llm")
 
 def _load_secrets() -> dict:
     sec: dict[str, str] = {}
-    path = os.path.expanduser("~/.eidos/secrets.env")
+    eidos_home = os.environ.get("EIDOS_HOME")
+    if eidos_home:
+        path = os.path.join(os.path.expanduser(eidos_home), "secrets.env")
+    else:
+        path = os.path.expanduser("~/.eidos/secrets.env")
     try:
         if os.path.exists(path):
             for line in open(path, encoding="utf-8"):
@@ -133,9 +137,14 @@ PROVIDERS: list[Provider] = [
              openai_compat=False),
 ]
 
-ORDER = os.environ.get(
-    "EIDOS_LLM_ORDER",
-    "deepseek,ollama,groq").split(",")
+ORDER = [
+    name.strip()
+    for name in os.environ.get(
+        "EIDOS_LLM_ORDER",
+        "groq,openrouter,cerebras,github,mistral,ollama",
+    ).split(",")
+    if name.strip()
+]
 
 _ROT: dict[str, int] = {}   # índice de rotación por proveedor
 
@@ -301,7 +310,7 @@ def _autolearn(prompt: str, response: str, provider: str,
         # como contenido principal. Tags = concepts + provider para que
         # recall() lo encuentre por tema o por proveedor.
         from core.brain_memory import BrainMemory
-        tags = ["autolearn", "interaction", provider]
+        tags = ["autolearn", "interaction", provider, "unverified_model_output"]
         for c in (k.get("concepts") or [])[:5]:
             if isinstance(c, str):
                 tags.append(c.lower()[:30])
@@ -309,8 +318,12 @@ def _autolearn(prompt: str, response: str, provider: str,
             tags.extend(t for t in extra_tags if isinstance(t, str))
         content = (f"[método observado vía {provider}] {method}\n"
                    f"contexto: {k.get('summary','')[:200]}")
-        BrainMemory().remember(content, tags=tags,
-                               importance=0.65, category="learned")
+        BrainMemory().remember(
+            content,
+            tags=tags,
+            importance=0.35,
+            category="candidate",
+        )
         log.debug("autolearn ✓ %s (%d concepts)", provider,
                   len(k.get("concepts") or []))
     except Exception as e:  # noqa: BLE001
@@ -357,8 +370,12 @@ def complete(prompt: str, system: Optional[str] = None,
             # (idea #1 de SER). En thread daemon para no bloquear el
             # flujo. Solo si inject_identity (llamadas internas de
             # EIDOS, no llamadas técnicas como deliberate's sub-pasos).
+            # Model output is a proposal/source, not verified experience.
+            # Keep automatic ingestion OFF by default. An operator may opt in
+            # explicitly, but the stored item is still tagged as unverified
+            # model-derived material and must not mint causal success.
             do_autolearn = (
-                (inject_identity and os.environ.get("EIDOS_AUTOLEARN", "1") == "1")
+                (inject_identity and os.environ.get("EIDOS_AUTOLEARN", "0") == "1")
                 or (not inject_identity and os.environ.get("EIDOS_AUTOLEARN_INTERNAL", "0") == "1")
             )
             if do_autolearn:
