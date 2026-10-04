@@ -217,12 +217,6 @@ def _act(element: Any, dry_run: bool) -> bool:
             # HumanEmulator: trayectoria humana + click con ritmo natural
             sc.human_emulator.click_at(x, y)
             log.info("click REAL via InputBackend en '%s' (%d,%d)", label, x, y)
-            try:
-                from core.body import remember_motor
-                remember_motor(label, x, y, success=True, confidence=0.70,
-                               source='bom_sc')
-            except Exception:
-                pass
             return True
         except Exception as e:
             log.warning("InputBackend click falló: %s → fallback xdotool", e)
@@ -245,13 +239,6 @@ def _act(element: Any, dry_run: bool) -> bool:
             headers={"Content-Type": "application/json"}, method="POST")
         urllib.request.urlopen(req, timeout=8)
         log.info("click REAL en '%s' (%d,%d)", label, x, y)
-        # ── Save motor memory immediately after real click ───────────────
-        try:
-            from core.body import remember_motor
-            remember_motor(label, x, y, success=True, confidence=0.65,
-                           source='bom_real')
-        except Exception:
-            pass
         # ── Recovery: verificar que el click tuvo efecto ──────────────────
         try:
             from core.eidos_recovery import get_recovery
