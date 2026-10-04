@@ -21,7 +21,7 @@ Qué puede mejorar EIDOS por sí solo:
 
 Lo que NUNCA toca sin SER:
   - /etc/, ~/.ssh/, configs del sistema
-  - Código de producción en /home/ser/EIDOS/ directamente
+  - Código de producción en el EIDOS_SOURCE_ROOT configurado
   - Datos del brain (evolution_brain.db) del sistema real
 
 Uso:
@@ -52,11 +52,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 from core.db import get_conn
+from core.paths import REPO_ROOT, SANDBOX_ROOT as DEFAULT_SANDBOX_ROOT
 
 log = logging.getLogger("eidos.self_improver")
 
-EIDOS_ROOT   = Path("/home/ser/EIDOS")
-SANDBOX_ROOT = Path("/home/ser/NO TOCAR/S@NDBOX_EIDOS")
+EIDOS_ROOT   = REPO_ROOT
+SANDBOX_ROOT = DEFAULT_SANDBOX_ROOT
 CLONE_DIR    = SANDBOX_ROOT / "eidos_clon"
 EXPERIMENTS  = SANDBOX_ROOT / "experiments"
 REPORTS      = SANDBOX_ROOT / "reports"

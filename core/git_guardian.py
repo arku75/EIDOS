@@ -14,7 +14,7 @@ Responsabilidades:
 Uso:
     from core.git_guardian import GitGuardian
     
-    guardian = GitGuardian(Path("/home/ser/EIDOS"))
+    guardian = GitGuardian(REPO_ROOT)
     
     # Crear transacción (staging branch + commit)
     tx = guardian.propose_change(
@@ -48,6 +48,8 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
+
+from core.paths import REPO_ROOT
 from typing import Dict, List, Optional, Literal, Any, Callable
 from uuid import uuid4
 
@@ -196,7 +198,7 @@ class GitGuardian:
             config: Configuración personalizada. Si None, usa defaults.
         """
         self.config = config or GuardianConfig(
-            repo_path=Path("/home/ser/EIDOS")
+            repo_path=REPO_ROOT
         )
         
         # Importar GitPython lazy para evitar dependencia hard

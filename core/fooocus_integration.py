@@ -18,6 +18,8 @@ import json
 import time
 import logging
 from pathlib import Path
+
+from core.paths import EIDOS_HOME, REPO_ROOT
 from typing import Optional, List, Dict
 import subprocess
 import requests
@@ -25,8 +27,8 @@ import requests
 logger = logging.getLogger(__name__)
 
 # Rutas
-FOOOCUS_DIR = Path("/home/ser/EIDOS/external_repos/Fooocus")
-OUTPUT_DIR = Path(os.path.expanduser("~/.eidos/images/generated"))
+FOOOCUS_DIR = REPO_ROOT / "external_repos" / "Fooocus"
+OUTPUT_DIR = EIDOS_HOME / "images" / "generated"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 

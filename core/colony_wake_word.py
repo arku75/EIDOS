@@ -26,13 +26,15 @@ import time
 from pathlib import Path
 from typing import Optional
 
+from core.paths import EIDOS_HOME, REPO_ROOT
+
 log = logging.getLogger("eidos.wake_word")
 
 WHISPER_MODEL   = os.environ.get("EIDOS_WHISPER_MODEL", "base")
 WHISPER_DEVICE  = "cpu"
-PIPER_BIN       = Path("/home/ser/EIDOS/voice/piper/piper/piper")
-PIPER_MODEL     = Path("/home/ser/.eidos/piper_voices/es_ES-davefx-medium.onnx")
-PIPER_LD        = "/home/ser/EIDOS/voice/piper:/home/ser/EIDOS/voice/piper/piper"
+PIPER_BIN       = REPO_ROOT / "voice" / "piper" / "piper" / "piper"
+PIPER_MODEL     = EIDOS_HOME / "piper_voices" / "es_ES-davefx-medium.onnx"
+PIPER_LD        = os.pathsep.join([str(REPO_ROOT / "voice" / "piper"), str(REPO_ROOT / "voice" / "piper" / "piper")])
 WAKE_WORDS      = {"eidos", "colonia", "colony", "oye eidos", "hey eidos"}
 SAMPLE_RATE     = 16000
 AUDIO_DEVICE    = os.environ.get("EIDOS_AUDIO_DEVICE", "pulse")
