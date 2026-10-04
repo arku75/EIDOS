@@ -148,6 +148,10 @@ SAFE_REGRESSION_MODULES = (
     "tests.test_learning_retention_contract",
     "tests.test_antibiblioteca_causality",
     "tests.test_rl_persistence",
+    "tests.test_actuator_selector",
+    "tests.test_eidos_cli_entrypoint",
+    "tests.test_hebbian_pruning_contract",
+    "tests.test_operation_modes_security",
 )
 
 
