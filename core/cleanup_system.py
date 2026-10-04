@@ -44,7 +44,7 @@ class LearnedFile:
     learned_at: float
     knowledge_extracted: str  # Resumen de lo aprendido
     original_size_mb: float
-    can_delete: bool = True
+    can_delete: bool = False
 
 @dataclass
 class CleanupStats:
@@ -164,7 +164,7 @@ class CleanupManager:
         self,
         file_path: Path,
         knowledge: str,
-        can_delete: bool = True
+        can_delete: bool = False
     ) -> LearnedFile:
         """
         Marca un archivo como "aprendido" y opcionalmente lo borra.
@@ -175,7 +175,7 @@ class CleanupManager:
         Args:
             file_path: Path al archivo
             knowledge: Conocimiento extraído (resumen, texto, etc.)
-            can_delete: Si True, borra el archivo después (si es seguro)
+            can_delete: Opt-in explícito. Si True, permite borrar después (solo si es seguro y auto_cleanup está activo)
 
         Returns:
             LearnedFile con metadata
