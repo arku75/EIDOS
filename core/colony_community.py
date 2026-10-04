@@ -263,6 +263,23 @@ class ColonyCommunity:
                 );
                 CREATE INDEX IF NOT EXISTS idx_ar_agent ON agent_rewards(agent_id);
                 CREATE INDEX IF NOT EXISTS idx_ar_session ON agent_rewards(session_id);
+
+                CREATE TABLE IF NOT EXISTS agent_outcomes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp REAL NOT NULL,
+                    session_id TEXT,
+                    agent_id TEXT NOT NULL,
+                    agent_name TEXT,
+                    proposal_id TEXT,
+                    action_type TEXT,
+                    verified INTEGER NOT NULL,
+                    confidence REAL NOT NULL,
+                    reason TEXT,
+                    evidence_json TEXT,
+                    given_by TEXT DEFAULT 'effect_verifier'
+                );
+                CREATE INDEX IF NOT EXISTS idx_ao_agent ON agent_outcomes(agent_id);
+                CREATE INDEX IF NOT EXISTS idx_ao_proposal ON agent_outcomes(proposal_id);
             """)
             
             conn.executescript("""
@@ -2718,6 +2735,136 @@ Responde de forma natural y conversacional.""")
             pass  # error no crítico, continuar
         return participants
     
+    def record_verified_outcome(
+        self,
+        agent_name: str,
+        verified: bool,
+        confidence: float,
+        reason: str = "",
+        proposal_id: str = "",
+        action_type: str = "",
+        evidence: Optional[Dict[str, Any]] = None,
+    ) -> Dict:
+        """Record effect-based reputation without spending or minting Colony tokens."""
+        name_map = {
+            "coder": "colony_coder",
+            "analyst": "colony_analyst",
+            "vision": "colony_vision",
+            "operator": "colony_operator",
+            "general": "colony_general",
+            "trinity": "trinity_claw",
+            "trinityclaw": "trinity_claw",
+        }
+        agent_id = name_map.get(agent_name.lower(), agent_name.lower())
+        if agent_id not in self._participants and agent_id != "trinity_claw":
+            return {
+                "success": False,
+                "error": f"Agente no encontrado: {agent_name}",
+                "agent_id": agent_id,
+            }
+
+        if agent_id == "trinity_claw":
+            display_name = "TrinityClaw"
+        else:
+            display_name = self._participants[agent_id].get("name", agent_id)
+
+        conf = max(0.0, min(1.0, float(confidence)))
+        evidence_json = json.dumps(evidence or {}, ensure_ascii=False, default=str)[:8000]
+        with get_conn_ctx(self.db_path) as conn:
+            conn.execute(
+                """INSERT INTO agent_outcomes
+                   (timestamp, session_id, agent_id, agent_name, proposal_id,
+                    action_type, verified, confidence, reason, evidence_json, given_by)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    time.time(),
+                    getattr(self, "_current_session", "none"),
+                    agent_id,
+                    display_name,
+                    proposal_id,
+                    action_type,
+                    1 if verified else 0,
+                    conf,
+                    reason,
+                    evidence_json,
+                    "effect_verifier",
+                ),
+            )
+
+        delta = conf if verified else -conf
+        try:
+            from core.colony_chronicle import get_chronicle
+            get_chronicle().record(
+                agent_id,
+                "effect_verified" if verified else "effect_failed",
+                reason or f"proposal={proposal_id}",
+                metadata={
+                    "proposal_id": proposal_id,
+                    "confidence": conf,
+                    "delta": delta,
+                    "action_type": action_type,
+                },
+                importance=min(1.0, 0.5 + conf / 2.0),
+            )
+        except Exception:
+            pass
+
+        return {
+            "success": True,
+            "agent_id": agent_id,
+            "agent_name": display_name,
+            "verified": bool(verified),
+            "confidence": conf,
+            "reputation_delta": round(delta, 4),
+            "proposal_id": proposal_id,
+            "given_by": "effect_verifier",
+        }
+
+    def get_agent_outcome_stats(self, agent_name: str) -> Dict:
+        """Return reputation derived only from observed/verified action outcomes."""
+        name_map = {
+            "coder": "colony_coder",
+            "analyst": "colony_analyst",
+            "vision": "colony_vision",
+            "operator": "colony_operator",
+            "general": "colony_general",
+            "trinity": "trinity_claw",
+            "trinityclaw": "trinity_claw",
+        }
+        agent_id = name_map.get(agent_name.lower(), agent_name.lower())
+        with get_conn_ctx(self.db_path) as conn:
+            row = conn.execute(
+                """SELECT COUNT(*) AS total,
+                          SUM(CASE WHEN verified=1 THEN 1 ELSE 0 END) AS verified_count,
+                          SUM(CASE WHEN verified=0 THEN 1 ELSE 0 END) AS failed_count,
+                          AVG(confidence) AS avg_confidence,
+                          SUM(CASE WHEN verified=1 THEN confidence ELSE -confidence END)
+                              AS reputation_score
+                   FROM agent_outcomes WHERE agent_id=?""",
+                (agent_id,),
+            ).fetchone()
+            history = conn.execute(
+                """SELECT timestamp, proposal_id, action_type, verified, confidence, reason
+                   FROM agent_outcomes
+                   WHERE agent_id=?
+                   ORDER BY timestamp DESC LIMIT 20""",
+                (agent_id,),
+            ).fetchall()
+
+        total = int(row["total"] or 0)
+        return {
+            "agent_id": agent_id,
+            "total_outcomes": total,
+            "verified_count": int(row["verified_count"] or 0),
+            "failed_count": int(row["failed_count"] or 0),
+            "verification_rate": (
+                float(row["verified_count"] or 0) / total if total else 0.0
+            ),
+            "avg_confidence": round(float(row["avg_confidence"] or 0.0), 4),
+            "reputation_score": round(float(row["reputation_score"] or 0.0), 4),
+            "history": [dict(item) for item in history],
+        }
+
     def reward_agent(self, agent_name: str, amount: float, reason: str = "") -> Dict:
         """
         SER recompensa a un agente con tokens.
