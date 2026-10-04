@@ -34,12 +34,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from core.db import get_conn_ctx
+from core.paths import EIDOS_HOME, REPO_ROOT
 
 log = logging.getLogger("eidos.vseidos")
 
-VSEIDOS_BIN = Path("/home/ser/EIDOS/VSEIDOS/bin/vseidos")
-EXT_DIR = Path("/home/ser/EIDOS/VSEIDOS/extensions")
-BRAIN_DB = Path.home() / ".eidos" / "evolution_brain.db"
+VSEIDOS_BIN = REPO_ROOT / "VSEIDOS" / "bin" / "vseidos"
+EXT_DIR = REPO_ROOT / "VSEIDOS" / "extensions"
+BRAIN_DB = EIDOS_HOME / "evolution_brain.db"
 
 # Las extensiones aprendidas alimentan la neurona del desarrollador
 KNOWLEDGE_OWNER = "colony_coder"

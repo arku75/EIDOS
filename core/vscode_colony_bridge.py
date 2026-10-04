@@ -14,8 +14,8 @@ y ejecuta los comandos que Colony encola aquí.
 Uso directo:
     from core.vscode_colony_bridge import get_vscode_bridge
     vb = get_vscode_bridge()
-    vb.open_file("/home/ser/EIDOS/core/colony_community.py")
-    vb.run_command("python3 -m pytest tests/", cwd="/home/ser/EIDOS")
+    vb.open_file(str(REPO_ROOT / "core" / "colony_community.py"))
+    vb.run_command("python3 -m pytest tests/", cwd=str(REPO_ROOT))
     vb.show_message("EIDOS ha completado el análisis")
 
 Uso desde Colony (via IPC broadcast):
@@ -28,6 +28,8 @@ import threading
 import urllib.request
 import json
 from typing import Optional
+
+from core.paths import REPO_ROOT
 
 log = logging.getLogger("eidos.vscode_bridge")
 
@@ -107,7 +109,7 @@ class VscodeColonyBridge:
         """Muestra un insight de Colony como mensaje info en VSCode."""
         return self.show_message(f"Colony: {insight}", "info")
 
-    def run_tests(self, cwd: str = "/home/ser/EIDOS") -> bool:
+    def run_tests(self, cwd: str = str(REPO_ROOT)) -> bool:
         """Ejecuta los tests del proyecto en el terminal de VSCode."""
         return self.run_command("python3 -m pytest tests/ -x --tb=short", cwd=cwd)
 

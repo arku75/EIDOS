@@ -11,6 +11,7 @@ import sqlite3
 from typing import Dict, List, Tuple, Optional
 from datetime import datetime
 from core.db import get_conn
+from core.paths import EIDOS_HOME, REPO_ROOT
 
 class EidosSystemControl:
     """
@@ -19,7 +20,7 @@ class EidosSystemControl:
     """
     
     def __init__(self):
-        self.db_path = '/home/ser/.eidos/evolution_brain.db'
+        self.db_path = str(EIDOS_HOME / 'evolution_brain.db')
         self.command_history = []
         self.authorized = False  # Requiere autorización de SER
         
@@ -237,7 +238,7 @@ if __name__ == "__main__":
     
     # Directorio actual
     print("\n📁 DIRECTORIO EIDOS:")
-    for item in ctrl.get_directory_listing('/home/ser/EIDOS')[:8]:
+    for item in ctrl.get_directory_listing(str(REPO_ROOT))[:8]:
         icon = "📁" if item['type'] == 'directory' else "📄"
         print(f"   {icon} {item['name'][:40]}")
     

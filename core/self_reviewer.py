@@ -22,12 +22,14 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from core.paths import EIDOS_HOME, REPO_ROOT
+
 log = logging.getLogger("eidos.self_reviewer")
 
-EIDOS_DIR    = os.environ.get("EIDOS_DIR", "/home/ser/EIDOS")
+EIDOS_DIR    = os.environ.get("EIDOS_DIR", str(REPO_ROOT))
 BRIDGE_URL   = os.environ.get("EIDOS_BRIDGE", "http://localhost:8003")
 BINJA_URL    = os.environ.get("BINJA_MCP_URL", "http://localhost:9009")   # Binary Ninja MCP server
-_REVIEW_DB   = Path.home() / ".eidos" / "review_log.jsonl"
+_REVIEW_DB   = EIDOS_HOME / "review_log.jsonl"
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
