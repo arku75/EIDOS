@@ -7,23 +7,29 @@ Si necesita login → pregunta a SER qué cuenta usar.
 import logging
 import time
 import os
+import hashlib
+import time as t
+import uuid
 from core.db import get_conn
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
 log = logging.getLogger("browser_manager")
 
-# Perfil Firefox de SER (con sesiones activas)
-FIREFOX_PROFILE = str(Path.home() / ".mozilla/firefox/yii3m1ky.default-esr")
-HEADLESS = False  # False = se ve en pantalla (EIDOS trabaja con interfaz real)
+# Browser state is EIDOS-owned by default. Authenticated user profiles require
+# an explicit path supplied by the operator; they are never guessed or cloned.
+EIDOS_HOME = Path(os.environ.get("EIDOS_HOME", str(Path.home() / ".eidos"))).expanduser()
+FIREFOX_PROFILE = os.environ.get("EIDOS_FIREFOX_PROFILE", "")
+EIDOS_BROWSER_PROFILE = str(EIDOS_HOME / "browser" / "firefox")
+HEADLESS = False
 
 
 def _get_browser():
-    """Obtiene instancia Playwright con Firefox y perfil de SER."""
+    """Obtiene Firefox persistente con estado propiedad de EIDOS."""
     from playwright.sync_api import sync_playwright
     p = sync_playwright().start()
     browser = p.firefox.launch_persistent_context(
-        user_data_dir=FIREFOX_PROFILE,
+        user_data_dir=EIDOS_BROWSER_PROFILE,
         headless=HEADLESS,
         args=["--no-sandbox"],
         timeout=30000
@@ -92,15 +98,18 @@ def navigate(url: str, wait_for: str = "domcontentloaded",
 
 def navigate_with_session(url: str, extract_text: bool = True) -> Dict[str, Any]:
     """
-    Navega usando el perfil Firefox de SER (con sesiones activas — Google, Gmail, etc.).
-    Requiere que Firefox NO esté corriendo en ese perfil al mismo tiempo.
+    Navega con un perfil Firefox indicado explícitamente por el operador.
+
+    No se descubre ni reutiliza automáticamente el perfil autenticado del usuario.
     """
     p = None
     try:
         from playwright.sync_api import sync_playwright
         p = sync_playwright().start()
 
-        # Usar perfil de Firefox de SER
+        if not FIREFOX_PROFILE:
+            return {"ok": False, "url": url, "error": "session_profile_not_authorized"}
+
         ctx = p.firefox.launch_persistent_context(
             user_data_dir=FIREFOX_PROFILE,
             headless=True,  # headless para no interferir con el escritorio
@@ -211,7 +220,7 @@ def ask_account_choice(service: str) -> str:
     """
     # Guardar la solicitud en brain para que Colony la muestre a SER
     try:
-        db = Path.home() / ".eidos" / "evolution_brain.db"
+        db = EIDOS_HOME / "evolution_brain.db"
         c = get_conn(db, timeout=3)
         now = t.time()
         c.execute(
@@ -234,7 +243,7 @@ def ask_account_choice(service: str) -> str:
 def _save_page_to_brain(url: str, title: str, text: str):
     """Guarda el contenido de una página en evolution_brain.db."""
     try:
-        db = Path.home() / ".eidos" / "evolution_brain.db"
+        db = EIDOS_HOME / "evolution_brain.db"
         c = get_conn(db, timeout=3)
         node_id = hashlib.md5(f"browser:{url}".encode()).hexdigest()[:16]
         now = t.time()
@@ -253,7 +262,7 @@ def _save_page_to_brain(url: str, title: str, text: str):
 def _save_search_to_brain(query: str, results: list):
     """Guarda los resultados de búsqueda en el brain."""
     try:
-        db = Path.home() / ".eidos" / "evolution_brain.db"
+        db = EIDOS_HOME / "evolution_brain.db"
         c = get_conn(db, timeout=3)
         node_id = hashlib.md5(f"search:{query}".encode()).hexdigest()[:16]
         now = t.time()
