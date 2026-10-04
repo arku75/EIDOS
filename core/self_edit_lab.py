@@ -140,6 +140,8 @@ SAFE_REGRESSION_MODULES = (
     "tests.test_colony_effect_reputation",
     "tests.test_character_lifecycle_contract",
     "tests.test_character_neuron_inheritance",
+    "tests.test_skill_evolver_safety",
+    "tests.test_dynamic_tools_promotion",
 )
 
 
