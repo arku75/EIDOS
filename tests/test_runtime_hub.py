@@ -69,7 +69,7 @@ class TestRuntimeHub(unittest.TestCase):
 
         predictions_before = self.hub.world_model.stats()["total_predictions"]
         result = self.hub.verify_action_effect(
-            proposal, before, after, evidence_source="runtime-observer"
+            proposal, before, after, evidence_source="runtime-observer", action_executed=True
         )
 
         self.assertEqual(result["status"], "verified")
@@ -98,7 +98,7 @@ class TestRuntimeHub(unittest.TestCase):
             "regions": [{"text": "Results"}],
         }
         result = self.hub.verify_action_effect(
-            proposal, before, after, evidence_source="runtime-observer"
+            proposal, before, after, evidence_source="runtime-observer", action_executed=True
         )
         learned = self.hub.board_read("last_causal_learning")
         self.assertTrue(result["learning_recorded"])
@@ -120,12 +120,29 @@ class TestRuntimeHub(unittest.TestCase):
             "regions": [{"text": "Results"}],
         }
         result = self.hub.verify_action_effect(
-            proposal, before, after, evidence_source="colony_coder"
+            proposal, before, after, evidence_source="colony_coder", action_executed=True
         )
         learned = self.hub.board_read("last_causal_learning")
         self.assertTrue(result["observed_verified"])
         self.assertFalse(result["credited_verified"])
         self.assertFalse(learned["verified"])
+
+    def test_world_change_without_execution_evidence_is_not_causal_success(self):
+        proposal = self.hub.propose_action(
+            {"action": "click", "x": 1, "y": 2},
+            source="colony_coder",
+            expected_outcome="changed",
+        )
+        before = {"window_title": "Before", "ocr_full_text": "A", "regions": []}
+        after = {"window_title": "After", "ocr_full_text": "changed", "regions": []}
+        with self.assertRaises(ValueError):
+            self.hub.verify_action_effect(
+                proposal,
+                before,
+                after,
+                evidence_source="runtime-observer",
+            )
+        self.assertIsNone(self.hub.action_outcome(proposal["proposal_id"]))
 
     def test_no_effect_is_not_reported_as_success(self):
         proposal = self.hub.propose_action(
@@ -138,7 +155,7 @@ class TestRuntimeHub(unittest.TestCase):
             "regions": [{"text": "No change"}],
         }
         result = self.hub.verify_action_effect(
-            proposal, snapshot, snapshot, evidence_source="runtime-observer"
+            proposal, snapshot, snapshot, evidence_source="runtime-observer", action_executed=True
         )
         self.assertEqual(result["status"], "failed")
         self.assertFalse(result["verification"]["verified"])
@@ -347,8 +364,8 @@ class TestRuntimeHub(unittest.TestCase):
         with patch.object(self.hub.world_model, "record_outcome") as record, \
              patch("core.colony_community.get_colony_community") as community:
             result = self.hub.verify_action_effect(
-                proposal, before, after, evidence_source="colony_coder"
-            )
+                proposal, before, after, evidence_source="colony_coder", action_executed=True
+        )
         self.assertTrue(result["observed_verified"])
         self.assertFalse(result["credited_verified"])
         self.assertEqual(result["status"], "untrusted_evidence")
@@ -367,8 +384,8 @@ class TestRuntimeHub(unittest.TestCase):
         predictions_before = self.hub.world_model.stats()["total_predictions"]
         with self.assertRaises(KeyError):
             self.hub.verify_action_effect(
-                forged, before, after, evidence_source="runtime-observer"
-            )
+                forged, before, after, evidence_source="runtime-observer", action_executed=True
+        )
         self.assertEqual(
             self.hub.world_model.stats()["total_predictions"], predictions_before
         )
@@ -386,8 +403,8 @@ class TestRuntimeHub(unittest.TestCase):
         after = {"window_title": "After", "ocr_full_text": "changed", "regions": []}
         with self.assertRaises(ValueError):
             self.hub.verify_action_effect(
-                tampered, before, after, evidence_source="runtime-observer"
-            )
+                tampered, before, after, evidence_source="runtime-observer", action_executed=True
+        )
         self.assertIsNone(self.hub.action_outcome(proposal["proposal_id"]))
 
     def test_observation_requires_provenance(self):
@@ -403,7 +420,7 @@ class TestRuntimeHub(unittest.TestCase):
         )
         same = {"window_title": "Same", "ocr_full_text": "No change", "regions": []}
         result = self.hub.verify_action_effect(
-            proposal, same, same, evidence_source="runtime-observer"
+            proposal, same, same, evidence_source="runtime-observer", action_executed=True
         )
         learned = self.hub.board_read("last_causal_learning")
         self.assertEqual(result["status"], "failed")
