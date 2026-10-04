@@ -13,7 +13,11 @@ The code now compiles and the focused sanitation/autonomy tests run in clean Ubu
 
 However, "the tests pass" is not the same as "a completely new user can install and start every EIDOS subsystem".
 
-A dependency-resolution CI job has been added. Full runtime/service startup remains a separate acceptance target.
+The repository now has two stronger public acceptance paths:
+- `.github/workflows/linux-portability-e2e.yml` installs the model-independent core on Debian 12, Debian 13, Kali rolling and Ubuntu 24.04, outside the checkout, and exercises causal persistence across a fresh Python process.
+- `.github/workflows/customer-vm-acceptance.yml` builds a wheel on one hosted VM and installs only that wheel on a second fresh hosted VM with no checkout. The customer VM runs the shared CLI, verifies a controlled filesystem effect, rejects false causal credit, persists RL/Colony learning, and re-verifies learned state through a transient systemd service boundary.
+
+This issue remains OPEN until those gates are successful on the exact release/closure HEAD. Full private hardware/service topology remains a separate certification target.
 
 ## 2. ChromaDB clean-CI integration
 
@@ -124,6 +128,8 @@ That is intentional.
 EIDOS may learn from model outputs, examples, APIs, documentation and benchmarks.
 
 Ordinary interaction does not expose another model's hidden proprietary chain-of-thought or internal weights.
+
+Model output is now treated as a source/proposal rather than verified experience by default: first-party LLM auto-ingestion is OFF unless explicitly enabled, and opt-in material is stored as an unverified candidate rather than authoritative learned truth.
 
 Future distillation work must define:
 
