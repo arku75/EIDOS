@@ -100,13 +100,16 @@ def learn_phase() -> dict[str, Any]:
         },
         observer="acceptance-observer",
     )
-    control_outcome = hub.verify_observations(
-        control,
-        control_before["observation_id"],
-        control_after["observation_id"],
-    )
-    assert control_outcome["observed_verified"] is True
-    assert control_outcome["credited_verified"] is False
+    control_rejected = False
+    try:
+        hub.verify_observations(
+            control,
+            control_before["observation_id"],
+            control_after["observation_id"],
+        )
+    except ValueError:
+        control_rejected = True
+    assert control_rejected is True
 
     proposal = hub.propose_action(
         {"action": "write_fixture", "path": str(fixture)},
@@ -215,7 +218,8 @@ def learn_phase() -> dict[str, Any]:
         "proposal_id": proposal["proposal_id"],
         "execution_id": execution["execution_id"],
         "effect_verified": outcome["credited_verified"],
-        "negative_control_credited": control_outcome["credited_verified"],
+        "negative_control_credited": False,
+        "negative_control_rejected": control_rejected,
         "colony_routing": colony_routing,
         "colony_db": str(colony.db_path),
         "fixture": str(fixture),
