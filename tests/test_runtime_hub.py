@@ -278,6 +278,9 @@ class TestRuntimeHub(unittest.TestCase):
             },
             observer="runtime-observer",
         )
+        self.hub.record_action_execution(
+            proposal, executor="guardian-executor", execution_id="exec-test-1"
+        )
         after = self.hub.record_observation(
             {
                 "window_title": "After",
@@ -309,6 +312,23 @@ class TestRuntimeHub(unittest.TestCase):
             self.hub.action_outcome(proposal["proposal_id"])["proposal_id"],
             proposal["proposal_id"],
         )
+
+    def test_registered_observations_without_execution_are_rejected(self):
+        before = self.hub.record_observation(
+            {"window_title": "Before", "ocr_full_text": "A", "regions": []},
+            observer="runtime-observer",
+        )
+        proposal = self.hub.propose_action(
+            {"action": "click", "x": 1, "y": 2}, source="colony_coder"
+        )
+        after = self.hub.record_observation(
+            {"window_title": "After", "ocr_full_text": "B", "regions": []},
+            observer="runtime-observer",
+        )
+        with self.assertRaises(ValueError):
+            self.hub.verify_observations(
+                proposal, before["observation_id"], after["observation_id"]
+            )
 
     def test_registered_observations_require_same_observer(self):
         proposal = self.hub.propose_action(
