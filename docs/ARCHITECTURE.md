@@ -1,143 +1,224 @@
-> ⚖️ **EIDOS © 2026 SER · Licencia [ESSL v1.0](../LICENSE) — propietaria, source-available.** Prohibida la replicación, el uso comercial y construir un producto competidor. Todo cambio o propuesta debe documentarse en `THIRD_PARTY_CHANGES.md` y comunicarse a SER. EIDOS **no** es open source.
+# EIDOS Architecture
 
-# Architecture — How EIDOS works from the inside
+> Current public architecture reference — 2026-10-04.
+>
+> This document describes the **shape of the system**, not a frozen runtime snapshot.
+> Service counts, graph size, character counts and enabled models vary by installation.
 
-> Real architecture verified against the running code (June 2026).
+## Core loop
 
----
-
-## Component map
-
-```
-                        SER (human owner)
-                             │
-              ┌──────────────┼──────────────┐
-              ▼              ▼              ▼
-         CLI (eidos)    Bridge API     Web Panel
-         (22 commands)  (:8003)        (:8080)
-              │              │              │
-              └──────────────┼──────────────┘
-                             │
-                        ┌────▼────┐
-                        │ COLONY  │  ← MANDATORY middleware
-                        │ 12 chars│     EVERYTHING passes here
-                        └────┬────┘
-                             │
-                     ┌───────▼───────┐
-                     │  brain-lite   │  ← deterministic loop
-                     │  (DECIDES)    │     EXECUTE/MODIFY/DISCARD
-                     └───────┬───────┘
-                             │
-          ┌──────────────────┼──────────────────┐
-          ▼                  ▼                  ▼
-    ┌──────────┐     ┌──────────────┐    ┌──────────┐
-    │  Memory  │     │   Research   │    │  Body    │
-    │Graph+Chr │     │ web+browser  │    │ mouse+OCR│
-    └──────────┘     └──────────────┘    └──────────┘
-          │                  │                  │
-          └──────────────────┼──────────────────┘
-                             │
-                    ┌────────▼────────┐
-                    │ 6 GUARDIANS    │
-                    │ RAM/Git/Phoenix│
-                    │ Mirror/Watchdog│
-                    │    + Healer     │
-                    └─────────────────┘
+```text
+WORLD / INPUT
+   ↓
+PERCEPTION
+   ↓
+MEMORY + GRAPH
+   ↓
+COLONY / SPECIALISTS
+   ↓
+ARBITRATION
+   ↓
+ACTION PROPOSAL
+   ↓
+SAFETY / POLICY GATES
+   ↓
+ACTION
+   ↓
+OBSERVED EFFECT
+   ↓
+VERIFICATION
+   ↓
+LEARNING / REPUTATION / WEIGHTS / MEMORY
+   ↺
 ```
 
----
+The key rule is that **a generated claim is not evidence of an external effect**.
 
-## Key services (12 systemd user units)
+## Main subsystems
 
-| Service | Port | Role |
-|:--------|:-----|:-----|
-| `eidos-bridge` | **8003** | Main REST API — 40+ endpoints (talk, research, browse, vision, GUI…) |
-| `eidos-webpanel` | **8080** | Dashboard + neural graph + system monitor |
-| `eidos-trinity` | **8001** | Service coordination & orchestration |
-| `eidos-chroma-http` | **8767** | ChromaDB vector database (Rust CLI) |
-| `eidos-brain-lite` | — | Deterministic central decision loop |
-| `eidos-daemon` | — | Lifecycle + Colony characters |
-| `eidos-vivo` | — | Autonomous vital cycle |
-| `eidos-healer` | — | Health monitor + auto-repair |
-| `eidos-telegram` | — | Telegram bot polling |
-| `eidos-tunnel-in` | — | Inbound tunnel (Mac → Kali) |
-| `eidos-tunnel-out` | — | Outbound tunnel (Kali → Mac) |
+| Area | Public components | Role |
+|---|---|---|
+| World / perception | `ui_world_model.py`, `eidos_world_engine.py`, perception/screen modules | Represent and observe environment state |
+| Memory / graph | SQLite stores, semantic/vector paths, knowledge reasoners | Persistent state and retrieval |
+| Colony | `colony_community.py`, lifecycle and character modules | Deliberation, specialization, social memory |
+| Characters | `character_neuron.py`, `character_lifecycle.py` | Individual state, synaptic-style links, genealogy/inheritance |
+| Arbitration | YO/reasoning/decision paths | Turn proposals into gated decisions |
+| Actions | action system/executor, body/browser/UI paths | Produce external effects |
+| Verification | action verifier, effect judges, negative controls | Check whether the intended effect occurred |
+| Learning | RL, error memory, graph updates, reputation/weights | Change future behavior from evidence |
+| Fly Lab | `fly_lab.py` | Isolated insect-inspired sparsity/plasticity experiments |
+| Runtime Hub | `runtime_hub.py` | Shared inspection/event/blackboard facade |
+| Self-edit Lab | `self_edit_lab.py` | Stage and inspect candidate code changes |
+| Autonomy Lab | `autonomy_benchmark.py` | Reproducible learn-from-effects benchmark |
 
----
+## Runtime Hub
 
-## Data flow (a complete action end-to-end)
+`core/runtime_hub.py` is deliberately conservative.
 
+Importing it must not:
+
+- start GUI automation;
+- start network services;
+- execute a proposed system action;
+- write Fly experiments into the live graph.
+
+It exposes component availability, a shared blackboard/event bus and action **proposals**.
+
+The intended direction is one observable runtime spine rather than many disconnected organs.
+
+## Colony
+
+Colony is a deliberative/social layer, not a fixed number of prompts.
+
+Historical stores contained different censuses of base characters, souls/identities and descendants. Therefore the architecture does not freeze one number as "the Colony".
+
+The rule is:
+
+> **Colony advises; EIDOS arbitrates.**
+
+Useful Colony output should eventually be linked to:
+
+- the claim it made;
+- the action chosen;
+- the observed result;
+- later reputation/credit.
+
+## Characters and artificial synapses
+
+Character lifecycle code can represent identity, parentage, inheritance and per-character associations.
+
+For a synaptic-style mechanism to count as useful learning, the project expects a causal chain:
+
+```text
+weight/state changes
+→ later activation changes
+→ later decision changes
+→ effect can be measured
 ```
-1. Bridge receives POST /talk {"text": "investigate n8n"}
-        │
-2. Colony: characters discuss (Analyst suggests research, Coder adds context)
-        │
-3. brain-lite: DECIDES → EXECUTE (mode: research)
-        │
-4. Research pipeline:
-   ├── eidos_deep_research.crawl() → DuckDuckGo-lite + BeautifulSoup
-   ├── eidos_active_research.research_now() → DeepSeek synthesizes
-   └── eidos_quality_gate.evaluate() → admit? quality_score > 0.5?
-        │
-5. Persist to graph:
-   ├── knowledge_nodes (SQLite) → new concept
-   └── ChromaDB → vector embedding (for semantic recall)
-        │
-6. Guardians verify:
-   ├── Mirror: did the new node pass quality gate?
-   ├── Git Guardian: snapshot the graph change
-   └── Watchdog: is the Bridge still responding?
-        │
-7. Response to caller: {"answer": "...", "learned": true, "sources": [...]}
+
+A stored number that never changes downstream computation is not evidence of useful plasticity.
+
+## Fly / Insect architecture
+
+The Fly line transfers **mechanisms**, not biological identity.
+
+Target pipeline:
+
+```text
+external connectome/dataset
+→ isolated loader
+→ sparse circuit experiment
+→ negative/shuffled control
+→ measurable advantage
+→ typed adapter
+→ gated integration
 ```
 
----
+Candidate mechanisms include sparse coding, Kenyon-cell-like expansion, novelty, reward-modulated plasticity, forgetting, routing and recurrent state.
 
-## Memory architecture (4 layers)
+The public Fly Lab is isolated from the live EIDOS graph.
 
-| Layer | Storage | Contents |
-|:------|:--------|:---------|
-| 1. Working | Python dicts | Ring buffers, immediate |
-| 2. ChromaDB | Vector DB (:8767) | ~6,200 embeddings (nomic-embed-text) |
-| 3. Episodic | `episodic.db` | ~800 episodes, session logs |
-| 4. Procedural | `evolution_brain.db` | Skills, motor patterns |
+## Models and tools
 
----
+Models are adapters/teachers/components, not EIDOS's persistent identity.
 
-## Databases
+They may provide:
 
-| File | Contents |
-|:-----|:---------|
-| `~/.eidos/evolution_brain.db` | **Primary** — 38,701 nodes + 168,818 edges + motor memory |
-| `~/.eidos/lifecycle.db` | Characters: birth, absorption, reproduction, genealogy |
-| `~/.eidos/self.db` | Self-model: 25K+ events, 9K+ self_states, 26K+ meta-thoughts |
-| `~/.eidos/episodic.db` | ~800 episodes, session logs |
+- language;
+- code proposals;
+- critique;
+- summarization;
+- planning hypotheses;
+- embeddings/representations.
 
-**Golden rule**: Never `sqlite3.connect()` directly. Always use
-`from core.db import get_conn` (applies `busy_timeout=30000`, WAL,
-`mmap_size=256M`, `cache_size=-40000`).
+Outputs remain claims until verified where verification is possible.
 
----
+EIDOS should learn from observable behavior, documentation, APIs, examples and benchmarks. It must not pretend ordinary interaction reveals a provider's hidden proprietary chain-of-thought or internal weights.
 
-## Extension points (for contributors)
+## Body / desktop
 
-| What | Where |
-|:-----|:------|
-| Add a Bridge endpoint | `core/bridge_to_eidos.py` (Flask `@app.route`) |
-| Add a Colony character | `core/character_lifecycle.py` → `birth_from_connection()` |
-| Add a skill | `core/eidos_skills.py` → `learn_skill()` |
-| Add a search engine | `core/eidos_action_executor.py` → `_SEARCH_ENGINES` dict |
-| Add a Guardian | New file in `core/`, register in `eidos-healer` |
-| Add a study source | `core/eidos_deep_research.py` → `_SKIP_DOMAINS` + parser |
+EIDOS has several action/perception paths:
 
----
+- accessibility APIs;
+- OCR/vision;
+- browser automation;
+- X11-style input;
+- window state;
+- desktop actions;
+- effect verification.
 
-## Operational limits (from `constitution.toml`)
+X11 and Wayland are not interchangeable.
 
-| Limit | Value |
-|:------|:------|
-| Files modified per cycle | 3 max |
-| Lines per file edit | 50 max |
-| New files per hour | 5 max |
-| Anti-loop | ring buffer 32, 3 reps in 30s → DISCARD |
-| Heavy ops | subprocess worker only (transcription/Playwright/crawl) |
+The clean Ubuntu CI can validate virtual X11 primitives and headless browser behavior. The real KDE/Wayland body must be validated separately on target hardware.
+
+## Persistent stores
+
+Runtime databases live outside the public source tree, typically under `~/.eidos`.
+
+The public repo must not rely on private databases being present for syntax/unit tests.
+
+Database access should prefer the project's unified DB layer where applicable and preserve rollback/backups for migrations.
+
+## Vector memory / ChromaDB
+
+The public tree currently contains **multiple historical Chroma strategies** and a port/client mismatch. This is tracked in GitHub issue #8.
+
+Until that issue is closed, documentation must not imply that one Chroma path is fully canonical.
+
+Required end state:
+
+- one supported server strategy;
+- one canonical port;
+- explicit client/server compatibility;
+- isolated integration test;
+- fallback behavior when unavailable.
+
+## Services and ports
+
+Historical documents listed fixed service counts. That is no longer treated as architecture truth.
+
+A service/port is only "active" when measured in a specific runtime snapshot.
+
+Common historical endpoints include Bridge/web/vector services, but a clean clone must discover its configured services rather than assume the private machine's topology.
+
+## Self-improvement
+
+Target code-improvement flow:
+
+```text
+proposal
+→ stage in isolation
+→ static validation
+→ tests
+→ benchmark delta
+→ policy/human gate
+→ commit
+→ later rollback if regression appears
+```
+
+Self-modification must never use its own prose as the sole proof that the change improved the system.
+
+## Evidence labels
+
+Architecture and documentation should use:
+
+- **VERIFIED** — reproduced by test/measurement/effect;
+- **DOCUMENTED** — recorded historically but not re-tested now;
+- **INFERRED** — conclusion supported by multiple observations;
+- **EXPERIMENTAL** — hypothesis/prototype/future mechanism.
+
+## Validation layers
+
+EIDOS now distinguishes three environments:
+
+1. **Clean Ubuntu CI** — public checkout, controlled tests.
+2. **Sanitized hardware worktree** — real machine, isolated from live EIDOS.
+3. **Live EIDOS** — private data/services/hardware.
+
+A capability should move inward only after it passes the previous layer.
+
+See also:
+
+- [AUTONOMY_LAB.md](AUTONOMY_LAB.md)
+- [KNOWN_ISSUES.md](KNOWN_ISSUES.md)
+- [EIDOS_EVOLUTION_DOCUMENTARY.md](EIDOS_EVOLUTION_DOCUMENTARY.md)
