@@ -408,8 +408,13 @@ def step(goal: str = "", app_name: Optional[str] = None,
                            confidence=conf, source='bom_real')
         except Exception:
             pass
+    # Motor execution is not task success. A non-positive verified effect must
+    # propagate as failure even when the click itself was physically dispatched.
+    verified_effect = reward > 0
     _learn(s_hash, chosen_key, reward, n_hash, label, effect)
-    return {"ok": True, "action": chosen_key, "label": label, "knew": meaning[:50],
+    return {"ok": verified_effect, "action_executed": True,
+            "effect_verified": verified_effect,
+            "action": chosen_key, "label": label, "knew": meaning[:50],
             "reward": round(reward, 2), "effect": effect,
             "state": s_hash, "next_state": n_hash, "dry_run": dry_run}
 
