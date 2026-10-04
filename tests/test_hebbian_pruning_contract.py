@@ -25,6 +25,8 @@ import json
 from core.eidos_hebbian_pruning import HebbianPruner, BRAIN_DB
 from core.db import get_conn
 p=HebbianPruner(); c=get_conn(BRAIN_DB)
+c.execute("CREATE TABLE IF NOT EXISTS knowledge_nodes(id TEXT PRIMARY KEY, concept TEXT, source TEXT DEFAULT '')")
+c.execute("CREATE TABLE IF NOT EXISTS knowledge_edges(from_node TEXT, to_node TEXT, relation_type TEXT, strength REAL, PRIMARY KEY(from_node,to_node,relation_type))")
 c.execute("INSERT OR REPLACE INTO knowledge_nodes(id,concept) VALUES('a','a'),('b','b')")
 c.execute("INSERT OR REPLACE INTO knowledge_edges(from_node,to_node,relation_type,strength) VALUES('a','b','test',0.01)")
 c.commit()
@@ -44,6 +46,8 @@ import json
 from core.eidos_hebbian_pruning import HebbianPruner, BRAIN_DB
 from core.db import get_conn
 p=HebbianPruner(); c=get_conn(BRAIN_DB)
+c.execute("CREATE TABLE IF NOT EXISTS knowledge_nodes(id TEXT PRIMARY KEY, concept TEXT, source TEXT DEFAULT '')")
+c.execute("CREATE TABLE IF NOT EXISTS knowledge_edges(from_node TEXT, to_node TEXT, relation_type TEXT, strength REAL, PRIMARY KEY(from_node,to_node,relation_type))")
 c.execute("INSERT OR REPLACE INTO knowledge_nodes(id,concept,source) VALUES('orphan','orphan','test')")
 c.commit()
 r=p.prune(dry_run=False)
