@@ -196,7 +196,7 @@ def summarize_day(date_str: str, max_tokens: int = 300) -> dict:
         f"Resume en 4-6 frases lo que pasó el {date_str} entre SER y EIDOS. "
         f"Identifica temas, decisiones, y aprendizajes. Diálogo:\n\n{ctx}")
     try:
-        sys.path.insert(0, "/home/ser/EIDOS")
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
         from core.eidos_llm import complete  # type: ignore
         r = complete(prompt, max_tokens=max_tokens, inject_identity=True)
         return {"ok": r.ok, "summary": r.text,

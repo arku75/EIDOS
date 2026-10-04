@@ -40,7 +40,7 @@ from pathlib import Path
 from typing import Optional
 from core.db import get_conn
 
-sys.path.insert(0, "/home/ser/EIDOS")
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
 def _imports():

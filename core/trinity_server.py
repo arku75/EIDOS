@@ -10,6 +10,7 @@ import logging
 import os
 import subprocess
 import sys
+from pathlib import Path
 import time
 import urllib.request
 import urllib.error
@@ -17,7 +18,7 @@ from typing import Any, Dict, List
 
 from flask import Flask, jsonify, request
 
-sys.path.insert(0, "/home/ser/EIDOS")
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 log = logging.getLogger("trinity")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [trinity] %(message)s")

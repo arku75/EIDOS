@@ -54,7 +54,7 @@ DASH_STATE = HUB_DIR / "dashboard_state.json"  # CSRF nonces, etc.
 def _lazy_imports():
     """Importa los módulos del clon/hub de forma perezosa para que el
     módulo se pueda importar sin dependencias circulares."""
-    sys.path.insert(0, "/home/ser/EIDOS")
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from core import eidos_hub             # noqa
     from core import eidos_tunnel          # noqa
     from core import eidos_command_channel # noqa

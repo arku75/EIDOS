@@ -269,7 +269,7 @@ def _default_llm_callable(system: str, prompt: str,
     """Adapter por defecto a eidos_llm.complete con inject_identity=False
     para respetar la persona del carácter."""
     try:
-        sys.path.insert(0, "/home/ser/EIDOS")
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
         from core.eidos_llm import complete  # type: ignore
     except Exception as e:  # noqa: BLE001
         return (f"[character_system: LLM no disponible — {e}]", "none")
