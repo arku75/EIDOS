@@ -147,6 +147,7 @@ SAFE_REGRESSION_MODULES = (
     "tests.test_recovery_causality",
     "tests.test_learning_retention_contract",
     "tests.test_antibiblioteca_causality",
+    "tests.test_rl_persistence",
 )
 
 
