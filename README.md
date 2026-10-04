@@ -92,7 +92,7 @@ The sanitation branch introduced reproducible tests that do not require SER's pr
 PYTHONPATH=. python core/fly_lab.py
 ```
 
-This runs a deterministic insect-inspired associative-learning experiment with a shuffled-label negative control.
+This runs a five-seed deterministic insect-inspired associative-learning benchmark with a shuffled-label negative control.
 
 A pass demonstrates that the implemented sparse/plastic learning mechanism learns structured data better than its control.
 
@@ -138,7 +138,7 @@ proposal
 PYTHONPATH=. python bin/eidos_agents_terminal.py
 ```
 
-The shared terminal exposes a common blackboard/event bus for:
+No-argument `python eidos.py` and explicit `python eidos.py cli` enter the same shared Runtime Hub terminal. It exposes a common blackboard/event bus for:
 
 - World
 - Actions
@@ -319,9 +319,9 @@ EIDOS contains multiple perception/action paths:
 - action verification;
 - world-model components.
 
-Desktop control is environment-dependent.
+Desktop control is environment-dependent. USB Gadget HID remains a first-class low-level actuator alongside DOM/browser and desktop-specific routes; it is not replaced by Playwright/Selenium.
 
-Historical X11/`xdotool` paths cannot be presented as equivalent to native KDE/Wayland input. Clean CI therefore tests virtual-X11 capability separately from hardware-in-the-loop validation on the real machine.
+Historical X11/`xdotool` paths cannot be presented as equivalent to native KDE/Wayland input. On Wayland, the generic selector fails closed rather than pretending xdotool/XTest is valid. Privileged USB HID/uinput behavior is hardware-in-the-loop work and availability never implies authorization. Clean CI therefore tests virtual-X11 capability separately from hardware-in-the-loop validation on the real machine.
 
 The real-machine test plan must verify:
 
@@ -459,6 +459,9 @@ Do not assume every historical service, port or private database exists on a fre
 EIDOS contains code capable of interacting with a computer and the web, so capability and safety must be separated.
 
 Public-development rules:
+
+- startup operation mode is fail-closed `PLAN`; `PLAN+EDIT` never bypasses constitution, ToolGuard, scope or operator authorization;
+- capability availability is distinct from authority to execute it;
 
 - secrets stay outside Git;
 - action proposals are not automatically successful actions;
