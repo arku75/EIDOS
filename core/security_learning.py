@@ -10,6 +10,8 @@ import json
 import zipfile
 import subprocess
 from pathlib import Path
+
+from core.paths import USER_HOME
 from typing import Dict, List, Optional, Set
 from dataclasses import dataclass, asdict
 from datetime import datetime
@@ -119,7 +121,7 @@ class SecurityLearningSystem:
         self.objectives = get_objectives_manager()
 
         # Directorios
-        self.courses_dir = Path("/home/ser/mis cosas/CURSOS/")
+        self.courses_dir = Path(os.environ.get("EIDOS_COURSES_DIR", str(USER_HOME / "Courses"))).expanduser()
         self.security_kb = Path.home() / ".eidos" / "knowledge" / "security"
         self.security_kb.mkdir(parents=True, exist_ok=True)
 
@@ -280,7 +282,7 @@ class SecurityLearningSystem:
         Aprende de un curso de hacking ético.
 
         🛡️ PROTECCIÓN: NUNCA borra archivos del usuario.
-        - Archivos en /home/ser/mis cosas/CURSOS/ → PROTEGIDOS, no se borran
+        - Archivos en $EIDOS_COURSES_DIR/ → PROTEGIDOS, no se borran
         - Archivos en ~/.eidos/downloads/ → Se pueden borrar después de aprender
         """
         print(f"\n📚 Aprendiendo de: {course.title}")
@@ -320,12 +322,12 @@ class SecurityLearningSystem:
                 self._save_concept(concept)
 
             # 🛡️ Auto-cleanup SOLO para archivos descargados por EIDOS
-            # Los archivos del usuario en /home/ser/mis cosas/ NUNCA se borran
+            # Los archivos del usuario en the configured user content directory/ NUNCA se borran
             if self.cleanup.auto_cleanup and course.format in ["ZIP", "PDF"]:
                 knowledge_summary = f"Curso: {course.title}\nConceptos: {len(concepts_learned)}\nTópicos: {', '.join(course.topics_covered)}"
                 # El cleanup manager verificará si es seguro borrar
                 self.cleanup.mark_as_learned(file_path, knowledge_summary, can_delete=True)
-                # Si el archivo estaba en /home/ser/mis cosas/, NO se borrará (protegido)
+                # Si el archivo estaba en the configured user content directory/, NO se borrará (protegido)
                 # Si el archivo estaba en ~/.eidos/downloads/, SÍ se borrará
 
             print(f"✅ Curso completado: {len(concepts_learned)} conceptos aprendidos")

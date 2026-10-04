@@ -473,7 +473,7 @@ if __name__ == "__main__":
     import sys
 
     task = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else \
-        "Analiza el directorio /home/ser/EIDOS/core y dame un resumen de los módulos más importantes"
+        "Analiza el directorio core del proyecto EIDOS y dame un resumen de los módulos más importantes"
 
     planner = AdvancedPlanner(verbose=True)
     plan = planner.create_plan(task, auto_critique=True)

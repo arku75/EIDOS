@@ -355,7 +355,7 @@ def get_planner() -> DAGPlanner:
 
 if __name__ == "__main__":
     import sys
-    task = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "lista los archivos .py en /home/ser/EIDOS/core"  # pyre-ignore[arg-type]
+    task = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "lista los archivos .py en el directorio core de EIDOS"  # pyre-ignore[arg-type]
     planner = DAGPlanner(verbose=True)
     summary = planner.run(task)
     print(f"\n{'='*50}")

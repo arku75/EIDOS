@@ -523,7 +523,7 @@ class IntentInferrer:
             # ── Project work detection ─────────────────────────────────────
             {
                 "name": "working_on_eidos",
-                "action_pattern": r"(EIDOS|eidos|/home/ser/EIDOS)",
+                "action_pattern": r"(EIDOS|eidos|EIDOS_SOURCE_ROOT)",
                 "intent": "work_eidos",
                 "template": "SER is working on EIDOS project",
                 "confidence": 0.70,

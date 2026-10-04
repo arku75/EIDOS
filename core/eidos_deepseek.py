@@ -6,7 +6,7 @@ Importable como módulo Python normal:
     r = ask_deepseek("system", "user", model="pro")
 
 CLI wrapper: bin/eidos-deepseek
-Transcripts: /home/ser/EIDOS_sandbox/deepseek_transcripts/
+Transcripts: $EIDOS_HOME/deepseek_transcripts/
 """
 from __future__ import annotations
 
@@ -19,8 +19,10 @@ import urllib.error
 from datetime import datetime
 from pathlib import Path
 
+from core.paths import EIDOS_HOME
+
 SECRETS_FILE = Path.home() / ".eidos" / "secrets.env"
-TRANSCRIPT_DIR = Path("/home/ser/EIDOS_sandbox/deepseek_transcripts")
+TRANSCRIPT_DIR = EIDOS_HOME / "deepseek_transcripts"
 TRANSCRIPT_DIR.mkdir(parents=True, exist_ok=True)
 
 API_URL = "https://api.deepseek.com/v1/chat/completions"
