@@ -2601,7 +2601,6 @@ Responde de forma natural y conversacional.""")
         for path in [
             os.path.join(eidos_dir, "SER_IDENTITY.md"),
             os.path.expanduser("~/EIDOS/SER_IDENTITY.md"),
-            os.path.expanduser("/home/ser/EIDOS/SER_IDENTITY.md"),
         ]:
             if os.path.exists(path):
                 break
