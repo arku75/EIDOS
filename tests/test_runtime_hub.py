@@ -76,6 +76,48 @@ class TestRuntimeHub(unittest.TestCase):
             proposal["proposal_id"],
         )
 
+    def test_verified_effect_becomes_reusable_causal_evidence(self):
+        proposal = self.hub.propose_action(
+            {"action": "click", "x": 10, "y": 20},
+            source="colony_coder",
+            expected_outcome="results appear",
+        )
+        before = {"window_title": "Before", "ocr_full_text": "Search", "regions": []}
+        after = {
+            "window_title": "After",
+            "ocr_full_text": "Search Results",
+            "regions": [{"text": "Results"}],
+        }
+        result = self.hub.verify_action_effect(
+            proposal, before, after, evidence_source="runtime-observer"
+        )
+        learned = self.hub.board_read("last_causal_learning")
+        self.assertTrue(result["learning_recorded"])
+        self.assertEqual(learned["proposal_id"], proposal["proposal_id"])
+        self.assertTrue(learned["verified"])
+        self.assertEqual(learned["action"]["action"], "click")
+        self.assertEqual(learned["evidence_source"], "runtime-observer")
+
+    def test_untrusted_self_evidence_is_not_reusable_as_verified_learning(self):
+        proposal = self.hub.propose_action(
+            {"action": "click", "x": 10, "y": 20},
+            source="colony_coder",
+            expected_outcome="results appear",
+        )
+        before = {"window_title": "Before", "ocr_full_text": "Search", "regions": []}
+        after = {
+            "window_title": "After",
+            "ocr_full_text": "Search Results",
+            "regions": [{"text": "Results"}],
+        }
+        result = self.hub.verify_action_effect(
+            proposal, before, after, evidence_source="colony_coder"
+        )
+        learned = self.hub.board_read("last_causal_learning")
+        self.assertTrue(result["observed_verified"])
+        self.assertFalse(result["credited_verified"])
+        self.assertFalse(learned["verified"])
+
     def test_no_effect_is_not_reported_as_success(self):
         proposal = self.hub.propose_action(
             {"action": "click", "x": 400, "y": 300},
