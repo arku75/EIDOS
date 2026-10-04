@@ -670,6 +670,53 @@ class ColonyCommunity:
             msg_type="system"
         )
     
+    def _effect_reputation_signal(self, agent_id: str) -> float:
+        """Return a bounded, evidence-weighted effect reputation in [-1, 1].
+
+        One isolated success/failure must not dominate routing. Five observed
+        outcomes are required before the evidence weight reaches 1.0.
+        """
+        try:
+            stats = self.get_agent_outcome_stats(agent_id)
+            total = int(stats.get("total_outcomes", 0) or 0)
+            if total <= 0:
+                return 0.0
+            mean_signed = float(stats.get("reputation_score", 0.0) or 0.0) / total
+            evidence_weight = min(1.0, total / 5.0)
+            return max(-1.0, min(1.0, mean_signed * evidence_weight))
+        except Exception:
+            return 0.0
+
+    def _rank_responders_by_effect(self, responders: List[str]) -> List[str]:
+        """Use verified effects as a bounded tie-breaker among plausible responders.
+
+        Semantic/neuronal routing supplies the candidate list and base order.
+        Effect reputation may reorder close candidates only after repeated
+        verified outcomes, so accumulated experience can change future routing
+        without replacing task relevance.
+        """
+        unique: List[str] = []
+        for agent_id in responders:
+            if agent_id not in unique:
+                unique.append(agent_id)
+
+        scored = []
+        for index, agent_id in enumerate(unique):
+            base = 1.0 - (0.15 * index)
+            effect_signal = self._effect_reputation_signal(agent_id)
+            final_score = base + (0.20 * effect_signal)
+            scored.append((final_score, index, agent_id, effect_signal))
+
+        scored.sort(key=lambda item: (-item[0], item[1]))
+        ranked = [item[2] for item in scored]
+        if ranked != unique:
+            log.info(
+                "Colony effect-routing reordered %s -> %s",
+                unique[:3],
+                ranked[:3],
+            )
+        return ranked
+
     def _select_responders(self, message: str) -> List[str]:
         """Selecciona qué agentes deberían responder al mensaje"""
         msg_lower = message.lower()
@@ -791,6 +838,7 @@ class ColonyCommunity:
         except Exception as _ne:
             log.debug("character_neuron no disponible: %s", _ne)
 
+        responders = self._rank_responders_by_effect(responders)
         return responders[:3]  # Máximo 3 respondiendo
 
     def _ensure_specialist_participant(self, agent_id: str):
