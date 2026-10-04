@@ -400,7 +400,7 @@ class TestRuntimeHub(unittest.TestCase):
         self.assertEqual(result["status"], "failed")
         self.assertFalse(learned["verified"])
         self.assertEqual(learned["proposal_id"], proposal["proposal_id"])
-        self.assertIn("no", learned["reason"].lower())
+        self.assertIn("cambios", learned["reason"].lower())
 
     def test_fly_validation_writes_result_to_shared_state(self):
         result = self.hub.fly_validate(317)
