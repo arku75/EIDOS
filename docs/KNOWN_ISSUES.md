@@ -15,18 +15,19 @@ However, "the tests pass" is not the same as "a completely new user can install 
 
 A dependency-resolution CI job has been added. Full runtime/service startup remains a separate acceptance target.
 
-## 2. ChromaDB strategy is internally inconsistent
+## 2. ChromaDB runtime compatibility still needs end-to-end proof
 
 **Status: OPEN — GitHub issue #8**
 
-The public tree currently mixes:
+The first-party topology is now aligned on port **8767**. The historical
+`bin/chroma_http_server.py` entrypoint delegates to the canonical
+`core/eidos_chroma_server.py` implementation instead of maintaining a second
+server.
 
-- port 8766 and port 8767;
-- external CLI service and custom Python server paths;
-- raw-HTTP assumptions and `chromadb.HttpClient`;
-- historical client/server version constraints.
-
-This must be resolved with an isolated end-to-end vector-store test, not a documentation-only change.
+What remains open is runtime/API compatibility: an isolated Ubuntu test must
+start the supported Chroma dependency, then prove heartbeat, collection
+creation, upsert, query, count, restart/persistence and fallback behavior.
+Topology alignment alone is not enough to close the issue.
 
 ## 3. Wayland body is not equivalent to the historical X11 body
 
