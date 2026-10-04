@@ -294,6 +294,7 @@ class EIDOSRuntimeHub:
             dict(before_record.get("snapshot") or {}),
             dict(after_record.get("snapshot") or {}),
             evidence_source=before_observer,
+            action_executed=True,
         )
 
     def verify_action_effect(
@@ -303,6 +304,7 @@ class EIDOSRuntimeHub:
         after: Dict[str, Any],
         *,
         evidence_source: str,
+        action_executed: bool = False,
     ) -> dict:
         """Close the evidence loop without executing the proposed action.
 
@@ -321,6 +323,11 @@ class EIDOSRuntimeHub:
         if not observer:
             raise ValueError("evidence_source is required")
         evidence_independent = observer != actor
+        if not action_executed:
+            raise ValueError(
+                "action execution evidence is required before an observed transition "
+                "can be credited to the proposal"
+            )
 
         before_scene = _scene_from_snapshot(before)
         after_scene = _scene_from_snapshot(after)
