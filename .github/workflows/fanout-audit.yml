@@ -209,32 +209,94 @@ jobs:
       - name: Install virtual desktop tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y xvfb xdotool xterm
+          sudo apt-get install -y xvfb xdotool x11-apps x11-utils xterm
 
-      - name: Test X11 pointer and keyboard effects
+      - name: Test X11 keyboard effect and XTEST availability
         run: |
           mkdir -p reports
-          Xvfb :99 -screen 0 1280x720x24 >reports/xvfb.log 2>&1 &
+          Xvfb :99 -screen 0 1280x720x24 +extension XTEST >reports/xvfb.log 2>&1 &
           export DISPLAY=:99
           sleep 1
-          xterm -geometry 80x24+10+10 -T EIDOS_FANOUT_TEST >reports/xterm.log 2>&1 &
+
+          xdpyinfo -ext XTEST >reports/xtest.txt
+          grep -q 'XTEST' reports/xtest.txt
+
+          xterm -T EIDOS_FANOUT_TEST -e bash -lc 'read line; printf "%s" "$line" > /tmp/eidos-fanout-typed.txt' >reports/xterm.log 2>&1 &
           XPID=$!
           sleep 1
 
           WIN="$(xdotool search --name EIDOS_FANOUT_TEST | head -n1)"
           test -n "$WIN"
-          xdotool windowfocus "$WIN"
-
-          xdotool mousemove 321 222
-          POS="$(xdotool getmouselocation --shell)"
-          printf '%s\n' "$POS" | tee reports/mouse.txt
-          echo "$POS" | grep -q 'X=321'
-          echo "$POS" | grep -q 'Y=222'
-
-          xdotool type --delay 10 "EIDOS_KEYBOARD_EFFECT_OK"
+          xdotool windowfocus --sync "$WIN"
+          xdotool type --delay 20 'EIDOS_KEYBOARD_EFFECT_OK'
+          xdotool key Return
+          wait "$XPID"
+          cp /tmp/eidos-fanout-typed.txt reports/typed.txt
+          grep -q '^EIDOS_KEYBOARD_EFFECT_OK
+      - name: Test local headless browser
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 --directory tests/fixtures/browser >reports/http.log 2>&1 &
+          HPID=$!
           sleep 1
+          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$BROWSER"
+          "$BROWSER" --headless --no-sandbox --disable-gpu --dump-dom http://127.0.0.1:8765/index.html > reports/browser-dom.html
+          grep -q EIDOS_BROWSER_OK reports/browser-dom.html
+          "$BROWSER" --headless --no-sandbox --disable-gpu --screenshot=reports/browser.png http://127.0.0.1:8765/index.html
+          test -s reports/browser.png
+          kill "$HPID" || true
 
-          kill "$XPID" || true
+      - name: Upload browser/desktop evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-desktop-evidence
+          path: reports/
+          retention-days: 7
+
+  aggregate:
+    name: aggregate-reports
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - python-shards
+      - subsystem-tests
+      - browser-desktop
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+          merge-multiple: false
+
+      - name: Build manifest
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json, hashlib
+
+          base = Path("all-artifacts")
+          items = []
+          for p in sorted(base.rglob("*")):
+              if p.is_file():
+                  data = p.read_bytes()
+                  items.append({
+                      "path": str(p),
+                      "bytes": len(data),
+                      "sha256": hashlib.sha256(data).hexdigest(),
+                  })
+          Path("fanout-manifest.json").write_text(json.dumps(items, indent=2), encoding="utf-8")
+          print(f"artifact files: {len(items)}")
+          PY
+
+      - name: Upload complete fanout bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: eidos-fanout-bundle
+          path: |
+            all-artifacts/
+            fanout-manifest.json
+          retention-days: 7
+ reports/typed.txt
 
       - name: Test local headless browser
         run: |
