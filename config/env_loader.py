@@ -18,7 +18,7 @@ _CREDENTIAL_SUFFIXES = ("_API_KEY", "_TOKEN", "_SECRET", "_KEY", "_PASSWORD")
 _WARNED_KEYS: set = set()
 
 def _sanitize_credentials():
-    """Limpiar caracteres no-ASCII de credenciales"""
+    """Reject suspicious credential encoding without mutating secret values."""
     for key, value in list(os.environ.items()):
         if not any(key.endswith(suffix) for suffix in _CREDENTIAL_SUFFIXES):
             continue
@@ -28,12 +28,12 @@ def _sanitize_credentials():
         except UnicodeEncodeError:
             pass
         
-        cleaned = value.encode("ascii", errors="ignore").decode("ascii")
-        os.environ[key] = cleaned
-        
         if key not in _WARNED_KEYS:
             _WARNED_KEYS.add(key)
-            print(f"⚠️  {key} contenía caracteres no-ASCII - limpiado", file=sys.stderr)
+            print(
+                f"⚠️  {key} contiene caracteres no-ASCII; se conserva sin modificar",
+                file=sys.stderr,
+            )
 
 def load_eidos_dotenv(
     eidos_home: Optional[Path] = None,
@@ -75,10 +75,19 @@ def get_eidos_home() -> Path:
 def ensure_eidos_home() -> Path:
     """Asegurar que ~/.eidos existe con permisos correctos"""
     home = get_eidos_home()
-    home.mkdir(parents=True, exist_ok=True)
-    
-    # Crear subdirectorios
+    home.mkdir(parents=True, exist_ok=True, mode=0o700)
+    try:
+        home.chmod(0o700)
+    except OSError:
+        pass
+
+    # State/config directories are private by default.
     for subdir in ("config", "sessions", "logs", "cron", "plugins"):
-        (home / subdir).mkdir(exist_ok=True)
+        path = home / subdir
+        path.mkdir(exist_ok=True, mode=0o700)
+        try:
+            path.chmod(0o700)
+        except OSError:
+            pass
     
     return home
