@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from core.runtime_hub import EIDOSRuntimeHub
 
@@ -87,6 +88,47 @@ class TestRuntimeHub(unittest.TestCase):
         self.assertEqual(result["status"], "failed")
         self.assertFalse(result["verification"]["verified"])
         self.assertEqual(result["verification"]["verdict"], "stuck")
+
+    def test_colony_source_gets_effect_reputation(self):
+        class FakeCommunity:
+            def __init__(self):
+                self.calls = []
+
+            def record_verified_outcome(self, *args, **kwargs):
+                self.calls.append((args, kwargs))
+                return {
+                    "success": True,
+                    "agent_id": args[0],
+                    "verified": args[1],
+                    "confidence": args[2],
+                }
+
+        fake = FakeCommunity()
+        proposal = self.hub.propose_action(
+            {"action": "click", "x": 400, "y": 300},
+            source="colony_coder",
+            expected_outcome="results appear",
+        )
+        before = {
+            "window_title": "EIDOS Test",
+            "ocr_full_text": "Search",
+            "regions": [{"text": "Search"}],
+        }
+        after = {
+            "window_title": "EIDOS Test — Results",
+            "ocr_full_text": "Search Results",
+            "regions": [{"text": "Search"}, {"text": "Results"}],
+        }
+
+        with patch(
+            "core.colony_community.get_colony_community",
+            return_value=fake,
+        ):
+            result = self.hub.verify_action_effect(proposal, before, after)
+
+        self.assertTrue(result["colony_reputation"]["success"])
+        self.assertEqual(result["colony_reputation"]["agent_id"], "colony_coder")
+        self.assertEqual(len(fake.calls), 1)
 
     def test_fly_validation_writes_result_to_shared_state(self):
         result = self.hub.fly_validate(317)
