@@ -36,3 +36,17 @@ Exact publication SHAs and run results are recorded in GitHub commit/issue follo
 - Complete first-party file-by-file review, dependency/supply-chain review and secret rotation where required.
 
 Next front after these repairs: measurable Runtime Hub/Colony integration, preserving CLAIM != ACTION != SUCCESS.
+
+
+## Colony / character causal consolidation
+
+Block 3 is accepted only when its release gates are green. The implementation now enforces these contracts:
+
+- Character synthesis requires `absorption_pct == 1.0` for both parents; incomplete learning cannot create a child.
+- Genealogy carries knowledge and reduced-strength synapses, and an isolated benchmark requires that inheritance measurably changes the child's later resonance.
+- Inherited competence is not earned reputation. Self-report, inheritance and explicitly unobserved evidence cannot write effect reputation.
+- Effect reputation remains bounded by repeated verified outcomes and can change later routing; persistence across restart is covered by the existing reputation regression.
+- Learned tool remediation cannot silently escalate privileges, and dynamically generated tools follow GENERATE -> VALIDATE -> TEST -> PROMOTE.
+- These Colony/tool invariants are included in fanout and the conservative self-edit regression suite so autonomous edits cannot remove them unnoticed.
+
+This closes architecture/test wiring for the block; CI status is recorded by GitHub Actions for the corresponding main HEAD. It does not claim that every possible programming language/domain is mastered, nor that inherited knowledge is generalization until held-out behavior demonstrates it.
