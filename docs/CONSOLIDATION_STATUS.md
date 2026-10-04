@@ -27,15 +27,16 @@ GitHub runners are ephemeral. Within each install job the checkout and venv are 
 
 Exact publication SHAs and run results are recorded in GitHub commit/issue follow-ups; a file cannot embed its own future commit SHA. No active runner is implied by this ledger.
 
-## Acceptance still open
+## Remaining external / hardware boundaries
 
-- Full runtime clean installation/startup, beyond the gateway/config distribution.
-- Runtime Hub causal execution, specialist reputation and reuse across subsystems.
-- Fly mechanism transfer with provenance and independent controls.
-- Hardware-in-the-loop Wayland/body verification on SER's Dell (not exercised here).
-- Complete first-party file-by-file review, dependency/supply-chain review and secret rotation where required.
+The original consolidation blocks below are implemented in the public tree. Remaining work is deliberately outside claims that clean CI can establish:
 
-Next front after these repairs: measurable Runtime Hub/Colony integration, preserving CLAIM != ACTION != SUCCESS.
+- hardware-in-the-loop Wayland/USB-HID verification on the target machine;
+- rotation of any credential that may historically have been exposed;
+- GitHub repository settings/metadata that require administrative UI/API access;
+- private/live-state validation where public CI cannot reproduce SER's databases, devices or sessions.
+
+These boundaries do not reopen an implemented block. They limit the evidence level of the affected capability.
 
 
 ## Colony / character causal consolidation
@@ -107,6 +108,7 @@ Block 7 contract:
 Block 8 contract:
 - USB Gadget HID remains a first-class low-level actuator; it is not replaced by Playwright/Selenium/DOM.
 - HID report dispatch is not equivalent to verified world effect; learning success requires subsequent observation/verification.
+- Keyboard dispatch now records backend, dispatched/error state and keeps verification pending; unsupported uinput keyboard cannot masquerade as success.
 - X11/xdotool is selected only when an X11 DISPLAY and tool availability are demonstrated.
 - Wayland does not silently fall through to xdotool/XTest; physical/privileged HID behavior requires explicit HIL authorization.
 - No actuator is documented as universally undetectable.
