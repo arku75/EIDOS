@@ -18,6 +18,8 @@ import urllib.request
 import urllib.error
 from typing import Any
 
+from core.paths import EIDOS_HOME, REPO_ROOT
+
 # ── Claude Oracle (Playwright) ─────────────────────────────────────────────
 try:
     from core.claude_web import ask_claude_sync as _claude_sync
@@ -34,8 +36,8 @@ except ImportError:
 
 OLLAMA_URL   = "http://localhost:11434"
 TOOL_MODEL   = "deepseek-r1:14b"   # soporta function calling
-EIDOS_DIR    = os.path.expanduser("~/EIDOS")
-SS_DIR       = os.path.expanduser("~/.eidos/screenshots")
+EIDOS_DIR    = str(REPO_ROOT)
+SS_DIR       = str(EIDOS_HOME / "screenshots")
 os.makedirs(SS_DIR, exist_ok=True)
 
 # ── Definición de herramientas que EIDOS puede usar ─────────────────────
@@ -50,7 +52,7 @@ TOOLS: list[dict] = [
                 "properties": {
                     "command": {
                         "type": "string",
-                        "description": "Comando bash completo a ejecutar. Ejemplo: 'ls -lh /home/ser/Documentos'"
+                        "description": "Comando bash completo a ejecutar. Ejemplo: 'ls -lh ~/Documents'"
                     },
                     "timeout": {
                         "type": "integer",
@@ -700,7 +702,7 @@ TOOLS: list[dict] = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "path": {"type": "string", "description": "Directorio o archivo a escanear. Ej: '/tmp', '/home/ser/Downloads'"}
+                    "path": {"type": "string", "description": "Directorio o archivo a escanear. Ej: '/tmp', '~/Downloads'"}
                 },
                 "required": []
             }
@@ -1314,7 +1316,7 @@ def _deep_crawl_url(url: str, max_pages: int = 20, visual: bool = False) -> str:
     Sintetiza con Ollama y guarda en ChromaDB.
     """
     import sys
-    sys.path.insert(0, "/home/ser/EIDOS")
+    sys.path.insert(0, str(REPO_ROOT))
 
     # Modo visual: abrir browser visible para la primera página
     if visual:
@@ -1411,7 +1413,7 @@ def _ram_check(kill: bool = False) -> str:
         import importlib.util as _ilu
         _spec = _ilu.spec_from_file_location(
             "ram_guardian",
-            "/home/ser/EIDOS/_SCRIPTS/ram_guardian.py"
+            str(REPO_ROOT / "_SCRIPTS" / "ram_guardian.py")
         )
         _mod = importlib.util.module_from_spec(_spec)   # pyre-ignore[arg-type]
         _spec.loader.exec_module(_mod)  # pyre-ignore[arg-type]
