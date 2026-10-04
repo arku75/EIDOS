@@ -32,6 +32,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, Dict, Any, Callable
 
+from core.paths import REPO_ROOT, SANDBOX_ROOT
+
 
 # ── Tipos básicos ────────────────────────────────────────────────────────────
 
@@ -1323,7 +1325,7 @@ Privacidad:
   • 25+ lenguajes soportados
 
 Ejemplo:
-  /graphify build /home/ser/EIDOS
+  /graphify build $EIDOS_SOURCE_ROOT
   /graphify query "qué es el KnowledgeGraph"
   /graphify path "kernel" "memory_vec"'''
             return CommandResult(success=True, output=help_text)
@@ -2718,7 +2720,7 @@ Ejemplo:
 
     def _cmd_improve(self, args: str) -> "CommandResult":
         """Auto-mejora de EIDOS: detecta áreas, propone, prueba en clon, guarda para SER."""
-        eidos_dir = os.environ.get("EIDOS_DIR", "/home/ser/EIDOS")
+        eidos_dir = os.environ.get("EIDOS_DIR", str(REPO_ROOT))
         sys.path.insert(0, eidos_dir)
         try:
             from core.self_improver import SelfImprover
@@ -2778,7 +2780,7 @@ Ejemplo:
                     "  /improve run      — ciclo completo (detectar→proponer→probar en clon)\n"
                     "  /improve list     — ver mejoras aprobadas pendientes\n"
                     "  /improve apply <id> — aplicar mejora al sistema real\n\n"
-                    "El clon está en /home/ser/NO TOCAR/S@NDBOX_EIDOS/eidos_clon/\n"
+                    f"El clon está en {SANDBOX_ROOT / 'eidos_clon'}\n"
                     "EIDOS propone, prueba en sandbox, SER decide si aplicar."
                 ))
         except Exception as e:
@@ -2789,7 +2791,7 @@ Ejemplo:
         import subprocess, sys as _sys
         from pathlib import Path
         try:
-            eidos_dir = os.environ.get("EIDOS_DIR", "/home/ser/EIDOS")
+            eidos_dir = os.environ.get("EIDOS_DIR", str(REPO_ROOT))
             sys.path.insert(0, eidos_dir)
             from core.memory_compressor import MemoryCompressor
             mc = MemoryCompressor()
@@ -2815,7 +2817,7 @@ Ejemplo:
     def _cmd_setup(self, args: str) -> "CommandResult":
         """Configura perfil de usuario (nickname → personaje Colony)."""
         try:
-            eidos_dir = os.environ.get("EIDOS_DIR", "/home/ser/EIDOS")
+            eidos_dir = os.environ.get("EIDOS_DIR", str(REPO_ROOT))
             sys.path.insert(0, eidos_dir)
             from core.user_profile_creator import UserProfileCreator
             creator = UserProfileCreator()
@@ -2945,7 +2947,7 @@ Ejemplo:
         import subprocess
         from pathlib import Path
         try:
-            eidos_dir = Path(os.environ.get("EIDOS_DIR", "/home/ser/EIDOS"))
+            eidos_dir = Path(os.environ.get("EIDOS_DIR", str(REPO_ROOT)))
             r = subprocess.run(
                 ["bash", str(eidos_dir / "scripts" / "sync_knowledge.sh")],
                 capture_output=True, text=True, timeout=300, cwd=str(eidos_dir)
@@ -2959,7 +2961,7 @@ Ejemplo:
         import subprocess, sys as _sys
         from pathlib import Path
         sources   = args.split() if args else ["cve", "wikipedia"]
-        eidos_dir = Path(os.environ.get("EIDOS_DIR", "/home/ser/EIDOS"))
+        eidos_dir = Path(os.environ.get("EIDOS_DIR", str(REPO_ROOT)))
         results   = []
         for src in sources:
             try:
