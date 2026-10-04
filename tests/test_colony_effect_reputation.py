@@ -114,5 +114,47 @@ class TestColonyEffectReputation(unittest.TestCase):
         self.assertFalse(result["success"])
 
 
+    def test_effect_learning_survives_restart_and_changes_future_routing(self):
+        initial = ["colony_analyst", "colony_coder"]
+        for i in range(5):
+            self.community.record_verified_outcome(
+                "colony_coder", True, 1.0,
+                reason="independently verified success",
+                proposal_id=f"persist-coder-{i}",
+                action_type="test",
+            )
+            self.community.record_verified_outcome(
+                "colony_analyst", False, 1.0,
+                reason="independently verified failure",
+                proposal_id=f"persist-analyst-{i}",
+                action_type="test",
+            )
+
+        restarted = object.__new__(ColonyCommunity)
+        restarted.db_path = self.community.db_path
+        restarted._current_session = "restart-session"
+        restarted._participants = dict(self.community._participants)
+        restarted._message_handlers = []
+        restarted._init_db()
+
+        self.assertEqual(
+            restarted._rank_responders_by_effect(initial),
+            ["colony_coder", "colony_analyst"],
+        )
+        stats = restarted.get_agent_outcome_stats("colony_coder")
+        self.assertEqual(stats["total_outcomes"], 5)
+        self.assertAlmostEqual(stats["reputation_score"], 5.0)
+
+    def test_persistence_without_evidence_does_not_change_routing(self):
+        restarted = object.__new__(ColonyCommunity)
+        restarted.db_path = self.community.db_path
+        restarted._current_session = "empty-restart"
+        restarted._participants = dict(self.community._participants)
+        restarted._message_handlers = []
+        restarted._init_db()
+        initial = ["colony_analyst", "colony_coder"]
+        self.assertEqual(restarted._rank_responders_by_effect(initial), initial)
+
+
 if __name__ == "__main__":
     unittest.main()
