@@ -142,6 +142,9 @@ SAFE_REGRESSION_MODULES = (
     "tests.test_character_neuron_inheritance",
     "tests.test_skill_evolver_safety",
     "tests.test_dynamic_tools_promotion",
+    "tests.test_action_verifier_causality",
+    "tests.test_causal_loop_safety",
+    "tests.test_recovery_causality",
 )
 
 
