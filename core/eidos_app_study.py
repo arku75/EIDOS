@@ -35,7 +35,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-sys.path.insert(0, str(Path.home() / "EIDOS"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 log = logging.getLogger("eidos.app_study")
 
@@ -58,7 +58,7 @@ KNOWN_APPS: dict = {
         "purpose": "Workflow automation low-code (HTTP, schedule, integrations)",
         "alternative_method": (
             "REST API directa: GET http://localhost:5678/rest/workflows. "
-            "Browse workflows en /home/ser/EIDOS/docs/n8n_workflows/workflows/."
+            "Browse workflows en $EIDOS_SOURCE_ROOT/docs/n8n_workflows/workflows/."
         ),
     },
     "vscode": {
@@ -85,7 +85,7 @@ KNOWN_APPS: dict = {
         "url": "https://docs.n8n.io/",
         "wm_class_re": r"chromium\.Chromium",
         "purpose": "Documentación n8n — workflow automation. Tu n8n local está en :5678 (eidos-n8n Docker)",
-        "alternative_method": "curl https://docs.n8n.io/llms.txt; ver /home/ser/EIDOS/docs/n8n_workflows/",
+        "alternative_method": "curl https://docs.n8n.io/llms.txt; ver $EIDOS_SOURCE_ROOT/docs/n8n_workflows/",
     },
     "firefox": {
         "binary": "firefox-esr",
@@ -112,14 +112,14 @@ KNOWN_APPS: dict = {
         "alternative_method": "SER usa principalmente: ls, cd, cat, grep, python3, nmap, curl, ps, find, nohup",
     },
     "blender": {
-        "binary": "/home/ser/MIS PROGRAMAS/blender",
+        "binary": os.environ.get("EIDOS_BLENDER_BIN", "blender"),
         "wm_class_re": r"blender|Blender",
         "purpose": "Suite de modelado 3D, animación, renderizado (Cycles/Eevee), compositing, VFX, scripting Python. Versión 5.1.2 instalada standalone",
         "alternative_method": (
-            "Scripting headless: /home/ser/MIS PROGRAMAS/blender --background --python script.py "
+            "Scripting headless: $EIDOS_BLENDER_BIN --background --python script.py "
             "--render-frame 1 --render-output /tmp/render.png. "
             "API: bpy (context, data, ops). bpy.ops.mesh.primitive_cube_add() para crear objetos. "
-            "Más en /home/ser/MIS PROGRAMAS/blender-5.1.2-linux-x64/5.1/scripts/templates_py/"
+            "Más en the Blender installation templates_py directory"
         ),
     },
 }

@@ -439,7 +439,7 @@ if __name__ == "__main__":
     # Test 4: Git
     print("\n[Test 4] Registrando commit...")
     bridge.record_git_commit(
-        "/home/ser/EIDOS", "Fix: RAM Guardian protection", 
+        str(Path(__file__).resolve().parents[1]), "Fix: RAM Guardian protection", 
         ["core/ram_guardian.py"], "abc1234"
     )
     print("  ✅ Git registrado")

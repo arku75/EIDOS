@@ -558,7 +558,7 @@ def seed_core_recipes() -> List[Dict[str, Any]]:
             "name": "Ver uso de disco",
             "description": "Muestra el espacio en disco disponible",
             "steps": [
-                {"action": "terminal", "cmd": "df -h && echo '---' && du -sh /home/ser/* 2>/dev/null | sort -rh | head -10",
+                {"action": "terminal", "cmd": "df -h && echo '---' && du -sh ~/* 2>/dev/null | sort -rh | head -10",
                  "description": "Mostrar espacio en disco y directorios más grandes"},
             ],
             "trigger_words": ["espacio disco", "disk usage", "df", "cuánto espacio"],
