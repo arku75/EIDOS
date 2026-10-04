@@ -151,6 +151,8 @@ jobs:
         include:
           - name: fly
             command: PYTHONPATH=. python -m unittest -v tests.test_fly_lab
+          - name: hebbian-pruning-contract
+            command: PYTHONPATH=. python -m unittest -v tests.test_hebbian_pruning_contract
           - name: runtime-hub
             command: PYTHONPATH=. python -m unittest -v tests.test_runtime_hub
           - name: agents-terminal
