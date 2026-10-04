@@ -145,6 +145,8 @@ SAFE_REGRESSION_MODULES = (
     "tests.test_action_verifier_causality",
     "tests.test_causal_loop_safety",
     "tests.test_recovery_causality",
+    "tests.test_learning_retention_contract",
+    "tests.test_antibiblioteca_causality",
 )
 
 
