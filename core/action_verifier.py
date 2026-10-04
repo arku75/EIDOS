@@ -385,9 +385,9 @@ class StateChecker:
                         "Página cargando lentamente tras scroll",
                         RecoveryAction.WAIT_RETRY)
             else:
-                return (Verdict.VERIFIED,
-                        "Scroll ejecutado (sin cambio detectable en OCR)",
-                        None)
+                return (Verdict.STUCK,
+                        "Scroll despachado sin efecto observable",
+                        RecoveryAction.REPLAN)
 
         # Type requires an observable state change; execution alone is not success.
         if action_type == "type":
