@@ -39,7 +39,8 @@ jobs:
             tests/test_self_edit_lab.py \
             tests/test_self_edit_guardrails.py \
             tests/test_colony_effect_reputation.py \
-            tests/test_db_thread_contract.py
+            tests/test_db_thread_contract.py \
+            tests/test_model_fabric_contract.py
 
       - name: Run pure integration tests
         run: |
@@ -51,7 +52,8 @@ jobs:
             tests.test_self_edit_lab \
             tests.test_self_edit_guardrails \
             tests.test_colony_effect_reputation \
-            tests.test_db_thread_contract
+            tests.test_db_thread_contract \
+            tests.test_model_fabric_contract
 
       - name: Run autonomy benchmark
         run: |
