@@ -129,6 +129,7 @@ def stage_candidate(source_path: str | Path, candidate: str) -> tuple[Path, Edit
 SAFE_REGRESSION_MODULES = (
     "tests.test_self_edit_lab",
     "tests.test_self_edit_guardrails",
+    "tests.test_self_edit_staging_integrity",
     "tests.test_fly_lab",
     "tests.test_runtime_hub",
     "tests.test_agents_terminal",
