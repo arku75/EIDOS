@@ -59,7 +59,9 @@ class TestRuntimeHub(unittest.TestCase):
         }
 
         predictions_before = self.hub.world_model.stats()["total_predictions"]
-        result = self.hub.verify_action_effect(proposal, before, after)
+        result = self.hub.verify_action_effect(
+            proposal, before, after, evidence_source="runtime-observer"
+        )
 
         self.assertEqual(result["status"], "verified")
         self.assertTrue(result["verification"]["verified"])
@@ -84,7 +86,9 @@ class TestRuntimeHub(unittest.TestCase):
             "ocr_full_text": "No change",
             "regions": [{"text": "No change"}],
         }
-        result = self.hub.verify_action_effect(proposal, snapshot, snapshot)
+        result = self.hub.verify_action_effect(
+            proposal, snapshot, snapshot, evidence_source="runtime-observer"
+        )
         self.assertEqual(result["status"], "failed")
         self.assertFalse(result["verification"]["verified"])
         self.assertEqual(result["verification"]["verdict"], "stuck")
@@ -129,6 +133,55 @@ class TestRuntimeHub(unittest.TestCase):
         self.assertTrue(result["colony_reputation"]["success"])
         self.assertEqual(result["colony_reputation"]["agent_id"], "colony_coder")
         self.assertEqual(len(fake.calls), 1)
+
+    def test_actor_cannot_credit_its_own_evidence(self):
+        proposal = self.hub.propose_action(
+            {"action": "click", "x": 400, "y": 300},
+            source="colony_coder",
+            expected_outcome="results appear",
+        )
+        before = {
+            "window_title": "Before",
+            "ocr_full_text": "Search",
+            "regions": [{"text": "Search"}],
+        }
+        after = {
+            "window_title": "After",
+            "ocr_full_text": "Search Results",
+            "regions": [{"text": "Search"}, {"text": "Results"}],
+        }
+
+        with patch("core.colony_community.get_colony_community") as mocked:
+            result = self.hub.verify_action_effect(
+                proposal,
+                before,
+                after,
+                evidence_source="colony_coder",
+            )
+
+        self.assertEqual(result["status"], "untrusted_evidence")
+        self.assertFalse(result["evidence_independent"])
+        self.assertFalse(result["credited_verified"])
+        self.assertIsNone(result["colony_reputation"])
+        mocked.assert_not_called()
+
+    def test_evidence_source_is_required(self):
+        proposal = self.hub.propose_action(
+            {"action": "click", "x": 1, "y": 2},
+            source="colony_coder",
+        )
+        snapshot = {
+            "window_title": "Same",
+            "ocr_full_text": "Same",
+            "regions": [],
+        }
+        with self.assertRaises(ValueError):
+            self.hub.verify_action_effect(
+                proposal,
+                snapshot,
+                snapshot,
+                evidence_source="",
+            )
 
     def test_fly_validation_writes_result_to_shared_state(self):
         result = self.hub.fly_validate(317)
