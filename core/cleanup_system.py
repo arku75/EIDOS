@@ -75,7 +75,7 @@ class CleanupManager:
       * ~/.eidos/videos/     (generados)
       * ~/.eidos/voice_output/ (generados)
     - NUNCA toca archivos del usuario en:
-      * /home/ser/ (TODO el directorio del usuario está protegido)
+      * el directorio home completo del usuario
       * Cualquier archivo fuera de ~/.eidos/
     """
 
@@ -123,24 +123,24 @@ class CleanupManager:
         - ~/.eidos/window_captures/
 
         NUNCA borra archivos del usuario en:
-        - /home/ser/ (TODO el directorio del usuario)
+        - el directorio home completo del usuario
         - Cualquier archivo fuera de ~/.eidos/
         """
         file_path = file_path.resolve()  # Ruta absoluta
 
-        # 🛡️ PROTECCIÓN 1: Verificar que NO esté en /home/ser/ (excepto ~/.eidos/)
+        # 🛡️ PROTECCIÓN 1: Verificar que NO esté en el home del usuario (excepto ~/.eidos/)
         user_home = Path.home()  # /home/ser
         eidos_home = user_home / ".eidos"
 
-        # Si el archivo está en /home/ser/ pero NO en /home/ser/.eidos/, PROTEGIDO
+        # Si el archivo está en el home pero NO en ~/.eidos/, PROTEGIDO
         try:
-            # Intentar obtener ruta relativa desde /home/ser/
+            # Intentar obtener ruta relativa desde el home del usuario
             rel_from_user = file_path.relative_to(user_home)
             # Si la ruta NO empieza con .eidos, está en directorio del usuario → PROTEGIDO
             if not str(rel_from_user).startswith(".eidos"):
                 return False  # ❌ NO borrar - es archivo del usuario
         except ValueError:
-            # No está en /home/ser/, continuar verificando
+            # No está en el home del usuario, continuar verificando
             pass
 
         # 🛡️ PROTECCIÓN 2: Verificar si el archivo está en algún directorio seguro

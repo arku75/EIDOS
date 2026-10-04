@@ -58,6 +58,8 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+
+from core.paths import REPO_ROOT
 from typing import Optional, Callable, List
 
 
@@ -272,7 +274,7 @@ class OperationModeManager:
 
         # Verificar si es archivo de EIDOS
         is_eidos_file = "core/" in str(path_obj) or \
-                        str(path_obj).startswith("/home/ser/EIDOS/core")
+                        str(path_obj.resolve()).startswith(str((REPO_ROOT / "core").resolve()))
 
         if not is_eidos_file:
             # No es archivo de EIDOS - usar permisos normales

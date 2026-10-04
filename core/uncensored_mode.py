@@ -23,7 +23,7 @@ Uso:
     mode.set_level(FreedomLevel.ZION)
     
     # Verificar permiso
-    if mode.can_modify("/home/ser/EIDOS/core/kernel.py"):
+    if mode.can_modify(str(REPO_ROOT / "core" / "kernel.py")):
         apply_changes()
     
     # Sanctuary archivos protegidos absolutamente
@@ -42,6 +42,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum, auto
 from pathlib import Path
+
+from core.paths import REPO_ROOT
 from typing import Dict, List, Optional, Set, Literal, Any
 
 # Configuración de logging estructurado
@@ -303,7 +305,7 @@ class UncensoredMode:
             return
         
         # EIDOS root directory
-        self.eidos_root = eidos_root or Path("/home/ser/EIDOS")
+        self.eidos_root = eidos_root or REPO_ROOT
         self.core_dir = self.eidos_root / "core"
         
         # Estado actual
@@ -662,8 +664,8 @@ if __name__ == "__main__":
         print("\n🛡️ Test Sanctuary:")
         sanctuary_tests = [
             "/etc/passwd",
-            "/home/ser/EIDOS/core/kernel.py",
-            "/home/ser/EIDOS/data/test.txt",
+            str(REPO_ROOT / "core" / "kernel.py"),
+            str(REPO_ROOT / "data" / "test.txt"),
         ]
         for path in sanctuary_tests:
             protected = mode.is_sanctuary_protected(path)
@@ -678,8 +680,8 @@ if __name__ == "__main__":
         # Test can_modify
         print("\n🔧 Test can_modify (PRISON level):")
         test_files = [
-            "/home/ser/EIDOS/plugins/test.py",
-            "/home/ser/EIDOS/core/kernel.py",
+            str(REPO_ROOT / "plugins" / "test.py"),
+            str(REPO_ROOT / "core" / "kernel.py"),
             "/etc/passwd",
         ]
         for path in test_files:
