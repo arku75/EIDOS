@@ -5,6 +5,9 @@ Permite a EIDOS interactuar visualmente y dinámicamente con las páginas web.
 import os
 import time
 import logging
+import shutil
+import subprocess
+from pathlib import Path
 from typing import Optional
 
 log = logging.getLogger("eidos.playwright")
@@ -24,22 +27,15 @@ class PlaywrightAgent:
             from playwright.sync_api import sync_playwright
             self.playwright = sync_playwright().start()
             
-            display = os.environ.get("DISPLAY", ":0")
-            os.environ["DISPLAY"] = display
-            
-            # Sincronizar perfil de Firefox del usuario a una carpeta temporal para usar sus sesiones
-            import subprocess
-            import glob
-            profile_dir = "/tmp/eidos_firefox_profile"
-            user_profiles = glob.glob(os.path.expanduser("~/.mozilla/firefox/*.default-esr")) + glob.glob(os.path.expanduser("~/.mozilla/firefox/*.default"))
-            if user_profiles:
-                source_profile = user_profiles[0]
-                subprocess.run(f"rm -rf {profile_dir} && rsync -a --copy-links --exclude 'lock' --exclude '.parentlock' {source_profile}/ {profile_dir}/", shell=True)
-            
-            # Usar Firefox de Playwright con el perfil clonado
+            # Browser state is EIDOS-owned by default. Never clone a user's
+            # authenticated Firefox profile implicitly.
+            state_root = Path(os.environ.get("EIDOS_HOME", str(Path.home() / ".eidos"))).expanduser()
+            profile_dir = state_root / "browser" / "playwright-firefox"
+            profile_dir.mkdir(parents=True, exist_ok=True)
+
             self.browser = self.playwright.firefox.launch_persistent_context(
-                user_data_dir=profile_dir if user_profiles else "",
-                headless=False,
+                user_data_dir=str(profile_dir),
+                headless=self.headless,
                 viewport={'width': 1920, 'height': 1080},
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             )
@@ -74,7 +70,10 @@ class PlaywrightAgent:
             self.page.goto(url, timeout=30000, wait_until="domcontentloaded")
             time.sleep(wait_time)
             if not self.headless:
-                os.system("wmctrl -a 'Firefox' 2>/dev/null || wmctrl -a 'firefox' 2>/dev/null")
+                for title in ("Firefox", "firefox"):
+                    r = subprocess.run(["wmctrl", "-a", title], capture_output=True, timeout=2)
+                    if r.returncode == 0:
+                        break
             return True
         except Exception as e:
             log.error("Error goto %s: %s", url, e)
