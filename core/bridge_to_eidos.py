@@ -33,6 +33,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import shlex
 import sys
 import time
 import threading
@@ -141,19 +142,37 @@ _DANGEROUS_CMD_PATTERNS = [
     "git push --force", ">|", "/dev/sd",
 ]
 
-def _is_safe_shell_cmd(cmd: str) -> Tuple[bool, str]:
-    """Valida que un comando shell no sea destructivo."""
+def _safe_shell_argv(cmd: str) -> Tuple[list[str] | None, str]:
+    """Parse an explicit SER command without invoking a shell interpreter."""
+    if not cmd or not cmd.strip():
+        return None, "Comando vacío"
+    try:
+        argv = shlex.split(cmd)
+    except ValueError as exc:
+        return None, f"Comando inválido: {exc}"
+    if not argv:
+        return None, "Comando vacío"
+    # Shell control syntax has semantics beyond argv and must go through a
+    # separately authorized interactive terminal, never the automatic bridge.
+    shell_meta = {"|", "||", "&&", ";", ">", ">>", "<", "<<", "&"}
+    if any(token in shell_meta for token in argv) or any(
+        marker in cmd for marker in ("$(", "`", "\n", "\r")
+    ):
+        return None, "Metacaracteres de shell no permitidos en el bridge automático"
     cmd_lower = cmd.lower()
     for pattern in _DANGEROUS_CMD_PATTERNS:
         if pattern in cmd_lower:
-            return False, f"Comando bloqueado por seguridad: coincide con patrón peligroso '{pattern}'"
-    # Bloquear pipes a comandos peligrosos
-    dangerous_commands = ["dd", "mkfs", "fdisk", "format", "mkswap"]
-    parts = cmd_lower.split()
-    for dc in dangerous_commands:
-        if dc in parts:
-            return False, f"Comando '{dc}' bloqueado por seguridad"
-    return True, ""
+            return None, f"Comando bloqueado por seguridad: coincide con patrón peligroso '{pattern}'"
+    dangerous_commands = {"dd", "mkfs", "fdisk", "format", "mkswap", "wipefs"}
+    if argv[0].lower() in dangerous_commands:
+        return None, f"Comando '{argv[0]}' bloqueado por seguridad"
+    return argv, ""
+
+
+def _is_safe_shell_cmd(cmd: str) -> Tuple[bool, str]:
+    """Compatibility predicate backed by the argv-only bridge policy."""
+    argv, reason = _safe_shell_argv(cmd)
+    return argv is not None, reason
 
 def _get_session(session_id: str) -> list:
     if session_id not in _talk_sessions:
@@ -249,12 +268,12 @@ def talk():
         _direct_shell = _re_pre.match(r'^\s*\[SHELL:\s*(.+?)\]\s*$', message, _re_pre.DOTALL)
         if _direct_shell:
             cmd = _direct_shell.group(1).strip()
-            safe, reason = _is_safe_shell_cmd(cmd)
-            if not safe:
+            argv, reason = _safe_shell_argv(cmd)
+            if argv is None:
                 return jsonify({"text": f"⛔ {reason}", "agents_used": ["shell"]})
             try:
                 r = _sp_pre.run(
-                    cmd, shell=True, capture_output=True, text=True,
+                    argv, shell=False, capture_output=True, text=True,
                     timeout=30, cwd=str(Path.home() / "EIDOS")
                 )
                 out = (r.stdout.strip() or r.stderr.strip() or "(sin salida)")[:1000]
@@ -784,29 +803,14 @@ def talk():
             elif rec == "play_along":
                 response_text = "🎭 " + response_text
 
-        # ── Ejecutar [SHELL: cmd] que el LLM haya incluido en su respuesta ──
-        import re as _re, subprocess as _sp
+        # Model output is a proposal, never authority to execute.
+        # Strip legacy [SHELL:] directives and surface them as blocked proposals.
+        import re as _re
         _shell_pat = _re.compile(r'\[SHELL:\s*([^\]]{1,300})\]')
         _shell_hits = _shell_pat.findall(response_text)
         if _shell_hits:
-            exec_parts = []
-            for cmd in _shell_hits[:3]:  # máx 3 comandos por respuesta
-                safe, reason = _is_safe_shell_cmd(cmd)
-                if not safe:
-                    exec_parts.append(f"\n⛔ {reason}")
-                    continue
-                try:
-                    r = _sp.run(
-                        cmd, shell=True, capture_output=True, text=True,
-                        timeout=15, cwd=str(Path.home() / "EIDOS")
-                    )
-                    out = (r.stdout.strip() or r.stderr.strip())[:500]
-                    exec_parts.append(f"\n```\n$ {cmd}\n{out}\n```")
-                except Exception as _e:
-                    exec_parts.append(f"\n[error: {_e}]")
-            if exec_parts:
-                response_text = _shell_pat.sub('', response_text).strip()
-                response_text += "\n\n" + "".join(exec_parts)
+            response_text = _shell_pat.sub('', response_text).strip()
+            response_text += "\n\n⛔ Propuesta de shell del modelo no ejecutada; requiere acción explícita de SER."
 
         _session.append({"role": "assistant", "text": response_text, "ts": time.time()})
 
