@@ -167,6 +167,8 @@ jobs:
             command: PYTHONPATH=. python -m unittest -v tests.test_colony_community
           - name: colony-effect-reputation
             command: PYTHONPATH=. python -m unittest -v tests.test_colony_effect_reputation
+          - name: character-lifecycle-contract
+            command: PYTHONPATH=. python -m unittest -v tests.test_character_lifecycle_contract
           - name: hardware-validation
             command: PYTHONPATH=. python -m unittest -v tests.test_hardware_validation
           - name: config
