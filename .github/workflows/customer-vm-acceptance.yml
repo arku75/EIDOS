@@ -1,0 +1,164 @@
+name: customer-vm-acceptance
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: customer-vm-acceptance-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-distribution:
+    name: Build distributable wheel
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build wheel from source
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --wheel
+          python - <<'PY'
+          from pathlib import Path
+          wheels = list(Path("dist").glob("*.whl"))
+          assert len(wheels) == 1, wheels
+          print(wheels[0])
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eidos-customer-wheel
+          path: dist/*.whl
+          if-no-files-found: error
+          retention-days: 7
+
+  fresh-customer-vm:
+    name: Fresh customer VM
+    needs: build-distribution
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      # Deliberately no checkout here. This job behaves like a third party who
+      # receives only the built distribution, on a separate fresh hosted VM.
+      - uses: actions/download-artifact@v4
+        with:
+          name: eidos-customer-wheel
+          path: /tmp/eidos-dist
+
+      - name: Install as an external customer
+        shell: bash
+        run: |
+          test ! -e "$GITHUB_WORKSPACE/.git"
+          python3 -m venv /tmp/customer-venv
+          . /tmp/customer-venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install /tmp/eidos-dist/*.whl
+          python -m pip check
+
+          export EIDOS_HOME=/tmp/customer-home
+          export HOME=/tmp/customer-user
+          mkdir -p "$EIDOS_HOME" "$HOME"
+          cd /tmp
+
+          python - <<'PY'
+          from importlib.util import find_spec
+          from pathlib import Path
+          import core
+          import eidos
+
+          venv = Path("/tmp/customer-venv").resolve()
+          for module in (core, eidos):
+              module_path = Path(module.__file__).resolve()
+              assert venv in module_path.parents, (module.__name__, module_path)
+
+          for model_dependency in ("torch", "transformers"):
+              assert find_spec(model_dependency) is None, model_dependency
+          PY
+
+          eidos --help > /tmp/customer-eidos-help.txt
+          grep -q "EIDOS CASCADE" /tmp/customer-eidos-help.txt
+
+      - name: Customer first-run and shared CLI
+        shell: bash
+        run: |
+          . /tmp/customer-venv/bin/activate
+          export EIDOS_HOME=/tmp/customer-home
+          export HOME=/tmp/customer-user
+          cd /tmp
+
+          eidos-config init
+          eidos-config set gateway.port 19001
+          test "$(eidos-config get gateway.port)" = "19001"
+          test -s "$EIDOS_HOME/config.yaml"
+
+          printf 'status\ncapabilities\nexit\n' | eidos > /tmp/customer-cli.txt
+          grep -q "EIDOS Shared Agents Terminal" /tmp/customer-cli.txt
+          grep -q '"effect_verification_available": true' /tmp/customer-cli.txt
+          grep -q '"world_effect_verification"' /tmp/customer-cli.txt
+
+      - name: Customer causal learning and restart
+        shell: bash
+        run: |
+          . /tmp/customer-venv/bin/activate
+          export EIDOS_HOME=/tmp/customer-home
+          export HOME=/tmp/customer-user
+          cd /tmp
+
+          # Distinct processes prove persistence rather than in-memory reuse.
+          eidos-acceptance-zero-llm learn | tee /tmp/customer-learn.json
+          eidos-acceptance-zero-llm verify | tee /tmp/customer-restart.json
+
+          grep -q '"effect_verified": true' /tmp/customer-learn.json
+          grep -q '"negative_control_credited": false' /tmp/customer-learn.json
+          grep -q '"colony_routing": \["colony_coder", "colony_analyst"\]' /tmp/customer-learn.json
+
+          grep -q '"phase": "verify-after-restart"' /tmp/customer-restart.json
+          grep -q '"chosen_action": "write_fixture"' /tmp/customer-restart.json
+          grep -q '"colony_routing_persisted": \["colony_coder", "colony_analyst"\]' /tmp/customer-restart.json
+          grep -q '"colony_verified_outcomes": 5' /tmp/customer-restart.json
+          grep -q '"llm_modules_loaded": false' /tmp/customer-restart.json
+
+      - name: Customer acceptance summary
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          learn = json.loads(Path("/tmp/customer-learn.json").read_text())
+          restart = json.loads(Path("/tmp/customer-restart.json").read_text())
+          summary = {
+              "source_checkout_present": False,
+              "installed_from_wheel": True,
+              "zero_llm": restart["llm_modules_loaded"] is False,
+              "real_fixture_effect_verified": learn["effect_verified"],
+              "false_credit_rejected": learn["negative_control_credited"] is False,
+              "learning_survived_restart": restart["chosen_action"] == "write_fixture",
+              "colony_routing_survived_restart": restart["colony_routing_persisted"],
+              "self_edit_source_unchanged": restart["self_edit_source_unchanged"],
+          }
+          assert all([
+              summary["installed_from_wheel"],
+              summary["zero_llm"],
+              summary["real_fixture_effect_verified"],
+              summary["false_credit_rejected"],
+              summary["learning_survived_restart"],
+              summary["self_edit_source_unchanged"],
+          ])
+          Path("/tmp/customer-acceptance-summary.json").write_text(
+              json.dumps(summary, indent=2, sort_keys=True) + "\n"
+          )
+          print(json.dumps(summary, sort_keys=True))
+          PY
