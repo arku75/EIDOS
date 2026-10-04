@@ -14,7 +14,7 @@ API HTTP (v1, compatible con chromadb.HttpClient):
     GET  /api/v1/collections/<id>/count
 
 Uso:
-    python3 core/eidos_chroma_server.py --port 8766
+    python3 core/eidos_chroma_server.py --port 8767
 """
 
 from __future__ import annotations
@@ -185,7 +185,7 @@ class ChromaHandler(BaseHTTPRequestHandler):
 def main():
     import argparse
     p = argparse.ArgumentParser(description="EIDOS ChromaDB Microservice")
-    p.add_argument("--port", type=int, default=8766)
+    p.add_argument("--port", type=int, default=int(os.environ.get("EIDOS_CHROMA_PORT", "8767")))
     p.add_argument("--host", default="127.0.0.1")
     args = p.parse_args()
 
