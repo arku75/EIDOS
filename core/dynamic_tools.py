@@ -434,19 +434,29 @@ class DynamicToolBuilder:
         if not safe:
             print(f"⚠️  [DynamicTools] Warnings de seguridad: {warnings}")
 
-        # Guardar
+        # Unsafe candidates are evidence/proposals, never active tools.
+        if not safe:
+            self._log(name, "rejected", "; ".join(warnings))
+            return ToolResult(
+                success=False, tool_name=name, code=code,
+                error="unsafe generated tool rejected",
+                validation={"syntax": syntax_ok, "safe": False, "warnings": warnings},
+            )
+
+        # Guardar only after syntax + safety gates.
         tool_path = TOOLS_DIR / f"{name}.py"
         tool_path.write_text(code)
 
         # Test en sandbox
         test_ok, test_output = self._test_in_sandbox(str(tool_path))
 
-        # Registrar en DB
+        # A generated tool becomes active only after its isolated smoke test passes.
         code_hash = hashlib.md5(code.encode()).hexdigest()
+        active = 1 if test_ok else 0
         self.db.execute("""
             INSERT OR REPLACE INTO tools (name, description, path, code_hash, created_at, active, source)
-            VALUES (?, ?, ?, ?, ?, 1, 'generated')
-        """, (name, description, str(tool_path), code_hash, time.time()))
+            VALUES (?, ?, ?, ?, ?, ?, 'generated')
+        """, (name, description, str(tool_path), code_hash, time.time(), active))
         self.db.commit()
 
         self._log(name, "created", f"syntax={syntax_ok}, safe={safe}, test={test_ok}")
@@ -454,7 +464,7 @@ class DynamicToolBuilder:
         print(f"{status} [DynamicTools] Tool '{name}' generado → {tool_path}")
 
         return ToolResult(
-            success=True, tool_name=name, tool_path=str(tool_path),
+            success=test_ok, tool_name=name, tool_path=str(tool_path),
             code=code, validation={"syntax": syntax_ok, "safe": safe,
                                     "warnings": warnings, "test_ok": test_ok,
                                     "test_output": test_output}
