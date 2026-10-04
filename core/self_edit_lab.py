@@ -131,6 +131,7 @@ SAFE_REGRESSION_MODULES = (
     "tests.test_self_edit_guardrails",
     "tests.test_fly_lab",
     "tests.test_runtime_hub",
+    "tests.test_agents_terminal",
     "tests.test_autonomy_benchmark",
     "tests.test_hardware_validation",
     "tests.test_constitution",
