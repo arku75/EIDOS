@@ -173,6 +173,8 @@ jobs:
             command: PYTHONPATH=. python -m unittest -v tests.test_character_neuron_inheritance
           - name: skill-evolver-safety
             command: PYTHONPATH=. python -m unittest -v tests.test_skill_evolver_safety
+          - name: dynamic-tools-promotion
+            command: PYTHONPATH=. python -m unittest -v tests.test_dynamic_tools_promotion
           - name: hardware-validation
             command: PYTHONPATH=. python -m unittest -v tests.test_hardware_validation
           - name: config
