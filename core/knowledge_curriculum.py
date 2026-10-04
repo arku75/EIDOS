@@ -14,11 +14,13 @@ import subprocess, os, logging, json, time, uuid, sqlite3
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
+from core.paths import EIDOS_HOME as DEFAULT_EIDOS_HOME, SANDBOX_ROOT
+
 log = logging.getLogger("curriculum")
 
-BRAIN_DB   = Path.home() / ".eidos" / "evolution_brain.db"
-EIDOS_HOME = Path.home() / ".eidos"
-SANDBOX    = Path("/home/ser/NO TOCAR/S@NDBOX_EIDOS/experiments")
+BRAIN_DB   = DEFAULT_EIDOS_HOME / "evolution_brain.db"
+EIDOS_HOME = DEFAULT_EIDOS_HOME
+SANDBOX    = SANDBOX_ROOT / "experiments"
 
 
 # ── Utilidades brain ──────────────────────────────────────────────────────────
@@ -582,7 +584,7 @@ SQLITE ESPECÍFICO:
   VACUUM;           → compactar DB
   ANALYZE;          → estadísticas para optimizer
 """,
-        "exercise": "sqlite3 /home/ser/.eidos/evolution_brain.db \"SELECT category, COUNT(*) FROM knowledge_nodes GROUP BY category ORDER BY COUNT(*) DESC LIMIT 10;\"",
+        "exercise": "sqlite3 ~/.eidos/evolution_brain.db \"SELECT category, COUNT(*) FROM knowledge_nodes GROUP BY category ORDER BY COUNT(*) DESC LIMIT 10;\"",
         "category": "languages:sql"
     },
     {

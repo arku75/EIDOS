@@ -8,7 +8,7 @@ DISEÑO DE LA LÍNEA DISCIPLINADA (v2026-05-21):
     → CRUZARÍA never_exfiltrate_data
   • Este adaptador FUERZA configuración por env vars que apunta CodeWiki a
     Ollama local (provider=openai-compatible, base_url=http://127.0.0.1:11434/v1)
-  • Modo "sensitive" (default ON para /home/ser/EIDOS/ y ~/.eidos/):
+  • Modo "sensitive" (default ON para $EIDOS_SOURCE_ROOT/ y $EIDOS_HOME/):
     - aborta si Ollama no responde (NO fallback a APIs externas)
     - CODEWIKI_NO_KEYRING=1 (respeta owner_policy.never_access_keyring)
   • Modo "public": permite fallback con warning + audit log
@@ -42,10 +42,12 @@ import urllib.error
 from pathlib import Path
 from typing import Optional
 
+from core.paths import EIDOS_HOME as DEFAULT_EIDOS_HOME, REPO_ROOT
 
-EIDOS_REPO = Path("/home/ser/EIDOS")
+
+EIDOS_REPO = REPO_ROOT
 CODEWIKI_VENDOR = EIDOS_REPO / "vendor" / "CodeWiki"
-EIDOS_HOME = Path(os.path.expanduser("~/.eidos"))
+EIDOS_HOME = DEFAULT_EIDOS_HOME
 AUDIT_LOG = EIDOS_HOME / "codewiki_audit.log"
 DOCS_OUT_BASE = EIDOS_REPO / "docs" / "wiki"
 
@@ -246,8 +248,8 @@ def _self_test() -> int:
             failures.append(name)
 
     # 1) is_sensitive_repo()
-    chk("/home/ser/EIDOS/core es sensitive",
-        is_sensitive_repo("/home/ser/EIDOS/core") is True)
+    chk("EIDOS core es sensitive",
+        is_sensitive_repo(str(REPO_ROOT / "core")) is True)
     chk("~/.eidos es sensitive",
         is_sensitive_repo(os.path.expanduser("~/.eidos")) is True)
     chk("/tmp NO es sensitive",
@@ -265,7 +267,7 @@ def _self_test() -> int:
 
     # 3) prepare_env modo sensitive con Ollama vivo → set vars correctas
     if ollama_available():
-        r = prepare_env("/home/ser/EIDOS/core", mode="sensitive",
+        r = prepare_env(str(REPO_ROOT / "core"), mode="sensitive",
                          main_model="lfm2.5-1.2b-instruct:q4_0")
         chk("sensitive + Ollama vivo → ok",
             r.get("ok") is True
@@ -276,7 +278,7 @@ def _self_test() -> int:
             r["env_to_set"]["LLM_API_KEY"] == "ollama-local")
     else:
         chk("sensitive + Ollama caído → ABORTA",
-            prepare_env("/home/ser/EIDOS/core",
+            prepare_env(str(REPO_ROOT / "core"),
                          mode="sensitive").get("ok") is False)
 
     # 4) Simular "Ollama caído" forzando URL imposible
@@ -285,7 +287,7 @@ def _self_test() -> int:
     OLLAMA_OPENAI_BASE = OLLAMA_BASE + "/v1"
     OLLAMA_TAGS = OLLAMA_BASE + "/api/tags"
     try:
-        r = prepare_env("/home/ser/EIDOS/core", mode="sensitive")
+        r = prepare_env(str(REPO_ROOT / "core"), mode="sensitive")
         chk("sensitive + Ollama caído → ABORTA con reason",
             r.get("ok") is False and "Ollama no disponible" in r.get("abort_reason", ""))
     finally:
@@ -299,7 +301,7 @@ def _self_test() -> int:
         r["env_to_set"]["CODEWIKI_NO_KEYRING"] == "1")
 
     # 6) Mode auto: EIDOS → sensitive, /tmp → public
-    r1 = prepare_env("/home/ser/EIDOS/core", mode="auto")
+    r1 = prepare_env(str(REPO_ROOT / "core"), mode="auto")
     r2 = prepare_env("/tmp", mode="auto")
     chk("auto sobre EIDOS → sensitive",
         r1.get("mode_effective") == "sensitive")

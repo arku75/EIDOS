@@ -49,6 +49,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Literal, Any, Callable
 
+from core.paths import EIDOS_HOME
+
 # Configuración de logging estructurado
 log = logging.getLogger("eidos.rate_limiter")
 
@@ -591,7 +593,7 @@ class RateLimiter:
     
     def _load_history(self):
         """Carga historial de acciones desde disco."""
-        history_file = Path("/home/ser/EIDOS/.eidos/rate_limiter_history.json")
+        history_file = EIDOS_HOME / "rate_limiter_history.json"
         
         if not history_file.exists():
             return
@@ -619,7 +621,7 @@ class RateLimiter:
     
     def _save_history(self):
         """Persiste historial de acciones a disco."""
-        history_file = Path("/home/ser/EIDOS/.eidos/rate_limiter_history.json")
+        history_file = EIDOS_HOME / "rate_limiter_history.json"
         history_file.parent.mkdir(parents=True, exist_ok=True)
         
         try:

@@ -30,10 +30,11 @@ import signal
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from core.db import get_conn
+from core.paths import EIDOS_HOME, REPO_ROOT
 
 log = logging.getLogger("eidos.libre")
 
-LEARNING_LOG = Path.home() / ".eidos" / "learning_log.md"
+LEARNING_LOG = EIDOS_HOME / "learning_log.md"
 
 # Acciones permitidas (whitelist) — todas READ-ONLY
 SAFE_ACTIONS = {
@@ -459,8 +460,8 @@ class EidosLibre:
             elif character == "colony_analyst":
                 # Analyst: analiza un documento de EIDOS
                 import random
-                docs = list(Path("/home/ser/EIDOS").glob("*.md")) + \
-                       list(Path("/home/ser/EIDOS").glob("core/*.py"))
+                docs = list(REPO_ROOT.glob("*.md")) + \
+                       list(REPO_ROOT.glob("core/*.py"))
                 if docs:
                     doc = random.choice(docs[:20])
                     content = doc.read_text(encoding="utf-8", errors="ignore")[:400]
@@ -847,7 +848,7 @@ class EidosLibre:
 
     def _read_eidos_local(self, topic: str) -> str:
         """Lee archivos locales de EIDOS para auto-estudio — sin necesitar internet."""
-        eidos_root = Path("/home/ser/EIDOS")
+        eidos_root = REPO_ROOT
         topic_lower = topic.lower()
         file_map = {
             "colony_dashboard": "core/colony_dashboard.py",
@@ -1044,7 +1045,7 @@ class EidosLibre:
                 try:
                     if "arquitectura interna" in topic.lower():
                         import glob
-                        py_files = glob.glob("/home/ser/EIDOS/core/*.py")[:5]
+                        py_files = glob.glob(str(REPO_ROOT / "core" / "*.py"))[:5]
                         text = "Código fuente local:\n"
                         for f in py_files:
                             with open(f, "r") as src:
@@ -1151,7 +1152,7 @@ class EidosLibre:
         """Lee un .md aleatorio del proyecto y lo aprende."""
         import random
         from pathlib import Path
-        candidates = list(Path("/home/ser/EIDOS").glob("*.md"))[:30]
+        candidates = list(REPO_ROOT.glob("*.md"))[:30]
         if not candidates:
             return None
         doc = random.choice(candidates)
@@ -1357,7 +1358,7 @@ class EidosLibre:
     def _action_study_own_code(self) -> Optional[str]:
         """EIDOS estudia su propio código fuente para mejorar."""
         import random
-        core_dir = Path("/home/ser/EIDOS/core")
+        core_dir = REPO_ROOT / "core"
         py_files = list(core_dir.glob("*.py"))
         if not py_files:
             return None
