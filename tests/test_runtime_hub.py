@@ -183,6 +183,79 @@ class TestRuntimeHub(unittest.TestCase):
                 evidence_source="",
             )
 
+    def test_registered_observations_verify_correlated_proposal(self):
+        proposal = self.hub.propose_action(
+            {"action": "click", "x": 10, "y": 20},
+            source="colony_coder",
+            expected_outcome="result appears",
+        )
+        before = self.hub.record_observation(
+            {
+                "window_title": "Before",
+                "ocr_full_text": "Search",
+                "regions": [{"text": "Search"}],
+            },
+            observer="runtime-observer",
+        )
+        after = self.hub.record_observation(
+            {
+                "window_title": "After",
+                "ocr_full_text": "Search Results",
+                "regions": [{"text": "Search"}, {"text": "Results"}],
+            },
+            observer="runtime-observer",
+        )
+
+        with patch("core.colony_community.get_colony_community") as mocked:
+            mocked.return_value.record_verified_outcome.return_value = {
+                "success": True,
+                "agent_id": "colony_coder",
+            }
+            result = self.hub.verify_observations(
+                proposal,
+                before["observation_id"],
+                after["observation_id"],
+            )
+
+        self.assertEqual(result["status"], "verified")
+        self.assertTrue(result["evidence_independent"])
+        self.assertTrue(result["credited_verified"])
+        self.assertEqual(
+            self.hub.action_proposal(proposal["proposal_id"])["proposal_id"],
+            proposal["proposal_id"],
+        )
+        self.assertEqual(
+            self.hub.action_outcome(proposal["proposal_id"])["proposal_id"],
+            proposal["proposal_id"],
+        )
+
+    def test_registered_observations_require_same_observer(self):
+        proposal = self.hub.propose_action(
+            {"action": "click", "x": 1, "y": 2},
+            source="colony_coder",
+        )
+        before = self.hub.record_observation(
+            {"window_title": "Before", "ocr_full_text": "A", "regions": []},
+            observer="observer-a",
+        )
+        after = self.hub.record_observation(
+            {"window_title": "After", "ocr_full_text": "B", "regions": []},
+            observer="observer-b",
+        )
+        with self.assertRaises(ValueError):
+            self.hub.verify_observations(
+                proposal,
+                before["observation_id"],
+                after["observation_id"],
+            )
+
+    def test_observation_requires_provenance(self):
+        with self.assertRaises(ValueError):
+            self.hub.record_observation(
+                {"window_title": "x", "ocr_full_text": "x", "regions": []},
+                observer="",
+            )
+
     def test_fly_validation_writes_result_to_shared_state(self):
         result = self.hub.fly_validate(317)
         self.assertTrue(result["passed"])
