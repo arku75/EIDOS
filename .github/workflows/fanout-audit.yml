@@ -205,6 +205,8 @@ jobs:
             command: PYTHONPATH=. python -m unittest -v tests.test_actuator_selector
           - name: usb-hid-dispatch
             command: PYTHONPATH=. python -m unittest -v tests.test_usb_hid_dispatch_contract
+          - name: browser-security-contract
+            command: PYTHONPATH=. python -m unittest -v tests.test_browser_security_contract
           - name: operation-modes-security
             command: PYTHONPATH=. python -m unittest -v tests.test_operation_modes_security
           - name: recovery-causality
