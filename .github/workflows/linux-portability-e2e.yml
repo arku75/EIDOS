@@ -18,7 +18,7 @@ jobs:
   distro:
     name: ${{ matrix.distro }}
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -38,64 +38,141 @@ jobs:
         shell: bash
         run: |
           apt-get update -qq
-          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends             git python3 python3-venv python3-pip ca-certificates
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            git python3 python3-venv python3-pip ca-certificates
+
       - uses: actions/checkout@v4
 
       - name: Verify portable source contract
         shell: bash
         run: |
-          ! grep -RIl --include='*.py' '/home/ser/' core bin cli config gateway terminal api browser daemon eidos.py main.py || {
+          ! grep -RIl --include='*.py' '/home/ser/' \
+            core bin cli config gateway terminal api browser daemon eidos.py main.py || {
             echo "first-party Python contains a hardcoded /home/ser path"
             exit 1
           }
 
-      - name: Exercise EIDOS base runtime in isolated state
+      - name: Install EIDOS core into a clean venv
         shell: bash
         run: |
           python3 -m venv /tmp/eidos-venv
           . /tmp/eidos-venv/bin/activate
           python -m pip install --upgrade pip
           python -m pip install .
-          export EIDOS_HOME=/tmp/eidos-home
-          export EIDOS_ROOT="$GITHUB_WORKSPACE"
-          mkdir -p "$EIDOS_HOME"
+          python -m pip check
 
-          PYTHONPATH=. python - <<'PY'
-          import json
-          from pathlib import Path
-          from core.runtime_hub import EIDOSRuntimeHub
-          from core.actuator_selector import choose_actuator
-
-          hub = EIDOSRuntimeHub()
-          snap = hub.snapshot()
-          assert snap["safety"]["executes_actions"] is False
-          assert "world" in snap["components"]
-          catalog = hub.capability_catalog()
-          assert "world_effect_verification" in catalog
-
-          # Headless Linux must remain useful and must not invent a GUI actuator.
-          choice = choose_actuator({})
-          assert choice.available is False
-          assert choice.backend == "none"
-
-          state = Path("/tmp/eidos-home/portability.json")
-          state.write_text(json.dumps({"runtime": "ok", "backend": choice.backend}))
-          assert json.loads(state.read_text())["runtime"] == "ok"
-          print(json.dumps({
-              "runtime_hub": "ok",
-              "components": len(snap["components"]),
-              "headless_actuator": choice.backend,
-          }))
-          PY
-
-      - name: Verify CLI/config outside checkout
+      - name: Verify installed package outside checkout
         shell: bash
         run: |
           . /tmp/eidos-venv/bin/activate
           export EIDOS_HOME=/tmp/eidos-home
+          mkdir -p "$EIDOS_HOME"
           cd /tmp
+
+          python - <<'PY'
+          from importlib.util import find_spec
+          from pathlib import Path
+          import core
+          import eidos
+
+          venv = Path("/tmp/eidos-venv").resolve()
+          for module in (core, eidos):
+              path = Path(module.__file__).resolve()
+              assert venv in path.parents, (module.__name__, path)
+
+          # The base EIDOS package must stay model-independent.
+          for optional in ("torch", "transformers"):
+              assert find_spec(optional) is None, optional
+          PY
+
+          eidos --help | grep -q "EIDOS CASCADE"
           eidos-gateway --help | grep -q "EIDOS Gateway CLI"
           eidos-config init
           eidos-config set gateway.port 19000
           test "$(eidos-config get gateway.port)" = "19000"
           test -s "$EIDOS_HOME/config.yaml"
+
+      - name: Exercise shared EIDOS CLI process
+        shell: bash
+        run: |
+          . /tmp/eidos-venv/bin/activate
+          export EIDOS_HOME=/tmp/eidos-home
+          cd /tmp
+          printf 'status\nexit\n' | eidos > /tmp/eidos-cli.txt
+          grep -q 'EIDOS Shared Agents Terminal' /tmp/eidos-cli.txt
+          grep -q '"effect_verification_available": true' /tmp/eidos-cli.txt
+          grep -q '"world"' /tmp/eidos-cli.txt
+
+      - name: Exercise zero-LLM causal persistence across restart
+        shell: bash
+        run: |
+          . /tmp/eidos-venv/bin/activate
+          export EIDOS_HOME=/tmp/eidos-home
+          cd /tmp
+
+          # These are two distinct Python processes by design.
+          eidos-acceptance-zero-llm learn | tee /tmp/eidos-zero-llm-learn.json
+          eidos-acceptance-zero-llm verify | tee /tmp/eidos-zero-llm-verify.json
+
+          grep -q '"effect_verified": true' /tmp/eidos-zero-llm-learn.json
+          grep -q '"phase": "verify-after-restart"' /tmp/eidos-zero-llm-verify.json
+          grep -q '"fixture_effect_persisted": true' /tmp/eidos-zero-llm-verify.json
+          grep -q '"self_edit_source_unchanged": true' /tmp/eidos-zero-llm-verify.json
+          grep -q '"llm_modules_loaded": false' /tmp/eidos-zero-llm-verify.json
+
+      - name: Verify headless fail-closed and DB thread isolation
+        shell: bash
+        run: |
+          . /tmp/eidos-venv/bin/activate
+          export EIDOS_HOME=/tmp/eidos-home
+          cd /tmp
+          python - <<'PY'
+          import tempfile
+          import threading
+          from concurrent.futures import ThreadPoolExecutor
+          from pathlib import Path
+
+          from core.actuator_selector import choose_actuator
+          from core.db import close_all, get_conn
+          from core.runtime_hub import EIDOSRuntimeHub
+
+          hub = EIDOSRuntimeHub()
+          snap = hub.snapshot()
+          assert snap["safety"]["executes_actions"] is False
+          assert "world" in snap["components"]
+          assert "world_effect_verification" in hub.capability_catalog()
+
+          choice = choose_actuator({})
+          assert choice.available is False
+          assert choice.backend == "none"
+
+          with tempfile.TemporaryDirectory(prefix="eidos-thread-") as td:
+              db_path = Path(td) / "thread.db"
+              barrier = threading.Barrier(4)
+
+              def worker(i):
+                  first = get_conn(db_path)
+                  second = get_conn(db_path)
+                  assert first is second
+                  barrier.wait(timeout=10)
+                  first.execute(
+                      "CREATE TABLE IF NOT EXISTS t "
+                      "(id INTEGER PRIMARY KEY, thread_id INTEGER NOT NULL)"
+                  )
+                  first.execute(
+                      "INSERT OR REPLACE INTO t(id, thread_id) VALUES (?, ?)",
+                      (i, threading.get_ident()),
+                  )
+                  first.commit()
+                  return threading.get_ident(), id(first)
+
+              with ThreadPoolExecutor(max_workers=4) as pool:
+                  values = list(pool.map(worker, range(4)))
+
+              assert len({thread_id for thread_id, _ in values}) == 4
+              assert len({conn_id for _, conn_id in values}) == 4
+              reader = get_conn(db_path, cache=False)
+              assert reader.execute("SELECT COUNT(*) FROM t").fetchone()[0] == 4
+              reader.close()
+              close_all()
+          PY
