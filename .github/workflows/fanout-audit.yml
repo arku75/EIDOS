@@ -213,6 +213,8 @@ jobs:
             command: PYTHONPATH=. python -m unittest -v tests.test_recovery_causality
           - name: db-thread-contract
             command: PYTHONPATH=. python -m unittest -v tests.test_db_thread_contract
+          - name: model-fabric-contract
+            command: PYTHONPATH=. python -m unittest -v tests.test_model_fabric_contract
           - name: zero-llm-acceptance
             command: export EIDOS_HOME="$RUNNER_TEMP/eidos-zero-llm"; PYTHONPATH=. python -m core.zero_llm_acceptance learn; PYTHONPATH=. python -m core.zero_llm_acceptance verify
           - name: chroma-topology
