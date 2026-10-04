@@ -29,6 +29,7 @@ jobs:
           python -m py_compile \
             tests/test_fly_lab.py \
             tests/test_runtime_hub.py \
+            tests/test_agents_terminal.py \
             tests/test_autonomy_benchmark.py \
             tests/test_self_edit_lab.py \
             tests/test_self_edit_guardrails.py \
@@ -39,6 +40,7 @@ jobs:
           PYTHONPATH=. python -m unittest -v \
             tests.test_fly_lab \
             tests.test_runtime_hub \
+            tests.test_agents_terminal \
             tests.test_autonomy_benchmark \
             tests.test_self_edit_lab \
             tests.test_self_edit_guardrails \
