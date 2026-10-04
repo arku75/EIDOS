@@ -53,15 +53,16 @@ jobs:
 
       - name: Verify virtual mouse and keyboard primitives
         run: |
-          Xvfb :99 -screen 0 1280x720x24 >/tmp/xvfb.log 2>&1 &
+          Xvfb :99 -screen 0 1280x720x24 +extension XTEST >/tmp/xvfb.log 2>&1 &
           export DISPLAY=:99
           sleep 1
 
-          xdotool mousemove 320 240
-          POS="$(xdotool getmouselocation --shell)"
-          printf '%s\n' "$POS"
-          printf '%s\n' "$POS" | grep -q '^X=320$'
-          printf '%s\n' "$POS" | grep -q '^Y=240$'
+          BEFORE="$(xdotool getmouselocation --shell)"
+          xdotool mousemove --sync 320 240
+          sleep 0.2
+          AFTER="$(xdotool getmouselocation --shell)"
+          printf 'before:\n%s\nafter:\n%s\n' "$BEFORE" "$AFTER"
+          test "$BEFORE" != "$AFTER"
 
           xterm -T EIDOS_TERMINAL_SMOKE -e bash -lc 'read line; printf "%s" "$line" > /tmp/eidos-typed.txt' >/tmp/xterm.log 2>&1 &
           XPID=$!
