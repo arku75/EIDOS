@@ -6,12 +6,12 @@ Maneja los 3 modos de operación específicos solicitados por el usuario.
 Modos:
   PLAN        - Solo observar/estudiar (NO modificar nada)
   EDIT        - Auto-mejora en sandbox únicamente
-  PLAN+EDIT   - Control completo (modo por defecto)
+  PLAN+EDIT   - Edición operativa sujeta a las mismas políticas/guardas
 
 Cambio de Modo:
   - Shift+TAB: Cicla entre modos
   - /mode <modo>: Cambia a modo específico
-  - Al inicio: Siempre PLAN+EDIT
+  - Al inicio: PLAN (fail-closed); la elevación de modo es explícita
 
 Comportamientos por Modo:
 
@@ -32,10 +32,8 @@ Comportamientos por Modo:
     ❌ Ejecutar comandos en sistema real
 
   PLAN+EDIT:
-    ✅ TODO sin restricciones
-    ✅ Acceso completo a Kali tools
-    ✅ Modificar cualquier archivo
-    ✅ Ejecutar cualquier comando
+    ✅ Escritura/ejecución operativa permitida por modo
+    ❌ No anula constitución, ToolGuard, scope ni autorización
 
 Uso:
     from core.operation_modes import OperationModeManager
@@ -89,7 +87,7 @@ class OperationModeManager:
 
     MODES = ["PLAN", "EDIT", "PLAN+EDIT"]
 
-    def __init__(self, initial_mode: str = "PLAN+EDIT"):
+    def __init__(self, initial_mode: str = "PLAN"):
         self.current_mode = initial_mode
         self._mode_history: List[tuple[str, float]] = []
         self._mode_change_callbacks: List[Callable] = []
@@ -303,8 +301,8 @@ class OperationModeManager:
         if any(tool_name.lower().startswith(kt) for kt in kali_tools):
             return self.permissions.can_use_kali_tools
 
-        # Otras tools - siempre permitidas
-        return True
+        # Otras tools siguen sujetas a los permisos de ejecución del modo.
+        return self.permissions.can_execute_readonly or self.permissions.can_execute_write
 
     def get_mode_indicator(self) -> str:
         """
@@ -367,7 +365,7 @@ class OperationModeManager:
 
         print("  PLAN:      Solo observar - NO modificar nada")
         print("  EDIT:      Auto-mejoras en sandbox únicamente")
-        print("  PLAN+EDIT: Control completo (Purple Team mode)")
+        print("  PLAN+EDIT: Operación con escritura; las guardas externas siguen vigentes")
 
         print("\nMode Cycling:")
         print("  Shift+TAB: PLAN → EDIT → PLAN+EDIT → PLAN → ...")
