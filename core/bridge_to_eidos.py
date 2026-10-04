@@ -2124,7 +2124,7 @@ def exhaustive_study_endpoint():
             import subprocess
             subprocess.Popen(
                 ["python3", "scripts/estudio_exhaustivo.py", url, "--depth", str(depth)],
-                cwd="/home/ser/EIDOS",
+                cwd=str(Path(os.environ.get("EIDOS_ROOT", Path(__file__).resolve().parents[1])).expanduser().resolve()),
                 env={**os.environ, "DISPLAY": ":0"},
                 stdout=open(os.path.expanduser("~/.eidos/logs/estudio_exhaustivo.log"), "a"),
                 stderr=subprocess.STDOUT,
