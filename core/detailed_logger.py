@@ -442,19 +442,19 @@ if __name__ == "__main__":
 
     # Simular algunos cambios
     logger.log_file_create(
-        "/home/ser/test.py",
+        "~/test.py",
         "def hello():\n    print('Hello EIDOS!')"
     )
 
     logger.log_function_add(
-        "/home/ser/test.py",
+        "~/test.py",
         "process_data",
         10,
         "def process_data(data):\n    return data.upper()"
     )
 
     logger.log_file_edit(
-        "/home/ser/test.py",
+        "~/test.py",
         5,
         5,
         "print('Hello')",

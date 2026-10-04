@@ -5,8 +5,8 @@ core/eidos_vivo_runner.py — Daemon entry point para eidos-vivo.service (S67)
 Arranca eidos_vivo.EidosVivo en main thread + registra SIGTERM/SIGINT handlers
 para shutdown limpio. Se ejecuta como servicio systemd-user persistente.
 
-systemd: /home/ser/.config/systemd/user/eidos-vivo.service
-Logs:    /home/ser/.eidos/logs/vivo.log
+systemd: ~/.config/systemd/user/eidos-vivo.service
+Logs:    ~/.eidos/logs/vivo.log
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ import time
 from pathlib import Path
 
 # S68-A · Capturar SIGSEGV con traceback Python antes de morir
-# Volcar a /home/ser/.eidos/logs/vivo_faulthandler.log
+# Volcar a ~/.eidos/logs/vivo_faulthandler.log
 _FH_LOG = Path.home() / ".eidos" / "logs" / "vivo_faulthandler.log"
 _FH_LOG.parent.mkdir(parents=True, exist_ok=True)
 _fh_file = open(_FH_LOG, "a", buffering=1)

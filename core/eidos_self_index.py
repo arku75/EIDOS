@@ -1,7 +1,7 @@
 """
 core/eidos_self_index.py — Auto-conocimiento de EIDOS
 
-Escanea /home/ser/EIDOS/core/ y extrae:
+Escanea core/ y extrae:
 - Cada módulo: propósito (de la docstring)
 - Cada clase principal: qué hace
 - Cada función pública: signature + docstring breve

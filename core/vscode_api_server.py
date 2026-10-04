@@ -31,7 +31,7 @@ from socketserver import ThreadingMixIn
 from urllib.parse import urlparse, parse_qs
 
 # Añadir directorio raíz al path
-EIDOS_ROOT = Path(__file__).parent.parent  # /home/ser/EIDOS/
+EIDOS_ROOT = Path(__file__).parent.parent  # EIDOS project root
 sys.path.insert(0, str(EIDOS_ROOT))
 
 from core.knowledge_db import KnowledgeDB, get_knowledge_db

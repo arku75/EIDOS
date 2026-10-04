@@ -21,7 +21,7 @@ Uso:
     session = manager.open_session(
         name="eidos_main",
         backend="tmux",  # o "screen", "pty"
-        cwd="/home/ser/EIDOS"
+        cwd="~/EIDOS"
     )
     
     # Escribir comando
