@@ -43,11 +43,12 @@ import time
 from pathlib import Path
 from typing import Callable, Iterable, Optional, TextIO
 from core.db import get_conn, get_conn_ctx
+from core.paths import REPO_ROOT
 
 HUB_DIR  = Path(os.path.expanduser("~/.eidos/hub"))
 REG_DB   = HUB_DIR / "registry.db"
 
-EIDOS_REPO = "/home/ser/EIDOS"
+EIDOS_REPO = str(REPO_ROOT)
 if EIDOS_REPO not in sys.path:
     sys.path.insert(0, EIDOS_REPO)
 

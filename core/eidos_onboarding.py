@@ -35,11 +35,11 @@ import time
 from pathlib import Path
 from typing import Optional, TextIO
 
+from core.paths import EIDOS_HOME, REPO_ROOT, USER_HOME
+
 # ── Paths y constantes ─────────────────────────────────────────────────────
 
-EIDOS_REPO = Path("/home/ser/EIDOS")
-USER_HOME  = Path(os.path.expanduser("~"))
-EIDOS_HOME = USER_HOME / ".eidos"
+EIDOS_REPO = REPO_ROOT
 CLONE_DIR  = EIDOS_HOME / "clone"
 
 # Subdirectorios visibles al huésped (estructuras vacías iniciales)
@@ -406,9 +406,8 @@ SYSTEMD_UNIT = textwrap.dedent("""\
     [Service]
     Type=simple
     # El clon se arranca como módulo Python. Asume PYTHONPATH apunta al
-    # checkout del clon (o que /home/ser/EIDOS está disponible en esta
-    # máquina). Si no, edita Environment= para apuntar al sitio correcto.
-    Environment=PYTHONPATH=%h/.eidos/clone:/home/ser/EIDOS
+    # checkout del clon. No depende del checkout privado del desarrollador.
+    Environment=PYTHONPATH=%h/.eidos/clone
     # NOTA: el clon mismo aún no tiene su daemon final; este unit queda
     # como placeholder reversible. Comando real se rellena al finalizar
     # la fase de transporte vivo.

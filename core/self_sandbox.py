@@ -20,11 +20,12 @@ import shutil
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
+from core.paths import ARCHIVE_ROOT, EIDOS_HOME, REPO_ROOT, SANDBOX_ROOT
+
 log = logging.getLogger("self_sandbox")
-EIDOS_ROOT = Path("/home/ser/EIDOS")
-NO_TOCAR = Path("/home/ser/NO TOCAR")
-SANDBOX_DIR = Path.home() / ".eidos" / "sandbox"
-EIDOS_HOME = Path.home() / ".eidos"
+EIDOS_ROOT = REPO_ROOT
+NO_TOCAR = ARCHIVE_ROOT
+SANDBOX_DIR = SANDBOX_ROOT
 
 
 # ── Detección de entornos disponibles ─────────────────────────────────────────

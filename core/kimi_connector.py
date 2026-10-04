@@ -22,6 +22,8 @@ import time
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 
+from core.paths import REPO_ROOT
+
 
 @dataclass
 class KimiTask:
@@ -51,7 +53,7 @@ class KimiCLIConnector:
     def __init__(self, 
                  working_dir: str = None,
                  model: str = "kimi-k2"):
-        self.working_dir = working_dir or "/home/ser/EIDOS"
+        self.working_dir = working_dir or str(REPO_ROOT)
         self.model = model
         self.is_available = False
         self.session_history: List[Dict] = []
