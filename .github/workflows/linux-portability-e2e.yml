@@ -1,0 +1,101 @@
+name: linux-portability-e2e
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-portability-e2e-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  distro:
+    name: ${{ matrix.distro }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: debian-12
+            image: debian:12
+          - distro: debian-13
+            image: debian:13
+          - distro: kali-rolling
+            image: kalilinux/kali-rolling
+          - distro: ubuntu-24.04
+            image: ubuntu:24.04
+    container:
+      image: ${{ matrix.image }}
+    steps:
+      - name: Bootstrap clean distro
+        shell: bash
+        run: |
+          apt-get update -qq
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends             git python3 python3-venv python3-pip ca-certificates
+      - uses: actions/checkout@v4
+
+      - name: Verify portable source contract
+        shell: bash
+        run: |
+          ! grep -RIl --include='*.py' '/home/ser/' core bin cli config gateway terminal api browser daemon eidos.py main.py || {
+            echo "first-party Python contains a hardcoded /home/ser path"
+            exit 1
+          }
+
+      - name: Exercise EIDOS base runtime in isolated state
+        shell: bash
+        run: |
+          python3 -m venv /tmp/eidos-venv
+          . /tmp/eidos-venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install .
+          export EIDOS_HOME=/tmp/eidos-home
+          export EIDOS_ROOT="$GITHUB_WORKSPACE"
+          mkdir -p "$EIDOS_HOME"
+
+          PYTHONPATH=. python - <<'PY'
+          import json
+          from pathlib import Path
+          from core.runtime_hub import EIDOSRuntimeHub
+          from core.actuator_selector import choose_actuator
+
+          hub = EIDOSRuntimeHub()
+          snap = hub.snapshot()
+          assert snap["safety"]["executes_actions"] is False
+          assert "world" in snap["components"]
+          catalog = hub.capability_catalog()
+          assert "world_effect_verification" in catalog
+
+          # Headless Linux must remain useful and must not invent a GUI actuator.
+          choice = choose_actuator({})
+          assert choice.available is False
+          assert choice.backend == "none"
+
+          state = Path("/tmp/eidos-home/portability.json")
+          state.write_text(json.dumps({"runtime": "ok", "backend": choice.backend}))
+          assert json.loads(state.read_text())["runtime"] == "ok"
+          print(json.dumps({
+              "runtime_hub": "ok",
+              "components": len(snap["components"]),
+              "headless_actuator": choice.backend,
+          }))
+          PY
+
+      - name: Verify CLI/config outside checkout
+        shell: bash
+        run: |
+          . /tmp/eidos-venv/bin/activate
+          export EIDOS_HOME=/tmp/eidos-home
+          cd /tmp
+          eidos-gateway --help | grep -q "EIDOS Gateway CLI"
+          eidos-config init
+          eidos-config set gateway.port 19000
+          test "$(eidos-config get gateway.port)" = "19000"
+          test -s "$EIDOS_HOME/config.yaml"
