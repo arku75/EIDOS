@@ -203,6 +203,8 @@ jobs:
             command: PYTHONPATH=. python -m unittest -v tests.test_action_verifier_causality
           - name: actuator-selector
             command: PYTHONPATH=. python -m unittest -v tests.test_actuator_selector
+          - name: operation-modes-security
+            command: PYTHONPATH=. python -m unittest -v tests.test_operation_modes_security
           - name: recovery-causality
             command: PYTHONPATH=. python -m unittest -v tests.test_recovery_causality
           - name: chroma-topology
