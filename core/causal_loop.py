@@ -365,7 +365,22 @@ def step(goal: str = "", app_name: Optional[str] = None,
     action_keys = [a for a, _, _ in affs]
     key_to_el = {a: e for a, e, _ in affs}
     key_to_meaning = {a: m for a, e, m in affs}
-    chosen_key = get_rl_agent().select_action(s_hash, available_actions=action_keys)
+    rl = get_rl_agent()
+    chosen_key = rl.select_action(s_hash, available_actions=action_keys)
+
+    # Negative causal memory is a second, persistent decision signal. It does
+    # not replace Q-learning: it prevents a verified failed trajectory from
+    # being forgotten when choosing among currently available affordances.
+    try:
+        from core.antibiblioteca import Antibiblioteca
+        anti = Antibiblioteca(Path.home() / ".eidos" / "antibiblioteca.db")
+        q_values = rl.q_value_report(s_hash)
+        base = [(key, q_values.get(key, 0.0)) for key in action_keys]
+        ranked = anti.rank_strategies(goal=goal or "", context=s_hash, candidates=base)
+        if ranked:
+            chosen_key = ranked[0][0]
+    except Exception as e:
+        log.debug("antibiblioteca selection: %s", e)
     element = key_to_el.get(chosen_key, affs[0][1])
     meaning = key_to_meaning.get(chosen_key, "")   # lo que EIDOS YA entendía de esto
     label = (getattr(element, "text", "") or "")[:40]
@@ -414,6 +429,20 @@ def step(goal: str = "", app_name: Optional[str] = None,
     # propagate as failure even when the click itself was physically dispatched.
     verified_effect = reward > 0
     _learn(s_hash, chosen_key, reward, n_hash, label, effect)
+    if not verified_effect and not dry_run:
+        try:
+            from core.antibiblioteca import Antibiblioteca
+            Antibiblioteca(Path.home() / ".eidos" / "antibiblioteca.db").record_failure(
+                goal=goal or "",
+                context=s_hash,
+                strategy=chosen_key,
+                reason=effect or "no verified world effect",
+                consequence=f"next_state={n_hash}",
+                evidence_source="causal-loop",
+                confidence=min(0.95, max(0.5, abs(float(reward)))),
+            )
+        except Exception as e:
+            log.debug("antibiblioteca record: %s", e)
     return {"ok": verified_effect, "action_executed": True,
             "effect_verified": verified_effect,
             "action": chosen_key, "label": label, "knew": meaning[:50],
