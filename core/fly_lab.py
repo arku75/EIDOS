@@ -59,9 +59,10 @@ class FlyValidationResult:
 class SparseConnectome:
     """Minimal sparse directed weighted graph used by Fly experiments."""
 
-    def __init__(self) -> None:
+    def __init__(self, provenance: dict | None = None) -> None:
         self.outgoing: Dict[int, List[Tuple[int, float]]] = {}
         self.edge_count = 0
+        self.provenance = dict(provenance or {})
 
     def add_edge(self, source: int, target: int, weight: float = 1.0) -> None:
         self.outgoing.setdefault(int(source), []).append((int(target), float(weight)))
@@ -103,7 +104,12 @@ def load_connectome(path: str | Path) -> SparseConnectome:
     if not path.exists():
         raise FileNotFoundError(path)
 
-    graph = SparseConnectome()
+    graph = SparseConnectome({
+        "source_path": str(path),
+        "format": path.suffix.lower().lstrip("."),
+        "loader": "core.fly_lab.load_connectome",
+        "live_graph_mutated": False,
+    })
     suffix = path.suffix.lower()
 
     if suffix in {".csv", ".tsv"}:
@@ -222,6 +228,47 @@ def _accuracy(model: MushroomBodyAssociator, data: Iterable[Tuple[Sequence[float
     if not rows:
         return 0.0
     return sum(model.predict(x) == y for x, y in rows) / len(rows)
+
+
+def validate_connectome_signal(
+    graph: SparseConnectome,
+    activation: Dict[int, float],
+    *,
+    decay: float = 0.65,
+    seed: int = 317,
+) -> dict:
+    """Compare real edge propagation against a degree-preserving target shuffle.
+
+    This validates that the supplied wiring affects the propagated signal. It
+    does not claim biological equivalence or write anything into EIDOS memory.
+    """
+    observed = graph.propagate(activation, decay=decay)
+    edges = [
+        (source, target, weight)
+        for source, outgoing in graph.outgoing.items()
+        for target, weight in outgoing
+    ]
+    targets = [target for _, target, _ in edges]
+    random.Random(seed).shuffle(targets)
+    shuffled = SparseConnectome({"control": "target-shuffled", "seed": seed})
+    for (source, _, weight), target in zip(edges, targets):
+        shuffled.add_edge(source, target, weight)
+    control = shuffled.propagate(activation, decay=decay)
+
+    keys = set(observed) | set(control)
+    l1_distance = sum(abs(observed.get(k, 0.0) - control.get(k, 0.0)) for k in keys)
+    return {
+        "nodes": graph.node_count,
+        "edges": graph.edge_count,
+        "active_inputs": len(activation),
+        "observed_targets": len(observed),
+        "control_targets": len(control),
+        "l1_distance_from_shuffled": round(l1_distance, 6),
+        "distinct_from_shuffled": l1_distance > 1e-9,
+        "seed": seed,
+        "provenance": dict(graph.provenance),
+        "live_graph_mutated": False,
+    }
 
 
 def validate_synthetic(seed: int = 317) -> FlyValidationResult:
