@@ -152,17 +152,25 @@ def execute_sequence(actions: list):
     
     for action in actions:
         try:
-            if action["type"] == "move":
-                move_to(action["x"], action["y"])
-            elif action["type"] == "click":
-                click(action.get("button", "left"))
-            elif action["type"] == "write":
-                write(action["text"])
-            elif action["type"] == "press":
-                press(action["key"])
-            elif action["type"] == "wait":
+            action_type = action["type"]
+            if action_type == "move":
+                ok = move_to(action["x"], action["y"])
+            elif action_type == "click":
+                ok = click(action.get("button", "left"))
+            elif action_type == "write":
+                ok = write(action["text"])
+            elif action_type == "press":
+                ok = press(action["key"])
+            elif action_type == "wait":
                 time.sleep(action.get("seconds", 1))
+                ok = True
+            else:
+                log.error("Tipo de acción desconocido: %s", action_type)
+                return False
+            if not ok:
+                log.error("Acción no ejecutada: %s", action)
+                return False
         except Exception as e:
             log.error("Acción falló: %s — %s", action, e)
-            continue
+            return False
     return True
