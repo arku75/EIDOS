@@ -1,3 +1,4 @@
+import json
 import os
 import pathlib
 import subprocess
@@ -27,6 +28,8 @@ from core.db import get_conn
 p=HebbianPruner(); c=get_conn(BRAIN_DB)
 c.execute("CREATE TABLE IF NOT EXISTS knowledge_nodes(id TEXT PRIMARY KEY, concept TEXT, source TEXT DEFAULT '')")
 c.execute("CREATE TABLE IF NOT EXISTS knowledge_edges(from_node TEXT, to_node TEXT, relation_type TEXT, strength REAL, PRIMARY KEY(from_node,to_node,relation_type))")
+c.execute("CREATE TABLE IF NOT EXISTS edge_activation_log(edge_id TEXT PRIMARY KEY, last_activated REAL, activation_count INTEGER, initial_weight REAL)")
+c.execute("CREATE TABLE IF NOT EXISTS orphaned_nodes_log(node_id TEXT PRIMARY KEY, pruned_at REAL, concept TEXT, edge_count INTEGER)")
 c.execute("INSERT OR REPLACE INTO knowledge_nodes(id,concept) VALUES('a','a'),('b','b')")
 c.execute("INSERT OR REPLACE INTO knowledge_edges(from_node,to_node,relation_type,strength) VALUES('a','b','test',0.01)")
 c.commit()
@@ -34,7 +37,6 @@ r=p.prune(dry_run=True)
 left=c.execute("SELECT COUNT(*) FROM knowledge_edges WHERE from_node='a' AND to_node='b'").fetchone()[0]
 print(json.dumps({"reported":r["edges_pruned"],"left":left}))
 """
-            import json
             out = json.loads(self.run_code(pathlib.Path(td) / "state", code))
             self.assertGreaterEqual(out["reported"], 1)
             self.assertEqual(out["left"], 1)
@@ -48,6 +50,8 @@ from core.db import get_conn
 p=HebbianPruner(); c=get_conn(BRAIN_DB)
 c.execute("CREATE TABLE IF NOT EXISTS knowledge_nodes(id TEXT PRIMARY KEY, concept TEXT, source TEXT)")
 c.execute("CREATE TABLE IF NOT EXISTS knowledge_edges(from_node TEXT, to_node TEXT, relation_type TEXT, strength REAL, PRIMARY KEY(from_node,to_node,relation_type))")
+c.execute("CREATE TABLE IF NOT EXISTS edge_activation_log(edge_id TEXT PRIMARY KEY, last_activated REAL, activation_count INTEGER, initial_weight REAL)")
+c.execute("CREATE TABLE IF NOT EXISTS orphaned_nodes_log(node_id TEXT PRIMARY KEY, pruned_at REAL, concept TEXT, edge_count INTEGER)")
 c.execute("INSERT OR REPLACE INTO knowledge_nodes(id,concept,source) VALUES('null-source','n',NULL)")
 c.commit()
 r=p.prune(dry_run=False)
@@ -67,13 +71,14 @@ from core.db import get_conn
 p=HebbianPruner(); c=get_conn(BRAIN_DB)
 c.execute("CREATE TABLE IF NOT EXISTS knowledge_nodes(id TEXT PRIMARY KEY, concept TEXT, source TEXT DEFAULT '')")
 c.execute("CREATE TABLE IF NOT EXISTS knowledge_edges(from_node TEXT, to_node TEXT, relation_type TEXT, strength REAL, PRIMARY KEY(from_node,to_node,relation_type))")
+c.execute("CREATE TABLE IF NOT EXISTS edge_activation_log(edge_id TEXT PRIMARY KEY, last_activated REAL, activation_count INTEGER, initial_weight REAL)")
+c.execute("CREATE TABLE IF NOT EXISTS orphaned_nodes_log(node_id TEXT PRIMARY KEY, pruned_at REAL, concept TEXT, edge_count INTEGER)")
 c.execute("INSERT OR REPLACE INTO knowledge_nodes(id,concept,source) VALUES('orphan','orphan','test')")
 c.commit()
 r=p.prune(dry_run=False)
 left=c.execute("SELECT COUNT(*) FROM knowledge_nodes WHERE id='orphan'").fetchone()[0]
 print(json.dumps({"nodes_pruned":r["nodes_pruned"],"left":left}))
 """
-            import json
             out = json.loads(self.run_code(pathlib.Path(td) / "state", code))
             self.assertGreaterEqual(out["nodes_pruned"], 1)
             self.assertEqual(out["left"], 0)
