@@ -152,6 +152,8 @@ SAFE_REGRESSION_MODULES = (
     "tests.test_eidos_cli_entrypoint",
     "tests.test_hebbian_pruning_contract",
     "tests.test_operation_modes_security",
+    "tests.test_db_thread_contract",
+    "tests.test_model_fabric_contract",
 )
 
 
