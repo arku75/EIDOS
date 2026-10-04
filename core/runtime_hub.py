@@ -184,16 +184,41 @@ class EIDOSRuntimeHub:
         if verification.recovery_suggested is not None:
             verification_payload["recovery_suggested"] = verification.recovery_suggested.value
 
+        colony_reputation = None
+        source = str(proposal.get("source", "unknown"))
+        if source.startswith("colony_"):
+            try:
+                from core.colony_community import get_colony_community
+                colony_reputation = get_colony_community().record_verified_outcome(
+                    source,
+                    verification.verified,
+                    verification.confidence,
+                    reason=verification.reason,
+                    proposal_id=str(proposal.get("proposal_id") or ""),
+                    action_type=str(action.get("action", "unknown")),
+                    evidence={
+                        "verdict": verification.verdict.value,
+                        "prediction_risk": prediction.risk_score,
+                        "prediction_confidence": prediction.confidence,
+                    },
+                )
+            except Exception as exc:
+                colony_reputation = {
+                    "success": False,
+                    "error": f"{type(exc).__name__}: {exc}",
+                }
+
         payload = {
             "proposal_id": proposal.get("proposal_id"),
             "action": action,
-            "source": proposal.get("source", "unknown"),
+            "source": source,
             "status": "verified" if verification.verified else "failed",
             "prediction": asdict(prediction),
             "verification": verification_payload,
             "before": dict(before),
             "after": dict(after),
             "outcome_recorded": True,
+            "colony_reputation": colony_reputation,
             "created_at": time.time(),
         }
         self.bus.publish("action.verified", payload, source="runtime-hub")
