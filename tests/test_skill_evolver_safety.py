@@ -24,9 +24,12 @@ class TestSkillEvolverSafety(unittest.TestCase):
         self.tmp.cleanup()
 
     def _evolve(self, error):
-        self.evolver.record_failure("exampletool", error, "test")
-        self.evolver.record_failure("exampletool", error, "test")
-        return self.evolver.evolve()[0]
+        # analyze_gaps intentionally waits for >=3 observations globally.
+        for _ in range(3):
+            self.evolver.record_failure("exampletool", error, "test")
+        evolved = self.evolver.evolve()
+        self.assertTrue(evolved, "recurrent failure should produce a remediation candidate")
+        return evolved[0]
 
     def test_permission_failure_never_evolves_sudo_execution(self):
         skill = self._evolve("permission denied")
