@@ -50,6 +50,14 @@ class FakeHub:
     def action_proposal(self, proposal_id=None):
         return self.proposals.get(proposal_id)
 
+    def record_action_execution(self, proposal, executor, execution_id):
+        self.calls.append(("executed", proposal["proposal_id"], executor, execution_id))
+        return {
+            "proposal_id": proposal["proposal_id"],
+            "executor": executor,
+            "execution_id": execution_id,
+        }
+
     def verify_observations(self, proposal, before_id, after_id):
         self.calls.append(("verify", proposal["proposal_id"], before_id, after_id))
         return {
@@ -101,6 +109,18 @@ class TestSharedAgentsTerminal(unittest.TestCase):
                 "colony_coder",
                 "results appear",
             ),
+        )
+
+    def test_execution_evidence_is_a_separate_terminal_channel(self):
+        self.hub.propose_action({"action": "click"}, source="colony_coder")
+        out = self.capture(
+            self.term.do_executed,
+            "proposal-test guardian-executor exec-123",
+        )
+        self.assertIn("exec-123", out)
+        self.assertEqual(
+            self.hub.calls[-1],
+            ("executed", "proposal-test", "guardian-executor", "exec-123"),
         )
 
     def test_observe_and_verify_use_separate_evidence_channel(self):
