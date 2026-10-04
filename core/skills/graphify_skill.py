@@ -31,14 +31,16 @@ import sys
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
+from core.paths import EIDOS_HOME, REPO_ROOT, USER_HOME
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Configuración
 # ═══════════════════════════════════════════════════════════════════════════════
 
-GRAPHIFY_VENV = Path("/home/ser/MIS PROGRAMAS/graphify/venv")
+GRAPHIFY_VENV = Path(os.environ.get("EIDOS_GRAPHIFY_VENV", str(USER_HOME / "MIS PROGRAMAS" / "graphify" / "venv"))).expanduser()
 GRAPHIFY_BIN = GRAPHIFY_VENV / "bin" / "graphify"
 PYTHON_BIN = GRAPHIFY_VENV / "bin" / "python"
-EIDOS_GRAPH_DIR = Path("/home/ser/EIDOS") / ".eidos" / "graphify"
+EIDOS_GRAPH_DIR = EIDOS_HOME / "graphify"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Graphify Skill
@@ -283,7 +285,7 @@ class GraphifySkill:
         if not graph_path:
             candidates = [
                 Path.cwd() / "graphify-out" / "graph.json",
-                Path("/home/ser/EIDOS") / "graphify-out" / "graph.json",
+                REPO_ROOT / "graphify-out" / "graph.json",
             ]
             for c in candidates:
                 if c.exists():

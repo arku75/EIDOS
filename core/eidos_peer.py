@@ -105,7 +105,7 @@ def peer_eidos_status() -> Optional[str]:
 def peer_brain_nodes() -> int:
     """Cuántos nodos tiene el brain del peer."""
     out = run_on_peer(
-        "python3 -c \"import sqlite3; c=sqlite3.connect('/home/ser/.eidos/evolution_brain.db' if __import__('platform').system()!='Darwin' else '/Users/luka/.eidos/evolution_brain.db'); print(c.execute('SELECT COUNT(*) FROM knowledge_nodes').fetchone()[0])\" 2>/dev/null"
+        "python3 -c \"import sqlite3; c=sqlite3.connect(__import__('os').path.expanduser('~/.eidos/evolution_brain.db')); print(c.execute('SELECT COUNT(*) FROM knowledge_nodes').fetchone()[0])\" 2>/dev/null"
         if not IS_MAC else
         "/usr/local/bin/python3 -c \"import sqlite3; c=sqlite3.connect('/Users/luka/.eidos/evolution_brain.db'); print(c.execute('SELECT COUNT(*) FROM knowledge_nodes').fetchone()[0])\" 2>/dev/null"
     )

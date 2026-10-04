@@ -68,6 +68,7 @@ if str(_EIDOS_ROOT) not in sys.path:
     sys.path.insert(0, str(_EIDOS_ROOT))
 
 from core.db import get_conn
+from core.paths import SANDBOX_ROOT
 
 log = logging.getLogger("eidos.singularity")
 
@@ -1113,7 +1114,7 @@ class SingularityEngine:
     def _test_in_clone(self, file_path: str, proposed_code: str) -> Tuple[bool, str]:
         """Test a code change in the SANDBOX_EIDOS clone."""
         sanitizer = S4NDBOX_EIDOS if None else None  # unused, placeholder
-        sandbox_root = Path("/home/ser/NO TOCAR/S@NDBOX_EIDOS")
+        sandbox_root = SANDBOX_ROOT
         clone_dir = sandbox_root / "eidos_clon"
 
         if not clone_dir.exists():

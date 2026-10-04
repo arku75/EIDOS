@@ -78,7 +78,7 @@ class AutoCorrector:
         """Carga patrones de fixes conocidos"""
         # TODO: Cargar de ChromaDB si existen
         return {
-            "No module named 'core'": "sys.path.insert(0, '/home/ser/EIDOS')",
+            "No module named 'core'": "import os, sys; sys.path.insert(0, os.environ.get('EIDOS_SOURCE_ROOT', os.getcwd()))",
             "name 'perception' is not defined": "from core.lazy_loader import lazy_import; perception = lazy_import('perception')",
         }
 
@@ -352,7 +352,7 @@ class AutoCorrector:
 
             # Si es un módulo de core, añadir path
             if module_name.startswith('core'):
-                return f"import sys\nsys.path.insert(0, '/home/ser/EIDOS')\n{code}"
+                return f"import os, sys\nsys.path.insert(0, os.environ.get('EIDOS_SOURCE_ROOT', os.getcwd()))\n{code}"
 
             # Si no, sugerir lazy_import
             if module_name in ['perception', 'bugbot', 'multi_uploader']:
