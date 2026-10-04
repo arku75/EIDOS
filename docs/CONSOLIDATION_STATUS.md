@@ -93,3 +93,36 @@ Block 6 evidence contract:
 - Connectome wiring experiments compare observed propagation with a shuffled-wiring control and preserve dataset provenance.
 - No x10, cognition, consciousness, or biological-equivalence claim follows from these benchmarks.
 - Real MaleCNS/FlyWire inputs remain external datasets; synthetic CI does not validate a real connectome.
+
+
+## Unified CLI consolidation
+
+Block 7 contract:
+- No-argument `eidos` and explicit `eidos cli` converge on SharedAgentsTerminal.
+- Runtime Hub remains the single capability catalog consumed by the terminal.
+- Legacy God mode is explicit and no longer silently owns the default entrypoint.
+
+## World / browser / actuator consolidation
+
+Block 8 contract:
+- USB Gadget HID remains a first-class low-level actuator; it is not replaced by Playwright/Selenium/DOM.
+- HID report dispatch is not equivalent to verified world effect; learning success requires subsequent observation/verification.
+- X11/xdotool is selected only when an X11 DISPLAY and tool availability are demonstrated.
+- Wayland does not silently fall through to xdotool/XTest; physical/privileged HID behavior requires explicit HIL authorization.
+- No actuator is documented as universally undetectable.
+
+## Controlled self-evolution consolidation
+
+Block 9 contract:
+- Self-improvement defaults to staging, not direct production mutation.
+- Candidate promotion rejects source drift using the validated production SHA-256.
+- Staging paths cannot escape the repository.
+- Public regression gates protect causal learning, Colony, Fly/plasticity, CLI, actuator and governance invariants.
+- Public tests are regression evidence, not a claim of private held-out generalization.
+
+## Security / authority consolidation
+
+Block 10 contract:
+- OperationModeManager starts in PLAN, fail-closed.
+- PLAN+EDIT grants operational write/execute permissions but never bypasses constitution, ToolGuard, scope or operator authorization.
+- Capability availability is distinct from authority to use it.
