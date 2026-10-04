@@ -117,6 +117,8 @@ jobs:
             command: PYTHONPATH=. python -m unittest -v tests.test_fly_lab
           - name: runtime-hub
             command: PYTHONPATH=. python -m unittest -v tests.test_runtime_hub
+          - name: agents-terminal
+            command: PYTHONPATH=. python -m unittest -v tests.test_agents_terminal
           - name: autonomy
             command: PYTHONPATH=. python -m unittest -v tests.test_autonomy_benchmark
           - name: self-edit
