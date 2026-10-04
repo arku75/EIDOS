@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/home/ser/.local/bin/chroma run --path /home/ser/.eidos/chroma --port 8767 --host 127.0.0.1
+ExecStart=%h/.local/bin/chroma run --path %h/.eidos/chroma --port 8767 --host 127.0.0.1
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 RestartSec=5
