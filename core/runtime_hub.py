@@ -225,8 +225,13 @@ class EIDOSRuntimeHub:
         after_observer = str(after_record.get("observer", ""))
         if not before_observer or before_observer != after_observer:
             raise ValueError("before/after observations must share one observer")
-        if float(before_record.get("created_at", 0.0)) > float(after_record.get("created_at", 0.0)):
+        before_at = float(before_record.get("created_at", 0.0))
+        after_at = float(after_record.get("created_at", 0.0))
+        proposal_at = float(proposal.get("created_at", 0.0))
+        if before_at > after_at:
             raise ValueError("before observation is newer than after observation")
+        if not proposal_at or not (before_at <= proposal_at <= after_at):
+            raise ValueError("observations must bracket the proposed action")
 
         return self.verify_action_effect(
             proposal,
@@ -269,10 +274,13 @@ class EIDOSRuntimeHub:
             action,
             proposal.get("expected_outcome", ""),
         )
-        credited_verified = bool(verification.verified and evidence_independent)
+        observed_verified = bool(verification.verified)
+        credited_verified = bool(observed_verified and evidence_independent)
+        # Committee: world truth and reputation are separate. A self-observed
+        # effect may inform prediction accuracy but cannot earn trusted credit.
         self.world_model.record_outcome(
             prediction,
-            credited_verified,
+            observed_verified,
             after_scene,
         )
 
@@ -319,6 +327,7 @@ class EIDOSRuntimeHub:
             "status": status,
             "prediction": asdict(prediction),
             "verification": verification_payload,
+            "observed_verified": observed_verified,
             "credited_verified": credited_verified,
             "before": dict(before),
             "after": dict(after),
