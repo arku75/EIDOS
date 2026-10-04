@@ -37,6 +37,13 @@ class TreeTriageTests(unittest.TestCase):
         )
         self.assertIn("not semantic equivalence", result["warning"].lower())
 
+        backup = tree_triage.triage({
+            "local_only_project_candidates": ["core/db_backup.py"],
+            "common_all": ["core/db.py"],
+            "tracked_only": [],
+        })["rows"][0]
+        self.assertNotEqual(backup["bucket"], "direct_normalized_name_match")
+
     def test_only_local_core_python_enters_triage(self) -> None:
         result = tree_triage.triage({
             "local_only_project_candidates": [
