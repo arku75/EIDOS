@@ -103,10 +103,11 @@ class QLearningAgent:
         self.episodes += 1
         self._unpersisted_updates += 1
         self.epsilon = max(EPSILON_MIN, self.epsilon * EPSILON_DECAY)
-        # Persist every 10 updates (was 50) so Q-values survive crashes/restarts
-        if self._unpersisted_updates >= 10:
-            self._persist_q_values()
-            self._save_state()
+        # A learning event is only durable if it survives restart. Persist each
+        # update; SQLite WAL keeps this bounded and avoids a 1-9 experience loss
+        # window on crash/restart.
+        self._persist_q_values()
+        self._save_state()
 
     def reward_from_events(self, event_type: str, **kwargs) -> float:
         if event_type == "goal_completed":
