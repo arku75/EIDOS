@@ -75,20 +75,55 @@ jobs:
               "compiled": 0,
               "ast_ok": 0,
               "errors": [],
+              "inventory": [],
           }
 
           for path in assigned:
+              item = {
+                  "path": str(path),
+                  "classification": "KEEP",
+                  "imports": [],
+                  "signals": [],
+              }
               try:
                   source = path.read_text(encoding="utf-8", errors="strict")
-                  ast.parse(source, filename=str(path))
+                  tree = ast.parse(source, filename=str(path))
                   report["ast_ok"] += 1
                   py_compile.compile(str(path), doraise=True)
                   report["compiled"] += 1
+                  imports = []
+                  for node in ast.walk(tree):
+                      if isinstance(node, ast.Import):
+                          imports.extend(alias.name for alias in node.names)
+                      elif isinstance(node, ast.ImportFrom) and node.module:
+                          imports.append(node.module)
+                  item["imports"] = sorted(set(imports))[:80]
+                  low = str(path).lower()
+                  if low.endswith(".stub"):
+                      item["classification"] = "DEPRECATE"
+                      item["signals"].append("stub")
+                  if ".bak" in low or "backup" in low or "original" in low:
+                      item["classification"] = "REMOVE-CANDIDATE"
+                      item["signals"].append("historical-copy")
+                  if "/home/ser/" in source:
+                      item["classification"] = "FIX"
+                      item["signals"].append("hardcoded-user-path")
+                  if "TODO" in source or "FIXME" in source:
+                      item["signals"].append("unfinished-marker")
+                  if "subprocess" in source or "os.system" in source:
+                      item["signals"].append("process-execution")
+                  if "requests." in source or "urllib." in source or "aiohttp" in source:
+                      item["signals"].append("network")
+                  if "sqlite" in source.lower() or ".db" in source:
+                      item["signals"].append("persistent-data")
               except Exception as exc:
+                  item["classification"] = "FIX"
+                  item["signals"].append("parse-or-compile-error")
                   report["errors"].append({
                       "path": str(path),
                       "error": f"{type(exc).__name__}: {exc}",
                   })
+              report["inventory"].append(item)
 
           out = Path("reports") / f"python-shard-{shard:02d}.json"
           out.write_text(json.dumps(report, indent=2), encoding="utf-8")
