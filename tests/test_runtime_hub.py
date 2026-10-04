@@ -388,6 +388,20 @@ class TestRuntimeHub(unittest.TestCase):
                 observer="",
             )
 
+    def test_failed_effect_is_reusable_as_negative_causal_evidence(self):
+        proposal = self.hub.propose_action(
+            {"action": "click", "x": 10, "y": 20}, source="colony_coder"
+        )
+        same = {"window_title": "Same", "ocr_full_text": "No change", "regions": []}
+        result = self.hub.verify_action_effect(
+            proposal, same, same, evidence_source="runtime-observer"
+        )
+        learned = self.hub.board_read("last_causal_learning")
+        self.assertEqual(result["status"], "failed")
+        self.assertFalse(learned["verified"])
+        self.assertEqual(learned["proposal_id"], proposal["proposal_id"])
+        self.assertIn("cambios", learned["reason"].lower())
+
     def test_fly_validation_writes_result_to_shared_state(self):
         result = self.hub.fly_validate(317)
         self.assertTrue(result["passed"])
