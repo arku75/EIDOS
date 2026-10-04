@@ -104,6 +104,30 @@ class TestColonyEffectReputation(unittest.TestCase):
             initial,
         )
 
+    def test_self_report_cannot_change_reputation(self):
+        result = self.community.record_verified_outcome(
+            "colony_coder", True, 1.0,
+            proposal_id="self-claim",
+            evidence={"evidence_source": "self"},
+        )
+        self.assertFalse(result["success"])
+        self.assertEqual(
+            self.community.get_agent_outcome_stats("colony_coder")["total_outcomes"],
+            0,
+        )
+
+    def test_inherited_knowledge_cannot_mint_reputation(self):
+        result = self.community.record_verified_outcome(
+            "colony_coder", True, 1.0,
+            proposal_id="inherited",
+            evidence={"evidence_source": "inheritance"},
+        )
+        self.assertFalse(result["success"])
+        self.assertEqual(
+            self.community.get_agent_outcome_stats("colony_coder")["reputation_score"],
+            0.0,
+        )
+
     def test_unknown_agent_is_rejected(self):
         result = self.community.record_verified_outcome(
             "colony_missing",
