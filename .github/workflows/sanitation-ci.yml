@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -26,7 +30,9 @@ jobs:
             tests/test_fly_lab.py \
             tests/test_runtime_hub.py \
             tests/test_autonomy_benchmark.py \
-            tests/test_self_edit_lab.py
+            tests/test_self_edit_lab.py \
+            tests/test_self_edit_guardrails.py \
+            tests/test_colony_effect_reputation.py
 
       - name: Run pure integration tests
         run: |
@@ -34,7 +40,9 @@ jobs:
             tests.test_fly_lab \
             tests.test_runtime_hub \
             tests.test_autonomy_benchmark \
-            tests.test_self_edit_lab
+            tests.test_self_edit_lab \
+            tests.test_self_edit_guardrails \
+            tests.test_colony_effect_reputation
 
       - name: Run autonomy benchmark
         run: |
