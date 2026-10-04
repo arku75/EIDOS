@@ -135,6 +135,7 @@ SAFE_REGRESSION_MODULES = (
     "tests.test_hardware_validation",
     "tests.test_constitution",
     "tests.test_colony_community",
+    "tests.test_colony_effect_reputation",
 )
 
 
