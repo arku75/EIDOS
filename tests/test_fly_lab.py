@@ -6,6 +6,7 @@ from core.fly_lab import (
     SparseConnectome,
     load_connectome,
     validate_connectome_signal,
+    validate_seed_sweep,
     validate_synthetic,
 )
 
@@ -16,6 +17,13 @@ class TestFlyLab(unittest.TestCase):
         self.assertGreaterEqual(result.baseline_accuracy, 0.80)
         self.assertGreaterEqual(result.margin, 0.35)
         self.assertTrue(result.passed)
+
+    def test_synthetic_result_is_robust_across_seed_sweep(self):
+        report = validate_seed_sweep()
+        self.assertTrue(report["all_passed"])
+        self.assertGreaterEqual(report["mean_margin"], 0.35)
+        self.assertFalse(report["biological_equivalence_claimed"])
+        self.assertEqual(len(report["runs"]), 5)
 
     def test_sparse_connectome_propagates(self):
         graph = SparseConnectome()
