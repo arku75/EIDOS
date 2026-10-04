@@ -94,6 +94,48 @@ class EIDOSRuntimeHub:
     def components(self) -> Dict[str, dict]:
         return {component.name: component.to_dict() for component in _COMPONENTS}
 
+    def capability_catalog(self) -> Dict[str, dict]:
+        """Return one non-executing view of EIDOS operational capabilities.
+
+        This is deliberately evidence-aware: module presence proves EXISTENCE,
+        not mastery. CLI, Colony and future Free mode can consume the same
+        catalog instead of maintaining parallel help/tool lists.
+        """
+        tool_names: list[str] = []
+        skill_names: list[str] = []
+        try:
+            from core.tool_registry import get_registry
+            tool_names = sorted(get_registry().list_names())
+        except Exception:
+            pass
+        try:
+            from core.skill_registry import get_skill_registry
+            skill_names = sorted(get_skill_registry().list_all())
+        except Exception:
+            pass
+        return {
+            "tools": {
+                "state": "EXISTS" if tool_names else "UNAVAILABLE",
+                "items": tool_names,
+                "evidence": "registered in core.tool_registry",
+            },
+            "skills": {
+                "state": "EXISTS" if skill_names else "UNAVAILABLE",
+                "items": skill_names,
+                "evidence": "discovered by core.skill_registry",
+            },
+            "world_effect_verification": {
+                "state": "WIRED",
+                "items": ["observe", "propose", "verify", "outcome"],
+                "evidence": "Runtime Hub correlates proposals with independent before/after observations",
+            },
+            "causal_reuse": {
+                "state": "WIRED",
+                "items": ["learning.causal_outcome", "last_causal_learning"],
+                "evidence": "verified and failed effects are retained as reusable causal evidence",
+            },
+        }
+
     def snapshot(self) -> dict:
         """Return a read-only architectural snapshot without starting services."""
         return {
