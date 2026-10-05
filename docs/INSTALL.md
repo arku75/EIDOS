@@ -12,10 +12,9 @@ Current public validation uses **Ubuntu Linux + Python 3.11** in GitHub Actions.
 
 The main development machine is Linux/Kali, but hardware/desktop behavior is tested separately from clean CI.
 
-## 2. Clone
+## 2. Local copy
 
 ```bash
-git clone https://github.com/arku75/EIDOS.git
 cd EIDOS
 ```
 
