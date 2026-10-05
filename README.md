@@ -434,7 +434,6 @@ EIDOS is developed for Linux.
 Start with:
 
 ```bash
-git clone https://github.com/arku75/EIDOS.git
 cd EIDOS
 
 python3 -m venv .venv
