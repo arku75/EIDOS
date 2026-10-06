@@ -20,6 +20,8 @@
   <a href="LICENSE">License</a>
 </p>
 
+> **Product & portfolio:** [Professional portfolio](docs/PORTFOLIO.md) · [Product & commercialization](docs/PRODUCT.md) · [Verified status — 2026-10-06](docs/STATUS_2026-10-06.md) · [Landing page](docs/index.html)
+
 ---
 
 ## What EIDOS is
