@@ -24,7 +24,7 @@
   <a href="LICENSE">License</a>
 </p>
 
-> **Professional surface:** [Portfolio](docs/PORTFOLIO.md) · [Product](docs/PRODUCT.md) · [Verified status](docs/STATUS_2026-10-06.md) · [Collaboration](docs/COLLABORATION.md) · [Repository map](docs/RELATED_REPOS.md) · [Landing page](docs/index.html)
+> **Professional surface:** [Portfolio](docs/PORTFOLIO.md) · [Product](docs/PRODUCT.md) · [Verified status](docs/STATUS_2026-10-07.md) · [Collaboration](docs/COLLABORATION.md) · [Repository map](docs/RELATED_REPOS.md) · [Landing page](docs/index.html)
 
 ---
 
@@ -36,7 +36,7 @@
 - **Versioning:** historical `v1.x` labels are preserved as history, while the project genealogy is being reconciled into a pre-1.0 `0.x` line based on verified capability milestones
 - **Evidence rule:** documented, wired, executed and measured are different states; public claims must identify which one applies
 
-See [Verified status](docs/STATUS_2026-10-06.md) and [0.x roadmap](docs/ROADMAP_0X.md).
+See [Verified status](docs/STATUS_2026-10-07.md) and [0.x roadmap](docs/ROADMAP_0X.md).
 
 ---
 
