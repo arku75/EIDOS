@@ -186,7 +186,7 @@ The moat is **not** the public source code alone.
 The GitHub presence should have one clear funnel:
 
 ```text
-GitHub profile
+Luka Sorta / GitHub profile
 → arku75/EIDOS
 → README
 → Portfolio
@@ -210,15 +210,13 @@ GitHub profile
 - protect `main` against force-push/deletion.
 - require core CI checks before merge.
 
-### Public releases
+### Public releases and versioning
 
-The June 2026 `v1.0.0` release is historical. The next release should not be called production-ready until clean install and core public acceptance tests are reproducible.
+The June 2026 `v1.0.0` label is preserved as a historical publication label; it is **not** treated as proof that the current product reached 1.0 maturity.
 
-Recommended next public tag after consolidation:
+The active reconstruction uses a **pre-1.0 `0.x` capability-history model**. Exact retrospective milestones must be backed by dated repository or machine evidence before tags are created. Until that genealogy is closed, do not manufacture version tags simply to make the repository look mature.
 
-`v0.2-product-preview` or `v1.1-preview`
-
-Choose one versioning convention and keep it consistent.
+The next public release should be a `0.x` preview only after clean installation and core public acceptance tests are reproducible. See [ROADMAP_0X.md](ROADMAP_0X.md).
 
 ---
 
