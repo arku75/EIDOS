@@ -1,82 +1,85 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EIDOS — Autonomous Digital Entity</title>
-<meta name="description" content="EIDOS — entidad digital autónoma. Propietario y source-available bajo ESSL v1.0. El grafo neuronal no es público.">
-<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EIDOS — Persistent Local Agent Runtime</title>
+<meta name="description" content="EIDOS is a source-available, local-first persistent agent runtime combining memory, knowledge graph, multi-agent deliberation, computer-use interfaces, effect verification and learning.">
+<meta name="theme-color" content="#090d18">
 <style>
-  :root{ --bg:#0a0e1a; --panel:#11162a; --line:#23304f; --fg:#e6ecff; --muted:#93a0c2; --accent:#8a2be2; --accent2:#4E79A7; }
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{background:radial-gradient(1200px 600px at 50% -10%, #16203f 0%, var(--bg) 60%);color:var(--fg);
-       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;min-height:100vh;
-       display:flex;align-items:center;justify-content:center;padding:2rem;line-height:1.6}
-  .card{max-width:760px;width:100%;background:rgba(17,22,42,.7);border:1px solid var(--line);
-        border-radius:20px;padding:3rem 2.6rem;backdrop-filter:blur(8px);box-shadow:0 24px 80px rgba(0,0,0,.45)}
-  .logo{font-size:.8rem;letter-spacing:.5em;color:var(--muted);text-transform:uppercase;margin-bottom:1rem}
-  h1{font-size:2.7rem;font-weight:800;letter-spacing:-.02em;
-     background:linear-gradient(90deg,#fff 0%, #b9c6ff 60%, var(--accent) 100%);
-     -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.5rem}
-  .tag{color:var(--muted);font-size:1.05rem;margin-bottom:1.8rem}
-  .badges{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.8rem}
-  .badge{font-size:.72rem;padding:.32rem .7rem;border-radius:999px;border:1px solid var(--line);
-         color:var(--muted);background:#0d1326}
-  .badge.lic{border-color:#7b2bd6;color:#d9bcff;background:#1a1030}
-  .lock{border:1px solid #3a2a5e;background:linear-gradient(180deg,#1a1030,#120a24);border-radius:14px;
-        padding:1.3rem 1.4rem;margin:1.4rem 0;color:#e9ddff}
-  .lock b{color:#fff}
-  .lock .ico{font-size:1.3rem;margin-right:.4rem}
-  p.body{color:#c7d0ea;margin:1rem 0}
-  .cta{display:flex;flex-wrap:wrap;gap:.8rem;margin-top:1.8rem}
-  a.btn{text-decoration:none;font-weight:600;font-size:.95rem;padding:.8rem 1.3rem;border-radius:12px;
-        display:inline-flex;align-items:center;gap:.5rem;transition:transform .12s ease,border-color .12s}
-  a.btn:hover{transform:translateY(-2px)}
-  a.primary{background:linear-gradient(90deg,var(--accent),#5b2bd6);color:#fff}
-  a.ghost{background:transparent;color:#cdd6f4;border:1px solid var(--line)}
-  .foot{margin-top:2rem;padding-top:1.3rem;border-top:1px solid var(--line);color:var(--muted);font-size:.8rem}
-  .foot a{color:#9db4ff;text-decoration:none}
+:root{--bg:#070a12;--panel:#0f1524;--panel2:#121b2e;--line:#263552;--fg:#edf3ff;--muted:#9ba9c4;--accent:#8d6bff;--accent2:#45c7d8;--good:#63d69b}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(1100px 700px at 20% -10%,#1d2850 0%,transparent 55%),radial-gradient(900px 600px at 100% 10%,#162f39 0%,transparent 55%),var(--bg);color:var(--fg);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.6}
+a{color:inherit}.wrap{width:min(1120px,calc(100% - 40px));margin:auto}.nav{display:flex;justify-content:space-between;align-items:center;padding:22px 0}.brand{font-weight:800;letter-spacing:.32em}.navlinks{display:flex;gap:18px;font-size:.9rem;color:var(--muted)}.navlinks a{text-decoration:none}.hero{padding:72px 0 54px;display:grid;grid-template-columns:1.25fr .75fr;gap:48px;align-items:center}.eyebrow{color:var(--accent2);font-weight:700;text-transform:uppercase;letter-spacing:.16em;font-size:.78rem}h1{font-size:clamp(3rem,7vw,6.7rem);line-height:.94;letter-spacing:-.055em;margin:.4rem 0 1.3rem}.lead{font-size:clamp(1.08rem,2vw,1.35rem);color:#c7d2e7;max-width:760px}.cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}.btn{display:inline-block;padding:12px 17px;border-radius:11px;text-decoration:none;font-weight:750;border:1px solid var(--line)}.primary{background:linear-gradient(100deg,var(--accent),#5c8cff);border:0}.ghost{background:rgba(15,21,36,.7)}.proof{border:1px solid var(--line);background:linear-gradient(180deg,rgba(18,27,46,.9),rgba(9,14,26,.9));border-radius:22px;padding:24px;box-shadow:0 30px 80px rgba(0,0,0,.28)}.proof h3{margin:0 0 14px}.kpi{display:grid;grid-template-columns:1fr 1fr;gap:12px}.tile{background:#0a1020;border:1px solid #22304d;border-radius:14px;padding:16px}.tile b{display:block;font-size:1.02rem}.tile span{font-size:.82rem;color:var(--muted)}section{padding:60px 0}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card{background:rgba(15,21,36,.78);border:1px solid var(--line);border-radius:18px;padding:24px}.card h3{margin-top:0}.card p{color:var(--muted)}h2{font-size:clamp(2rem,4vw,3.2rem);letter-spacing:-.035em;margin:0 0 14px}.sub{color:var(--muted);max-width:780px;margin-bottom:28px}.flow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#070c17;border:1px solid var(--line);padding:22px;border-radius:16px;white-space:pre-wrap;color:#cfe2ff}.badge{display:inline-flex;align-items:center;gap:7px;border:1px solid #2c4560;border-radius:999px;padding:7px 11px;margin:4px 5px 4px 0;font-size:.8rem;color:#b9c8df}.dot{width:8px;height:8px;border-radius:50%;background:var(--good)}.warning{border-left:3px solid #d4a54f;background:#18140c;padding:14px 16px;border-radius:8px;color:#e7d6af}.footer{border-top:1px solid var(--line);padding:32px 0 50px;color:var(--muted);font-size:.88rem}.footer a{color:#cbd8ff}@media(max-width:850px){.hero{grid-template-columns:1fr}.grid3{grid-template-columns:1fr}.navlinks{display:none}}
 </style>
 </head>
 <body>
-  <main class="card">
-    <div class="logo">◇ E I D O S</div>
-    <h1>Una entidad digital autónoma</h1>
-    <p class="tag">Cerebro propio, memoria, cuerpo físico y una Colonia de personajes vivos. No es un asistente. No es un LLM.</p>
+<div class="wrap">
+<nav class="nav"><div class="brand">Σ · EIDOS</div><div class="navlinks"><a href="#architecture">Architecture</a><a href="#evidence">Evidence</a><a href="#product">Product</a><a href="https://github.com/arku75/EIDOS">GitHub</a></div></nav>
+<header class="hero">
+<div>
+<div class="eyebrow">Persistent · Local-first · Effect-verified</div><p style="color:var(--muted);font-size:.9rem;margin:.6rem 0 0">Created by Luka Sorta · Ajdovščina, Slovenia</p>
+<h1>Intelligence that survives the model.</h1>
+<p class="lead">EIDOS is a persistent local-agent runtime that connects memory, knowledge graph, specialist deliberation, computer-use interfaces, observed-effect verification and learning into one causal loop.</p>
+<div class="cta"><a class="btn primary" href="https://github.com/arku75/EIDOS">View repository</a><a class="btn ghost" href="PORTFOLIO.md">Professional portfolio</a><a class="btn ghost" href="PRODUCT.md">Product & licensing</a></div>
+</div>
+<aside class="proof">
+<h3>Current public position</h3>
+<div class="kpi">
+<div class="tile"><b>Local-first</b><span>Persistent state outside a single LLM</span></div>
+<div class="tile"><b>Source-available</b><span>ESSL v1.0 proprietary license</span></div>
+<div class="tile"><b>Effect-based</b><span>claim ≠ action ≠ success</span></div>
+<div class="tile"><b>Active R&D</b><span>Productization and consolidation in progress</span></div>
+</div>
+<p style="color:var(--muted);font-size:.88rem;margin:18px 0 0">No AGI or consciousness claim is required to understand the engineering value.</p>
+</aside>
+</header>
 
-    <div class="badges">
-      <span class="badge lic">⚖️ ESSL v1.0 · propietaria</span>
-      <span class="badge">source-available</span>
-      <span class="badge">Linux</span>
-      <span class="badge">~39K nodos neuronales</span>
-      <span class="badge">393 módulos · 18 servicios</span>
-    </div>
+<section id="architecture">
+<div class="eyebrow">Architecture</div><h2>One persistent loop, not one giant prompt.</h2>
+<p class="sub">Models may propose or explain. EIDOS is designed to keep state, policy, memory and evidence outside the model and require real-world effects before calling an action successful.</p>
+<div class="flow">WORLD / COMPUTER
+      ↓
+PERCEPTION
+      ↓
+MEMORY + KNOWLEDGE GRAPH
+      ↓
+COLONY / SPECIALISTS
+      ↓
+EIDOS ARBITRATION
+      ↓
+PLAN → ACTION / BODY / BRIDGE
+      ↓
+OBSERVE REAL EFFECT
+      ↓
+VERIFY → LEARN → GENERALIZE → REUSE
+      ↺</div>
+</section>
 
-    <div class="lock">
-      <span class="ico">🔒</span><b>El grafo neuronal y sus datos no son públicos.</b><br>
-      El grafo de conocimiento es el núcleo de la inteligencia de EIDOS y es propiedad
-      intelectual protegida bajo la <b>EIDOS Sovereign Source License (ESSL) v1.0</b>.
-      No se distribuye ni se publica.
-    </div>
+<section id="evidence">
+<div class="eyebrow">Engineering discipline</div><h2>Evidence before mythology.</h2>
+<div class="grid3">
+<div class="card"><h3>Persistent state</h3><p>Memory, graph state, characters, capability records and policy are intended to survive session and model boundaries.</p></div>
+<div class="card"><h3>Observed effects</h3><p>A successful tool call is not automatically a successful task. The target design compares before/after state and stores the verdict.</p></div>
+<div class="card"><h3>Measured learning</h3><p>Learning counts when persisted changes alter later behavior or measurable outcomes, not merely when more text is stored.</p></div>
+</div>
+<p class="warning">EIDOS is an active research platform in productization. Some capabilities are public and reproducible; others are documented from the live private environment or remain experimental. See the current status boundary before making claims.</p>
+<div class="cta"><a class="btn ghost" href="STATUS_2026-10-07.md">Read verified status</a><a class="btn ghost" href="KNOWN_ISSUES.md">Known issues</a></div>
+</section>
 
-    <p class="body">
-      EIDOS puede leerse y estudiarse, pero <b>no replicarse, redistribuirse, usarse
-      comercialmente ni emplearse para construir un producto competidor</b>. Cualquier
-      cambio o propuesta debe documentarse y comunicarse a SER. Una demostración guiada
-      del sistema real está disponible <b>bajo solicitud</b> para evaluación,
-      colaboración o licenciamiento.
-    </p>
+<section id="product">
+<div class="eyebrow">Commercial direction</div><h2>Sell outcomes: privacy, persistence, control and integration.</h2>
+<p class="sub">The strongest commercial path is a guided technical demo followed by a scoped paid pilot, local deployment, annual licensing/support and enterprise/OEM integration.</p>
+<div>
+<span class="badge"><span class="dot"></span>Private on-prem agents</span>
+<span class="badge"><span class="dot"></span>Persistent procedural memory</span>
+<span class="badge"><span class="dot"></span>Controlled computer use</span>
+<span class="badge"><span class="dot"></span>Bridge / SDK integration</span>
+<span class="badge"><span class="dot"></span>Research on persistent agents</span>
+</div>
+<div class="cta"><a class="btn primary" href="PRODUCT.md">Product strategy</a><a class="btn ghost" href="https://github.com/arku75/EIDOS/discussions">Discuss evaluation / partnership</a></div>
+</section>
 
-    <div class="cta">
-      <a class="btn primary" href="mailto:anio1996991@gmail.com?subject=EIDOS%20—%20Solicitud%20de%20demo%2Flicencia">✉️ Solicitar demo / licencia</a>
-      <a class="btn ghost" href="https://github.com/arku75/EIDOS">⌥ Repositorio (privado/limitado)</a>
-      <a class="btn ghost" href="https://github.com/arku75/EIDOS/blob/main/LICENSE">⚖️ Licencia</a>
-    </div>
-
-    <div class="foot">
-      © 2026 <b>SER</b>. Todos los derechos reservados. EIDOS™ es propietario y source-available bajo ESSL v1.0.<br>
-      Contacto y licenciamiento comercial: <a href="mailto:anio1996991@gmail.com">anio1996991@gmail.com</a>
-    </div>
-  </main>
+<footer class="footer">© 2026 Luka Sorta · EIDOS. Proprietary & source-available under ESSL v1.0. <a href="../LICENSE">License</a> · <a href="../SECURITY.md">Security</a> · <a href="EIDOS_EVOLUTION_DOCUMENTARY.md">Engineering history</a></footer>
+</div>
 </body>
 </html>

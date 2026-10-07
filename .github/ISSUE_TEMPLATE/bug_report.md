@@ -1,15 +1,42 @@
 ---
 name: Bug report
-about: Report a problem with EIDOS
+about: Report a reproducible defect in EIDOS
+title: "[Bug] "
 labels: bug
 ---
 
-**What happened**
+## What happened?
 
-**Steps to reproduce**
+Describe the observed behavior.
 
-**Expected**
+## Expected behavior
 
-**Environment** (OS, Python, EIDOS commit, relevant service)
+What should have happened?
 
-**Logs / output** (redact any secrets)
+## Reproduction
+
+Provide the smallest safe reproduction:
+
+```text
+# commands / steps
+```
+
+## Evidence
+
+- EIDOS revision / commit:
+- OS:
+- Python/runtime:
+- X11 / Wayland:
+- Model/service dependencies:
+- Relevant logs (remove secrets/private data):
+
+## Effect boundary
+
+What real state proves the bug occurred? A command returning successfully is not enough when the expected effect is external.
+
+## Safety / data
+
+- [ ] No credentials, tokens, private DB contents or personal data included
+- [ ] Reproduction does not require destructive changes
+
+## Additional context
