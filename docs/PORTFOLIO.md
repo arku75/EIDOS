@@ -103,7 +103,7 @@ The public repository contains reproducible components for:
 
 Live-machine work has additionally documented desktop-body certification, OCR/perception checks and generic tool-learning/reuse experiments. Those live results are kept distinct from what a clean public clone can reproduce.
 
-See [STATUS_2026-10-06.md](STATUS_2026-10-06.md) for the current evidence boundary.
+See [STATUS_2026-10-07.md](STATUS_2026-10-07.md) for the current evidence boundary.
 
 ---
 
@@ -212,6 +212,6 @@ Commercial licensing, redistribution and competing-product rights are governed b
 - **Known issues:** [KNOWN_ISSUES.md](KNOWN_ISSUES.md)
 - **Security:** ../SECURITY.md
 - **Product & commercialization:** [PRODUCT.md](PRODUCT.md)
-- **Current evidence boundary:** [STATUS_2026-10-06.md](STATUS_2026-10-06.md)
+- **Current evidence boundary:** [STATUS_2026-10-07.md](STATUS_2026-10-07.md)
 
 For evaluation, partnership or licensing, use the repository's **GitHub Discussions** channel so the first contact remains public, auditable and separate from private deployment details.
