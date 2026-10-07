@@ -1,14 +1,18 @@
-# EIDOS — Extensión Neuronal Ilimitada
+# EIDOS — Persistent Local Agent Runtime
 
 <p align="center">
   <img src="https://img.shields.io/badge/Linux-local--first-555?style=for-the-badge&logo=linux&logoColor=white" alt="Linux">
   <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.11+">
   <img src="https://img.shields.io/badge/license-ESSL%20v1.0-red?style=for-the-badge" alt="ESSL v1.0">
-  <img src="https://img.shields.io/badge/status-active-brightgreen?style=for-the-badge" alt="Active">
+  <img src="https://img.shields.io/badge/maturity-active%20R%26D-orange?style=for-the-badge" alt="Active R&D">
 </p>
 
 <p align="center">
   <b>Persistent local intelligence: memory + graph + Colony + world model + actions + verification + learning.</b>
+</p>
+
+<p align="center">
+  <b>Created by <a href="https://github.com/arku75">Luka Sorta</a> · Ajdovščina, Slovenia</b>
 </p>
 
 <p align="center">
@@ -20,7 +24,19 @@
   <a href="LICENSE">License</a>
 </p>
 
-> **Product & portfolio:** [Professional portfolio](docs/PORTFOLIO.md) · [Product & commercialization](docs/PRODUCT.md) · [Verified status — 2026-10-06](docs/STATUS_2026-10-06.md) · [Landing page](docs/index.html)
+> **Professional surface:** [Portfolio](docs/PORTFOLIO.md) · [Product](docs/PRODUCT.md) · [Verified status](docs/STATUS_2026-10-06.md) · [Collaboration](docs/COLLABORATION.md) · [Repository map](docs/RELATED_REPOS.md) · [Landing page](docs/index.html)
+
+---
+
+## Project identity and maturity
+
+- **Canonical repository:** `arku75/EIDOS`
+- **Creator:** Luka Sorta (the internal project/operator identifier `SER` appears in historical and architectural material)
+- **Maturity:** active research and productization; **not** production-ready and **not** claimed as 100% complete
+- **Versioning:** historical `v1.x` labels are preserved as history, while the project genealogy is being reconciled into a pre-1.0 `0.x` line based on verified capability milestones
+- **Evidence rule:** documented, wired, executed and measured are different states; public claims must identify which one applies
+
+See [Verified status](docs/STATUS_2026-10-06.md) and [0.x roadmap](docs/ROADMAP_0X.md).
 
 ---
 
