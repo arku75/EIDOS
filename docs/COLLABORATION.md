@@ -1,6 +1,6 @@
 # Collaborating on EIDOS
 
-EIDOS is an active, source-available research and product project created by **Luka Sorta**. Contributions are welcome when they improve evidence, portability, safety, integration quality or reproducibility.
+EIDOS is an active, source-available research and product project created by **Ema Curk Mali**. Contributions are welcome when they improve evidence, portability, safety, integration quality or reproducibility.
 
 ## Where help is most valuable
 
