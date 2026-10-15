@@ -2,7 +2,7 @@
 
 > **Persistent local intelligence that can remember, arbitrate, act, verify effects, learn from them, and reuse what it learned.**
 
-EIDOS is a single-developer research and product project created by **Ema Curk Mali** in Slovenia. Historical and internal project material also uses **SER** as the operator/owner identifier. EIDOS is designed as a **local-first persistent agent architecture**, not as a thin chat wrapper around one model.
+EIDOS is a single-developer research and product project created by **Ema Curk** in Slovenia. Historical and internal project material also uses **SER** as the operator/owner identifier. EIDOS is designed as a **local-first persistent agent architecture**, not as a thin chat wrapper around one model.
 
 The core product idea is simple:
 
@@ -25,7 +25,7 @@ The model can change. The identity, state, memory, learned capabilities, policie
 
 ## Creator
 
-**Ema Curk Mali** is an independent AI-native builder focused on agentic systems, local AI, automation and rapid prototyping. The project is developed by defining system behavior, architecture, verification criteria and product direction, then using AI coding agents and local/cloud tooling as implementation collaborators.
+**Ema Curk** is an independent AI-native builder focused on agentic systems, local AI, automation and rapid prototyping. The project is developed by defining system behavior, architecture, verification criteria and product direction, then using AI coding agents and local/cloud tooling as implementation collaborators.
 
 The public positioning is intentionally evidence-based: no traditional software-engineering credentials, employer history or scientific claims are implied by the project unless separately verified.
 
