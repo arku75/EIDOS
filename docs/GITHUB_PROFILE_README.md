@@ -1,4 +1,4 @@
-# Ema Curk Mali
+# Ema Curk
 
 **AI Automation & Agentic Systems Builder** based in Ajdovščina, Slovenia.
 
