@@ -186,7 +186,7 @@ The moat is **not** the public source code alone.
 The GitHub presence should have one clear funnel:
 
 ```text
-Ema Curk Mali / GitHub profile
+Ema Curk / GitHub profile
 → arku75/EIDOS
 → README
 → Portfolio
