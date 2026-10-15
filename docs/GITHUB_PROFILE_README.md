@@ -1,4 +1,4 @@
-# Luka Sorta
+# Ema Curk Mali
 
 **AI Automation & Agentic Systems Builder** based in Ajdovščina, Slovenia.
 
