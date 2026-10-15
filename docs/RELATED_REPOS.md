@@ -6,7 +6,7 @@ This page prevents confusion between repositories with similar names.
 
 ### [arku75/EIDOS](https://github.com/arku75/EIDOS)
 
-**Canonical public repository for Ema Curk Mali's EIDOS project.**
+**Canonical public repository for Ema Curk's EIDOS project.**
 
 Use this repository for current documentation, issues, discussions, product evaluation and future releases.
 
@@ -22,7 +22,7 @@ Do not use it to determine the current architecture or maturity of EIDOS.
 
 ### arku75/eidos-encontrado
 
-This repository is a copy/reference of the separate **eidos.space** project (a relational spreadsheet / local data tool). It is **not** Ema Curk Mali's EIDOS agent runtime and should not be cited as part of this project's codebase or history.
+This repository is a copy/reference of the separate **eidos.space** project (a relational spreadsheet / local data tool). It is **not** Ema Curk's EIDOS agent runtime and should not be cited as part of this project's codebase or history.
 
 ## Other supporting / research repositories
 
