@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <b>Created by <a href="https://github.com/arku75">Luka Sorta</a> · Ajdovščina, Slovenia</b>
+  <b>Created by <a href="https://github.com/arku75">Ema Curk Mali</a> · Ajdovščina, Slovenia</b>
 </p>
 
 <p align="center">
@@ -31,7 +31,7 @@
 ## Project identity and maturity
 
 - **Canonical repository:** `arku75/EIDOS`
-- **Creator:** Luka Sorta (the internal project/operator identifier `SER` appears in historical and architectural material)
+- **Creator:** Ema Curk Mali (the internal project/operator identifier `SER` appears in historical and architectural material)
 - **Maturity:** active research and productization; **not** production-ready and **not** claimed as 100% complete
 - **Versioning:** historical `v1.x` labels are preserved as history, while the project genealogy is being reconciled into a pre-1.0 `0.x` line based on verified capability milestones
 - **Evidence rule:** documented, wired, executed and measured are different states; public claims must identify which one applies
@@ -568,7 +568,7 @@ Read **[LICENSE](LICENSE)** and **[CONTRIBUTING.md](CONTRIBUTING.md)** before ma
 
 ## Creator
 
-**Luka Sorta** — creator and project owner. Historical/internal material uses **SER** as the operator identifier.
+**Ema Curk Mali** — creator and project owner. Historical/internal material uses **SER** as the operator identifier.
 
 GitHub: [arku75/EIDOS](https://github.com/arku75/EIDOS)
 
